@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="description" content="서버별 GPU 실험과 예상 종료시간을 한눈에 확인하는 타임라인"><title>GPU Timeline</title><link rel="stylesheet" href="./styles.css"></head>
+<html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="description" content="서버별 GPU 실험과 예상 종료시간을 한눈에 확인하는 타임라인"><title>GPU Timeline</title><link rel="stylesheet" href="./styles.css"><link rel="stylesheet" href="./usage.css"></head>
 <body><main><header><div class="brand"><span class="brand-mark" aria-hidden="true"></span><div><p class="eyebrow">COMPUTE WORKSPACE</p><h1>GPU <span>Timeline</span></h1></div></div><div class="header-right"><span id="mode" class="badge">불러오는 중</span><span id="clock"></span></div></header>
 <section class="overview" aria-label="사용 현황 요약" id="overview"></section>
 <section class="workspace" aria-labelledby="timeline-title"><div class="toolbar"><div><h2 id="timeline-title">실험 타임라인</h2><p id="window-label"></p></div><div class="controls"><div class="segmented" aria-label="표시 기간"><button data-hours="24">24시간</button><button data-hours="72" class="active" aria-pressed="true">3일</button><button data-hours="168">7일</button></div><div class="stepper"><button id="previous" aria-label="이전 기간">‹</button><button id="today">현재</button><button id="next" aria-label="다음 기간">›</button></div><button id="refresh">새로고침</button></div></div>
@@ -9,20 +9,57 @@
 
 <!-- 간단 사용법: 이 section의 문구와 명령어를 수정하세요. -->
 <section id="usage" class="usage" aria-labelledby="usage-title">
-  <div class="section-title"><h2 id="usage-title">간단 사용법</h2><a href="https://github.com/shxyzn/gpu-timeline/blob/main/README.md">전체 설명서 ↗</a></div>
-  <p class="usage-intro">GPU 상태는 10분마다 자동 갱신됩니다. 실험은 평소처럼 실행하고, <strong>그 서버의 SSH 터미널</strong>에서 아래 명령으로 정보를 등록하세요.</p>
-  <div class="usage-setup">
-    <span>준비 · 새 터미널마다 한 번</span>
-    <pre><code>alias gputl='/usr/bin/python3 ~/gpu-timeline/agent/gpu_agent.py --config ~/.config/gpu-timeline/config.json'</code></pre>
+  <div class="usage-heading">
+    <div><h2 id="usage-title">간단 사용법</h2><p>직접 입력하거나, 서버에 연결된 Agent에게 요청하세요.</p></div>
+    <a href="https://github.com/shxyzn/gpu-timeline/blob/main/README.md">전체 설명서 ↗</a>
   </div>
-  <ol class="usage-steps">
-    <li><div><strong>실험 등록</strong><span>GPU 0 · 종료 예정 6시간 뒤</span></div><pre><code>gputl add --id exp01 --name "GEPA" --gpus 0 --end "$(date -d '+6 hours' --iso-8601=seconds)"</code></pre></li>
-    <li><div><strong>종료 예정 수정</strong><span>지금부터 2시간 뒤로 변경</span></div><pre><code>gputl update --id exp01 --end "$(date -d '+2 hours' --iso-8601=seconds)"</code></pre></li>
-    <li><div><strong>완료 기록</strong><span>실험이 끝난 뒤 실행</span></div><pre><code>gputl finish --id exp01</code></pre></li>
-  </ol>
-  <p class="usage-note"><code>exp01</code>은 실험마다 다르게, <code>GEPA</code>는 원하는 이름으로 바꾸세요. GPU 여러 개는 <code>--gpus 0,1</code>로 입력합니다.</p>
-  <div class="usage-sync"><span>바로 업로드하려면</span><code>systemctl --user start gpu-timeline.service</code></div>
+  <div class="usage-grid">
+    <article class="usage-card usage-terminal" aria-labelledby="terminal-guide-title">
+      <header class="usage-card-heading"><span class="usage-label">TERMINAL</span><h3 id="terminal-guide-title">터미널에서 직접 입력</h3><p>실험 중인 GPU 서버의 SSH 터미널에서 실행하세요.</p></header>
+      <div class="usage-command">
+        <div class="usage-command-heading"><span><strong>먼저 준비</strong><small>새 터미널마다 한 번</small></span><button type="button" class="usage-copy" data-copy-target="usage-alias" aria-label="준비 명령 복사">복사</button></div>
+        <pre><code id="usage-alias">alias gputl='/usr/bin/python3 ~/gpu-timeline/agent/gpu_agent.py --config ~/.config/gpu-timeline/config.json'</code></pre>
+      </div>
+      <div class="usage-command">
+        <div class="usage-command-heading"><span><strong>실험 등록</strong><small>GPU 0 · 종료 예정 6시간 뒤</small></span><button type="button" class="usage-copy" data-copy-target="usage-add" aria-label="실험 등록 명령 복사">복사</button></div>
+        <pre><code id="usage-add">gputl add --id exp01 --name "GEPA" --gpus 0 \
+  --end "$(date -d '+6 hours' --iso-8601=seconds)"</code></pre>
+      </div>
+      <div class="usage-command">
+        <div class="usage-command-heading"><span><strong>완료 기록</strong><small>실험이 끝난 뒤 실행</small></span><button type="button" class="usage-copy" data-copy-target="usage-finish" aria-label="실험 완료 명령 복사">복사</button></div>
+        <pre><code id="usage-finish">gputl finish --id exp01</code></pre>
+      </div>
+      <details class="usage-more"><summary>예상 종료시간을 바꾸려면</summary><div class="usage-command"><div class="usage-command-heading"><span><small>지금부터 2시간 뒤로 변경</small></span><button type="button" class="usage-copy" data-copy-target="usage-update" aria-label="예상 종료시간 수정 명령 복사">복사</button></div><pre><code id="usage-update">gputl update --id exp01 \
+  --end "$(date -d '+2 hours' --iso-8601=seconds)"</code></pre></div></details>
+      <p class="usage-card-note"><code>exp01</code>은 실험마다 다르게, <code>GEPA</code>는 원하는 이름으로 바꾸세요. GPU 여러 개는 <code>--gpus 0,1</code>로 입력합니다.</p>
+    </article>
+    <article class="usage-card usage-agent" aria-labelledby="agent-guide-title">
+      <header class="usage-card-heading"><span class="usage-label">AGENT</span><h3 id="agent-guide-title">Agent에게 요청</h3><p>아래 요청문을 복사해 서버에 연결된 Agent에게 보내세요.</p></header>
+      <div class="usage-prompt">
+        <div class="usage-prompt-heading"><span>그대로 붙여넣는 요청문</span><button type="button" class="usage-copy" data-copy-target="usage-agent-prompt" data-copy-label="요청문 복사" aria-label="Agent 요청문 전체 복사">요청문 복사</button></div>
+        <pre id="usage-agent-prompt">앞으로 이 서버에서 내가 요청하는 실험을 실행할 때 GPU Timeline에도 기록해줘.
+
+수집기: ~/gpu-timeline/agent/gpu_agent.py
+설정 파일: ~/.config/gpu-timeline/config.json
+실행 방법: /usr/bin/python3 수집기경로 --config 설정파일경로 &lt;명령&gt;
+
+• 시작하면: add로 고유한 실험 ID, 실험명, 사용 GPU, 실제 시작시간을 등록해.
+• 계획이 바뀌면: 같은 ID의 정보를 update로 수정해. 예상 종료시간도 알 수 있을 때 갱신해.
+• 끝나면: 결과를 확인하고 finish로 완료·실패·취소를 구분해 기록해.
+
+GPU 번호는 nvidia-smi에 표시된 물리 번호를 사용해. 예상 종료시간을 모르면 생략하고, 이미 등록한 실험은 중복 추가하지 마.
+
+등록·수정·완료 후에는 아래 명령으로 바로 업로드해:
+systemctl --user start gpu-timeline.service
+
+자세한 옵션은 수집기의 --help와 각 명령의 --help로 확인해줘.</pre>
+      </div>
+      <p class="usage-card-note">GPU 사용률과 VRAM은 자동으로 수집됩니다. Agent는 실험명·일정·종료 결과를 함께 기록합니다.</p>
+    </article>
+  </div>
+  <div class="usage-bottom"><p>10분마다 자동 업로드 · 바로 반영하려면 아래 명령을 실행하세요.</p><div class="usage-sync"><code id="usage-sync">systemctl --user start gpu-timeline.service</code><button type="button" class="usage-copy" data-copy-target="usage-sync" aria-label="즉시 업로드 명령 복사">복사</button></div></div>
+  <p id="usage-feedback" class="usage-feedback" role="status" aria-live="polite"></p>
 </section>
 
 <footer><span>GPU TIMELINE</span><span>읽기 전용 · 서버에서 전달한 상태를 표시합니다.</span></footer></main>
-<dialog id="detail-dialog"><div class="dialog-heading"><span class="eyebrow">EXPERIMENT</span><button id="close-detail" aria-label="상세 닫기">×</button></div><div id="job-detail"></div></dialog><script type="module" src="./app.js"></script></body></html>
+<dialog id="detail-dialog"><div class="dialog-heading"><span class="eyebrow">EXPERIMENT</span><button id="close-detail" aria-label="상세 닫기">×</button></div><div id="job-detail"></div></dialog><script type="module" src="./app.js"></script><script type="module" src="./usage.js"></script></body></html>
