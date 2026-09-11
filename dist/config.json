@@ -1,11 +1,14 @@
 {
-  "mode": "demo",
+  "mode": "live",
   "title": "GPU Timeline",
   "refresh_seconds": 60,
   "stale_after_seconds": 1200,
   "data_base_url": "https://raw.githubusercontent.com/shxyzn/gpu-timeline/status/",
   "servers": [
-    {"id": "server-a", "name": "Server A", "file": "servers/server-a.json"},
-    {"id": "server-b", "name": "Server B", "file": "servers/server-b.json"}
+    {
+      "id": "server-a",
+      "name": "Server A",
+      "file": "servers/server-a.json"
+    }
   ]
 }
