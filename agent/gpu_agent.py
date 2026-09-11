@@ -21,6 +21,7 @@ import subprocess
 import sys
 import tempfile
 import time
+import uuid
 from contextlib import contextmanager
 from datetime import datetime, timezone
 from urllib.error import HTTPError
@@ -140,11 +141,15 @@ def normalize_gpu_selection(values, gpus):
     return selected
 
 
-def metadata_command(c, args):
+def metadata_command(c, args, owner_uid=None):
     state = Path(c["state_dir"])
     with locked(state / "jobs.lock"):
         jobs = read_jobs(state)
-        item = next((j for j in jobs if j["id"] == args.id), None)
+        if owner_uid is None:
+            item = next((j for j in jobs if j["id"] == args.id), None)
+        else:
+            item = next((j for j in jobs if j.get("_owner_uid") == owner_uid
+                         and j.get("_local_id") == args.id), None)
         if args.action == "add":
             if item:
                 raise ValueError("이미 존재하는 실험 id입니다. update를 사용하세요.")
@@ -160,6 +165,10 @@ def metadata_command(c, args):
                     "gpu_uuids": normalize_gpu_selection(args.gpus, collect_gpus()),
                     "status": "planned" if args.planned else "running", "started_at": started,
                     "expected_end_at": args.end, "ended_at": None, "eta_source": "manual"}
+            if owner_uid is not None:
+                item.update(id="job-" + uuid.uuid4().hex, _owner_uid=owner_uid, _local_id=args.id)
+            if args.owner:
+                item["owner"] = args.owner
             if args.pid:
                 identity = pid_identity(args.pid)
                 if not identity:
@@ -175,6 +184,8 @@ def metadata_command(c, args):
                 raise ValueError("종료시간은 시작시간 이후여야 합니다.")
             item.update(status=args.status, ended_at=end, end_source="manual")
         elif args.action == "update":
+            if args.owner:
+                item["owner"] = args.owner
             if args.name:
                 item["name"] = args.name
             if args.description is not None:
@@ -204,7 +215,9 @@ def metadata_command(c, args):
                     raise ValueError("--completed와 --total을 함께 입력하세요. 0 ≤ completed ≤ total, total > 0")
                 item["progress"] = {"completed": args.completed, "total": args.total}
         atomic_json(state / "jobs.json", jobs)
-    print(f"실험 정보 저장: {args.id}")
+    if owner_uid is None:
+        print(f"실험 정보 저장: {args.id}")
+    return item
 
 
 def make_snapshot(c):
@@ -235,9 +248,10 @@ def make_snapshot(c):
             atomic_json(state / "jobs.json", jobs)
     cutoff = datetime.now(timezone.utc).timestamp() - c.get("history_days", 30) * 86400
     public_jobs = []
-    # Whitelist fields: never publish PIDs, usernames, commands, local paths, tokens, or hostnames.
+    # owner is an explicitly supplied public label, never an OS username lookup.
+    # UID, local IDs, PIDs, commands, local paths and credentials stay private.
     fields = ("id", "name", "description", "gpu_uuids", "status", "started_at",
-              "expected_end_at", "ended_at", "eta_source", "progress", "end_source")
+              "expected_end_at", "ended_at", "eta_source", "progress", "end_source", "owner")
     for item in jobs:
         if item.get("ended_at") and parse_time(item["ended_at"]).timestamp() < cutoff:
             continue
@@ -295,15 +309,19 @@ def publish(c, snapshot):
             raise RuntimeError(f"GitHub 업로드 실패 (HTTP {error.code}). 저장소·토큰 권한·status 브랜치를 확인하세요.") from None
 
 
-def parser():
-    p = argparse.ArgumentParser(description=__doc__)
-    p.add_argument("--config", required=True, help="서버별 설정 JSON 경로")
+def parser(shared=False, parser_class=argparse.ArgumentParser):
+    p = parser_class(prog="gputl" if shared else None,
+                     description="공용 GPU Timeline 실험 기록" if shared else __doc__)
+    if not shared:
+        p.add_argument("--config", required=True, help="서버별 설정 JSON 경로")
     sub = p.add_subparsers(dest="action", required=True)
-    collect = sub.add_parser("collect", help="GPU 상태를 한 번 수집")
-    collect.add_argument("--publish", action="store_true", help="수집 후 GitHub에 업로드")
+    if not shared:
+        collect = sub.add_parser("collect", help="GPU 상태를 한 번 수집")
+        collect.add_argument("--publish", action="store_true", help="수집 후 GitHub에 업로드")
     add = sub.add_parser("add", help="실험 정보 등록. 실험을 실행하지 않습니다.")
     add.add_argument("--id", required=True)
     add.add_argument("--name", required=True)
+    add.add_argument("--owner", required=shared, help="대시보드에 공개할 사용자 표시 이름")
     add.add_argument("--gpus", required=True, help="물리 GPU index 또는 UUID. 예: 0,1")
     add.add_argument("--start")
     add.add_argument("--end")
@@ -313,6 +331,7 @@ def parser():
     update = sub.add_parser("update", help="실험 정보·진행률·예상 종료시간 변경")
     update.add_argument("--id", required=True)
     update.add_argument("--name")
+    update.add_argument("--owner", help="공개 표시 이름 수정. 실험 소유 계정은 변경되지 않습니다.")
     update.add_argument("--description")
     eta = update.add_mutually_exclusive_group()
     eta.add_argument("--end")
@@ -325,6 +344,10 @@ def parser():
     finish.add_argument("--id", required=True)
     finish.add_argument("--status", choices=["completed", "failed", "cancelled"], default="completed")
     finish.add_argument("--at")
+    if shared:
+        sub.add_parser("list", help="현재 계정의 최근 실험 최대 100개 확인")
+        sub.add_parser("status", help="공용 수집기와 마지막 업로드 상태 확인")
+        sub.add_parser("sync", help="업로드 요청. 여러 요청은 합쳐서 처리합니다.")
     return p
 
 

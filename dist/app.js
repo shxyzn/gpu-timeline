@@ -5,6 +5,7 @@ const escape=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&
 const fmt=(value,options={})=>{const t=typeof value==='number'?value:timestamp(value);return t===null?'미등록':new Intl.DateTimeFormat('ko-KR',{timeZone:'Asia/Seoul',...options}).format(t);};
 const time=v=>fmt(v,{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit',hourCycle:'h23'});
 const ago=t=>{const minutes=Math.max(0,Math.floor((Date.now()-(timestamp(t)??Date.now()))/60000));return minutes<1?'방금':minutes<60?`${minutes}분 전`:`${Math.floor(minutes/60)}시간 ${minutes%60}분 전`;};
+const jobLabel=j=>[j.name,j.owner].filter(Boolean).join(' · ');
 const statusLabels={running:'실행 중',planned:'예정',completed:'완료',failed:'실패',cancelled:'취소',stopped:'프로세스 종료 · 결과 미확인',unknown:'확인 필요'};
 let config,servers=[],hours=72,offset=0,lastFetch=null,fetchErrors=0,selected=null;
 const demo=demoSnapshot();
@@ -50,7 +51,7 @@ function render(){
       const jobs=s.jobs.filter(j=>j.gpu_uuids.includes(g.uuid));const bars=layoutJobs(jobs,start,end,now);const height=Math.max(84,(Math.max(0,...bars.map(b=>b.lane))+1)*54+30);
       const ok=health(s,now,stale).ok;
       const empty=bars.length?'':!ok?'마지막 상태 · 수신 확인 필요':gpuState(s,g,now,stale)==='busy'?'점유 중 · 표시할 실험 일정 없음':'표시할 실험 없음';
-      html+=`<div class="lane ${gi===0?'group-start':''} ${ok?'':'stale'}" style="min-height:${height}px"><div class="gpu-label"><div><strong>${escape(s.name)}</strong><small>${escape(g.name)}</small></div><span class="gpu-num">GPU ${g.index}</span></div><div class="track" style="--grid:${step/hours*100}%">${line}${empty?`<span class="empty-track">${empty}</span>`:''}${bars.map(b=>`<button class="job-bar ${b.job.status==='running'?['','violet','green'][si%3]:escape(b.job.status)} ${b.uncertain?'uncertain':''}" style="left:${b.left}%;width:${Math.min(b.width,100-b.left)}%;top:${20+b.lane*54}px" data-server="${escape(s.server_id)}" data-job="${escape(b.job.id)}" aria-label="${escape(b.job.name)} · ${escape(statusLabels[b.job.status]||b.job.status)} · ${b.uncertain?'종료 미정 또는 예정 초과':time(b.job.expected_end_at)}">${escape(b.job.name)}${b.uncertain?' · 종료 확인':''}</button>`).join('')}</div></div>`;
+      html+=`<div class="lane ${gi===0?'group-start':''} ${ok?'':'stale'}" style="min-height:${height}px"><div class="gpu-label"><div><strong>${escape(s.name)}</strong><small>${escape(g.name)}</small></div><span class="gpu-num">GPU ${g.index}</span></div><div class="track" style="--grid:${step/hours*100}%">${line}${empty?`<span class="empty-track">${empty}</span>`:''}${bars.map(b=>`<button class="job-bar ${b.job.status==='running'?['','violet','green'][si%3]:escape(b.job.status)} ${b.uncertain?'uncertain':''}" style="left:${b.left}%;width:${Math.min(b.width,100-b.left)}%;top:${20+b.lane*54}px" data-server="${escape(s.server_id)}" data-job="${escape(b.job.id)}" aria-label="${escape(jobLabel(b.job))} · ${escape(statusLabels[b.job.status]||b.job.status)} · ${b.uncertain?'종료 미정 또는 예정 초과':time(b.job.expected_end_at)}">${escape(jobLabel(b.job))}${b.uncertain?' · 종료 확인':''}</button>`).join('')}</div></div>`;
     });
   });
   $('timeline').innerHTML=servers.length?html:'<div class="blank">연결된 서버가 없습니다.</div>';
@@ -65,7 +66,7 @@ function serverCard(s,now,stale){
     const util=Number.isFinite(g.utilization)?g.utilization:null,used=Number.isFinite(g.memory_used_mib)?g.memory_used_mib:null,total=g.memory_total_mib;
     const pct=total>0&&used!==null?Math.min(100,used/total*100):0;
     const giB=v=>Number.isFinite(v)?(v/1024).toFixed(1):'—';
-    return `<div class="gpu-detail"><div class="gpu-detail-title"><strong>GPU ${g.index}</strong><small>${state==='unknown'?'확인 필요':state==='busy'?'점유 중':'현재 여유'}</small></div><div class="meter-line"><span>GPU 사용률${h.ok?'':' · 마지막 수신'}</span><span>${util===null?'—':util+'%'}</span></div><div class="meter"><div class="meter-fill" style="width:${Math.max(0,Math.min(100,util||0))}%"></div></div><div class="meter-line"><span>VRAM</span><span>${giB(used)} / ${giB(total)} GiB</span></div><div class="meter"><div class="meter-fill vram" style="width:${pct}%"></div></div>${running.map(j=>`<div class="gpu-experiment"><span>${escape(j.name)}</span><span>${j.expected_end_at?time(j.expected_end_at)+' 예정':'종료 미정'}</span></div>`).join('')}${!running.length&&state==='busy'?'<div class="gpu-experiment"><span>미등록 GPU 사용 감지</span></div>':''}</div>`;
+    return `<div class="gpu-detail"><div class="gpu-detail-title"><strong>GPU ${g.index}</strong><small>${state==='unknown'?'확인 필요':state==='busy'?'점유 중':'현재 여유'}</small></div><div class="meter-line"><span>GPU 사용률${h.ok?'':' · 마지막 수신'}</span><span>${util===null?'—':util+'%'}</span></div><div class="meter"><div class="meter-fill" style="width:${Math.max(0,Math.min(100,util||0))}%"></div></div><div class="meter-line"><span>VRAM</span><span>${giB(used)} / ${giB(total)} GiB</span></div><div class="meter"><div class="meter-fill vram" style="width:${pct}%"></div></div>${running.map(j=>`<div class="gpu-experiment"><span>${escape(jobLabel(j))}</span><span>${j.expected_end_at?time(j.expected_end_at)+' 예정':'종료 미정'}</span></div>`).join('')}${!running.length&&state==='busy'?'<div class="gpu-experiment"><span>미등록 GPU 사용 감지</span></div>':''}</div>`;
   }).join('');
   return `<article class="server-card"><div class="server-heading"><h3>${escape(s.name)}</h3><span class="state ${h.ok?'':'warning'}">${h.label}</span></div><p class="server-meta">${escape([...new Set(s.gpus.map(g=>g.name))].join(' / ')||'GPU 정보 대기')} · ${s.gpus.length} GPU<br>마지막 수신 ${s.updated_at?ago(s.updated_at):'없음'}</p>${rows||'<p class="server-meta">서버 수집 프로그램의 연결을 확인해 주세요.</p>'}</article>`;
 }
@@ -75,6 +76,7 @@ function fillDetail(server,id){
   const elapsed=started===null||j.status==='planned'?'—':`${Math.max(0,((actualEnd??now)-started)/HOUR).toFixed(1)}시간`;
   const eta=timestamp(j.expected_end_at),isOver=j.status==='running'&&eta!==null&&eta<now;
   const fields=[['서버',s.name],['GPU',s.gpus.filter(g=>j.gpu_uuids.includes(g.uuid)).map(g=>`GPU ${g.index}`).join(', ')],['상태',statusLabels[j.status]||j.status],['시작',time(j.started_at)],['사용 시간',elapsed],['예상 종료',eta===null?'미등록':time(eta)+(isOver?' · 예정 초과':'')],['종료 기준',j.eta_source==='progress'?'진행률 기반 추정':'직접 입력'],['실제 종료',time(j.ended_at)]];
+  if(j.owner)fields.splice(1,0,['등록자',j.owner]);
   if(j.progress)fields.push(['진행',`${j.progress.completed} / ${j.progress.total}`]);
   if(j.end_source==='observed')fields.push(['종료 관측','수집 시점에 PID 종료 감지 · 성공 여부 미확인']);
   $('job-detail').innerHTML=`<h3>${escape(j.name)}</h3><p>${escape(j.description||'')}</p><dl>${fields.map(([k,v])=>`<dt>${k}</dt><dd>${escape(v)}</dd>`).join('')}</dl>${!health(s,now,config.stale_after_seconds||1200).ok?'<p>갱신이 지연되어 마지막 수신 정보입니다.</p>':''}`;

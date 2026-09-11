@@ -1,0 +1,40 @@
+name: Check collector and shared access
+on:
+  push:
+    branches: [main]
+    paths: ['agent/**', 'tests/**', 'dist/**', '.github/workflows/checks.yml']
+  pull_request:
+    paths: ['agent/**', 'tests/**', 'dist/**', '.github/workflows/checks.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  check:
+    runs-on: ubuntu-22.04
+    strategy:
+      matrix:
+        python: ['3.8', '3.11']
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      - name: Collector, compatibility and Unix socket checks
+        env:
+          GPU_TIMELINE_REQUIRE_SOCKET_TESTS: '1'
+        run: python -m unittest discover -s tests -p 'test_*.py' -v
+      - name: Real separate-account authorization check
+        if: matrix.python == '3.11'
+        run: sudo env GPU_TIMELINE_REQUIRE_SOCKET_TESTS=1 "$(command -v python)" -m unittest discover -s tests -p 'test_shared.py' -v
+      - name: Install and migrate on a disposable server
+        if: matrix.python == '3.11'
+        run: sudo env GITHUB_ACTIONS=true bash tests/ci_shared_install.sh "$(command -v python)"
+      - name: CLI and installer syntax
+        run: |
+          bash -n agent/install-shared.sh
+          python agent/shared_cli.py add --help
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Dashboard behavior
+        run: node --test tests/model.test.js

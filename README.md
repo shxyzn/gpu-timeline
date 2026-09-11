@@ -2,7 +2,9 @@
 
 SSH로 사용하는 여러 서버의 GPU 실험과 예상 종료시간을 조회하는 대시보드입니다. 상단은 서버/GPU별 가로 타임라인, 하단은 GPU 사용률·VRAM·마지막 갱신 정보입니다. 첨부한 일정표의 행/시간축/막대 구성을 바탕으로 만들었습니다.
 
-**현재 화면은 예시 데이터입니다. 실제 GPU 서버에는 아직 연결하지 않았습니다.** 저장소는 `shxyzn/gpu-timeline`이며, 아래 서버 설정을 완료한 뒤 실데이터로 전환할 수 있습니다.
+공개 대시보드: **https://shxyzn.github.io/gpu-timeline/**. 현재 설정은 실제 서버 데이터를 읽는 live 모드입니다.
+
+**여러 사람이 각자 계정으로 쓰는 서버는 [공용 설치 안내](SHARED_SETUP.md)를 사용하세요.** 관리자(`cvml` 등)가 서버당 한 번 설치하면 모든 계정에서 `gputl`로 자기 실험을 기록할 수 있습니다. 토큰·수집기·서비스를 사용자마다 설치할 필요가 없습니다. 아래 개인 설치 절차는 기존 단일 계정 운영을 위한 설명입니다.
 
 ## 구성
 
@@ -238,6 +240,9 @@ python3 -m unittest discover -s tests -p 'test_*.py'
 | `dist/` | 그대로 배포할 정적 웹 파일. `config.json`에서 demo/live 전환 |
 | `agent/gpu_agent.py` | 상태 조회·등록·업로드 명령 |
 | `agent/config.example.json` | 서버 설정 예시 |
+| `SHARED_SETUP.md` | 연구실 공용 설치·기존 기록 전환·사용자 안내 |
+| `agent/install-shared.sh`, `install_shared.py` | 서버당 한 번 실행하는 관리자 설치 프로그램 |
+| `agent/shared_daemon.py`, `shared_cli.py` | 사용자별 실험 권한을 확인하는 공용 수집기와 클라이언트 |
 | `agent/gpu-timeline.service`, `.timer` | 사용자 systemd 자동 업로드 예시 |
 | `.github/workflows/pages.yml` | GitHub Pages 배포 |
 | `tests/` | 핵심 동작 검증 |
