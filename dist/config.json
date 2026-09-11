@@ -9,6 +9,11 @@
       "id": "server-a",
       "name": "Server A",
       "file": "servers/server-a.json"
+    },
+    {
+      "id": "server-b",
+      "name": "Server B",
+      "file": "servers/server-b.json"
     }
   ]
 }
