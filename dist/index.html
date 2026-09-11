@@ -5,5 +5,24 @@
 <section class="workspace" aria-labelledby="timeline-title"><div class="toolbar"><div><h2 id="timeline-title">실험 타임라인</h2><p id="window-label"></p></div><div class="controls"><div class="segmented" aria-label="표시 기간"><button data-hours="24">24시간</button><button data-hours="72" class="active" aria-pressed="true">3일</button><button data-hours="168">7일</button></div><div class="stepper"><button id="previous" aria-label="이전 기간">‹</button><button id="today">현재</button><button id="next" aria-label="다음 기간">›</button></div><button id="refresh">새로고침</button></div></div>
 <div class="legend"><span><i class="running"></i>실행 중</span><span><i class="planned"></i>예정</span><span><i class="completed"></i>완료</span><span><i class="uncertain"></i>종료 미정·초과</span><span class="legend-note">막대를 누르면 실험 상세를 볼 수 있어요.</span></div>
 <div id="notice" class="notice" role="status"></div><div class="timeline-scroll"><div id="timeline" class="timeline" aria-label="GPU별 실험 일정"></div></div><div class="timeline-foot"><span id="sync-label">상태 확인 중</span><span>Asia/Seoul · 예상 종료시간은 변경될 수 있습니다.</span></div></section>
-<section class="details" aria-labelledby="details-title"><div class="section-title"><h2 id="details-title">서버 상세</h2><span>GPU 상태와 실행 정보</span></div><div id="servers" class="server-grid"></div></section><footer><span>GPU TIMELINE</span><span>읽기 전용 · 서버에서 전달한 상태를 표시합니다.</span></footer></main>
+<section class="details" aria-labelledby="details-title"><div class="section-title"><h2 id="details-title">서버 상세</h2><span>GPU 상태와 실행 정보</span></div><div id="servers" class="server-grid"></div></section>
+
+<!-- 간단 사용법: 이 section의 문구와 명령어를 수정하세요. -->
+<section id="usage" class="usage" aria-labelledby="usage-title">
+  <div class="section-title"><h2 id="usage-title">간단 사용법</h2><a href="https://github.com/shxyzn/gpu-timeline/blob/main/README.md">전체 설명서 ↗</a></div>
+  <p class="usage-intro">GPU 상태는 10분마다 자동 갱신됩니다. 실험은 평소처럼 실행하고, <strong>그 서버의 SSH 터미널</strong>에서 아래 명령으로 정보를 등록하세요.</p>
+  <div class="usage-setup">
+    <span>준비 · 새 터미널마다 한 번</span>
+    <pre><code>alias gputl='/usr/bin/python3 ~/gpu-timeline/agent/gpu_agent.py --config ~/.config/gpu-timeline/config.json'</code></pre>
+  </div>
+  <ol class="usage-steps">
+    <li><div><strong>실험 등록</strong><span>GPU 0 · 종료 예정 6시간 뒤</span></div><pre><code>gputl add --id exp01 --name "GEPA" --gpus 0 --end "$(date -d '+6 hours' --iso-8601=seconds)"</code></pre></li>
+    <li><div><strong>종료 예정 수정</strong><span>지금부터 2시간 뒤로 변경</span></div><pre><code>gputl update --id exp01 --end "$(date -d '+2 hours' --iso-8601=seconds)"</code></pre></li>
+    <li><div><strong>완료 기록</strong><span>실험이 끝난 뒤 실행</span></div><pre><code>gputl finish --id exp01</code></pre></li>
+  </ol>
+  <p class="usage-note"><code>exp01</code>은 실험마다 다르게, <code>GEPA</code>는 원하는 이름으로 바꾸세요. GPU 여러 개는 <code>--gpus 0,1</code>로 입력합니다.</p>
+  <div class="usage-sync"><span>바로 업로드하려면</span><code>systemctl --user start gpu-timeline.service</code></div>
+</section>
+
+<footer><span>GPU TIMELINE</span><span>읽기 전용 · 서버에서 전달한 상태를 표시합니다.</span></footer></main>
 <dialog id="detail-dialog"><div class="dialog-heading"><span class="eyebrow">EXPERIMENT</span><button id="close-detail" aria-label="상세 닫기">×</button></div><div id="job-detail"></div></dialog><script type="module" src="./app.js"></script></body></html>
