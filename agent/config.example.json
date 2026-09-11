@@ -1,0 +1,8 @@
+{
+  "server_id": "server-a",
+  "name": "Atlas",
+  "github_repository": "shxyzn/gpu-timeline",
+  "github_branch": "status",
+  "state_dir": "~/.local/state/gpu-timeline",
+  "history_days": 30
+}

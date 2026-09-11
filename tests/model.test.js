@@ -1,0 +1,35 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {health,gpuState,layoutJobs,HOUR} from '../dist/model.js';
+const now=Date.parse('2026-09-11T12:00:00Z');
+const iso=h=>new Date(now+h*HOUR).toISOString();
+const gpu={uuid:'GPU-0',process_count:0,utilization:0,memory_used_mib:10};
+const server={updated_at:iso(0),collector_ok:true,gpus:[gpu],jobs:[]};
+test('stale or failed telemetry never marks a GPU available',()=>{
+  assert.equal(gpuState(server,gpu,now,1200),'idle');
+  assert.equal(gpuState({...server,updated_at:iso(-1)},gpu,now,1200),'unknown');
+  assert.equal(gpuState({...server,collector_ok:false},gpu,now,1200),'unknown');
+  assert.equal(gpuState({...server,fetch_error:true},gpu,now,1200),'unknown');
+  assert.equal(health({...server,updated_at:iso(1)},now,1200).ok,false);
+});
+test('missing process visibility and active low-utilization jobs do not imply free GPU',()=>{
+  assert.equal(gpuState(server,{...gpu,process_count:null},now,1200),'unknown');
+  assert.equal(gpuState(server,{...gpu,memory_used_mib:4000},now,1200),'busy');
+  assert.equal(gpuState({...server,jobs:[{status:'running',gpu_uuids:['GPU-0']}]},gpu,now,1200),'busy');
+});
+test('unknown and overdue ETA end at now without inventing future duration',()=>{
+  const jobs=[{id:'a',status:'running',started_at:iso(-4),expected_end_at:null},{id:'b',status:'running',started_at:iso(-2),expected_end_at:iso(-1)}];
+  const bars=layoutJobs(jobs,now-6*HOUR,now+6*HOUR,now);
+  assert.equal(bars.length,2);assert.ok(bars.every(b=>b.to===now&&b.uncertain));
+  assert.deepEqual(bars.map(b=>b.lane),[0,1]);
+});
+test('multi-process overlaps stack while adjacent jobs reuse a lane',()=>{
+  const jobs=[{id:'a',status:'planned',started_at:iso(0),expected_end_at:iso(2)},{id:'b',status:'planned',started_at:iso(1),expected_end_at:iso(3)},{id:'c',status:'planned',started_at:iso(2),expected_end_at:iso(4)}];
+  assert.deepEqual(layoutJobs(jobs,now,now+6*HOUR,now).map(b=>b.lane),[0,1,0]);
+});
+test('stopped experiments use observed end, completed experiments use actual end',()=>{
+  const jobs=[{id:'a',status:'stopped',started_at:iso(-5),expected_end_at:iso(3),ended_at:iso(-2)},{id:'b',status:'completed',started_at:iso(-1),expected_end_at:iso(3),ended_at:iso(0)}];
+  const bars=layoutJobs(jobs,now-3*HOUR,now+6*HOUR,now);
+  assert.equal(bars[0].from,now-3*HOUR);assert.equal(bars[0].to,now-2*HOUR);
+  assert.equal(bars[1].to,now);assert.ok(bars.every(b=>!b.uncertain));
+});

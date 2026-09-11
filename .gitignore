@@ -1,0 +1,7 @@
+.sites-runtime/
+__pycache__/
+*.pyc
+agent/config.json
+agent/jobs.json
+agent/state/
+.env

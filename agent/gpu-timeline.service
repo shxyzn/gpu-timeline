@@ -1,0 +1,11 @@
+[Unit]
+Description=GPU Timeline snapshot publisher
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+EnvironmentFile=%h/.config/gpu-timeline/agent.env
+ExecStart=/usr/bin/python3 %h/gpu-timeline/agent/gpu_agent.py --config %h/.config/gpu-timeline/config.json collect --publish
+TimeoutStartSec=180
+UMask=0077
