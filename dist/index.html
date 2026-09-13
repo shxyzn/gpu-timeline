@@ -1,6 +1,17 @@
 <!doctype html>
-<html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="description" content="서버별 GPU 실험과 예상 종료시간을 한눈에 확인하는 타임라인"><title>GPU Timeline</title><link rel="stylesheet" href="./styles.css"><link rel="stylesheet" href="./usage.css"></head>
+<html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="description" content="서버별 GPU 실험과 예상 종료시간을 한눈에 확인하는 타임라인"><title>GPU Timeline</title><link rel="stylesheet" href="./styles.css"><link rel="stylesheet" href="./usage.css"><style id="development-info-styles">
+.development-info{display:flex;align-items:flex-start;gap:12px;margin:0 0 24px;padding:16px 20px;background:#fff9e6;border:1px solid #f1e4ba;border-radius:12px;color:#766338;font-size:.875rem;line-height:1.75}
+.development-info-icon{flex:0 0 20px;width:20px;height:20px;margin-top:2px;color:#a58430}
+.development-info-copy{display:flex;align-items:baseline;flex-wrap:wrap;gap:3px 12px;min-width:0}
+.development-info strong{color:#715a25;font-weight:600;white-space:nowrap}
+.development-info p{margin:0;word-break:keep-all;overflow-wrap:anywhere}
+@media(max-width:640px){.development-info{gap:10px;padding:14px 16px;margin-bottom:20px}.development-info-copy{display:block}.development-info p{margin-top:4px}}
+</style></head>
 <body><main><header><div class="brand"><span class="brand-mark" aria-hidden="true"></span><div><p class="eyebrow">COMPUTE WORKSPACE</p><h1>GPU <span>Timeline</span></h1></div></div><div class="header-right"><span id="mode" class="badge">불러오는 중</span><span id="clock"></span></div></header>
+<aside id="development-info" class="development-info" role="note" aria-label="개발 안내">
+  <svg class="development-info-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M12 11v6"></path><circle cx="12" cy="7.5" r=".8" fill="currentColor" stroke="none"></circle></svg>
+  <div class="development-info-copy"><strong>개발 중 안내</strong><p>현재 개발 중인 대시보드입니다. 표시 정보가 부정확하거나 실제 상태보다 늦게 반영될 수 있습니다.</p></div>
+</aside>
 <section class="overview" aria-label="사용 현황 요약" id="overview"></section>
 <section class="workspace" aria-labelledby="timeline-title"><div class="toolbar"><div><h2 id="timeline-title">실험 타임라인</h2><p id="window-label"></p></div><div class="controls"><div class="segmented" aria-label="표시 기간"><button data-hours="24">24시간</button><button data-hours="72" class="active" aria-pressed="true">3일</button><button data-hours="168">7일</button></div><div class="stepper"><button id="previous" aria-label="이전 기간">‹</button><button id="today">현재</button><button id="next" aria-label="다음 기간">›</button></div><button id="refresh">새로고침</button></div></div>
 <div class="legend"><span><i class="running"></i>실행 중</span><span><i class="planned"></i>예정</span><span><i class="completed"></i>완료</span><span><i class="uncertain"></i>종료 미정·초과</span><span class="legend-note">막대를 누르면 실험 상세를 볼 수 있어요.</span></div>
