@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="description" content="서버별 GPU 실험과 예상 종료시간을 한눈에 확인하는 타임라인"><title>GPU Timeline</title><link rel="stylesheet" href="./styles.css"><link rel="stylesheet" href="./usage.css"><style id="development-info-styles">
+<html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="description" content="서버별 GPU 실험과 예상 종료시간을 한눈에 확인하는 타임라인"><title>CVML GPU Timeline</title><link rel="stylesheet" href="./styles.css"><link rel="stylesheet" href="./usage.css"><style id="development-info-styles">
 .development-info{display:flex;align-items:flex-start;gap:12px;margin:0 0 24px;padding:16px 20px;background:#fff9e6;border:1px solid #f1e4ba;border-radius:12px;color:#766338;font-size:.875rem;line-height:1.75}
 .development-info-icon{flex:0 0 20px;width:20px;height:20px;margin-top:2px;color:#a58430}
 .development-info-copy{display:flex;align-items:baseline;flex-wrap:wrap;gap:3px 12px;min-width:0}
@@ -7,7 +7,7 @@
 .development-info p{margin:0;word-break:keep-all;overflow-wrap:anywhere}
 @media(max-width:640px){.development-info{gap:10px;padding:14px 16px;margin-bottom:20px}.development-info-copy{display:block}.development-info p{margin-top:4px}}
 </style></head>
-<body><main><header><div class="brand"><span class="brand-mark" aria-hidden="true"></span><div><p class="eyebrow">COMPUTE WORKSPACE</p><h1>GPU <span>Timeline</span></h1></div></div><div class="header-right"><span id="mode" class="badge">불러오는 중</span><span id="clock"></span></div></header>
+<body><main><header><div class="brand"><span class="brand-mark" aria-hidden="true"></span><div><p class="eyebrow">GPU UTILIZATION DASHBOARD</p><h1>CVML GPU <span>Timeline</span></h1></div></div><div class="header-right"><span id="mode" class="badge">불러오는 중</span><span id="clock"></span></div></header>
 <aside id="development-info" class="development-info" role="note" aria-label="개발 안내">
   <svg class="development-info-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M12 11v6"></path><circle cx="12" cy="7.5" r=".8" fill="currentColor" stroke="none"></circle></svg>
   <div class="development-info-copy"><strong>개발 중 안내</strong><p>현재 개발 중인 대시보드입니다. 표시 정보가 부정확하거나 실제 상태보다 늦게 반영될 수 있습니다.</p></div>
@@ -71,5 +71,5 @@
   <p id="usage-feedback" class="usage-feedback" role="status" aria-live="polite"></p>
 </section>
 
-<footer><span>GPU TIMELINE</span><span>읽기 전용 · 서버에서 전달한 상태를 표시합니다.</span></footer></main>
+<footer><span>CVML GPU TIMELINE</span><span>읽기 전용 · 서버에서 전달한 상태를 표시합니다.</span></footer></main>
 <dialog id="detail-dialog"><div class="dialog-heading"><span class="eyebrow">EXPERIMENT</span><button id="close-detail" aria-label="상세 닫기">×</button></div><div id="job-detail"></div></dialog><script type="module" src="./app.js"></script><script type="module" src="./usage.js"></script></body></html>

@@ -32,7 +32,7 @@ async function refresh(){
 }
 function render(){
   const {now,start,end}=viewWindow();const stale=config.stale_after_seconds||1200;
-  document.title=config.title||'GPU Timeline';$('clock').textContent=fmt(now,{hour:'2-digit',minute:'2-digit',hourCycle:'h23'})+' KST';$('mode').textContent=config.mode==='demo'?'예시 데이터':'조회 전용';
+  document.title=config.title||'CVML GPU Timeline';$('clock').textContent=fmt(now,{hour:'2-digit',minute:'2-digit',hourCycle:'h23'})+' KST';$('mode').textContent=config.mode==='demo'?'예시 데이터':'조회 전용';
   const states=servers.flatMap(s=>s.gpus.map(g=>gpuState(s,g,now,stale)));
   const unknownServers=servers.filter(s=>!health(s,now,stale).ok).length;
   const stats=[['전체 GPU',states.length,'개',`${servers.length}개 서버`,''],['현재 점유',states.filter(x=>x==='busy').length,'개','등록 실험·실제 사용 기준','purple'],['현재 여유',states.filter(x=>x==='idle').length,'개','예약·독점 사용은 보장하지 않음','green'],['확인 필요',states.filter(x=>x==='unknown').length,'개',`${unknownServers}개 서버 수신 상태 확인`,'amber']];

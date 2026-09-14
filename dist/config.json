@@ -1,6 +1,6 @@
 {
   "mode": "live",
-  "title": "GPU Timeline",
+  "title": "CVML GPU Timeline",
   "refresh_seconds": 60,
   "stale_after_seconds": 1200,
   "data_base_url": "https://raw.githubusercontent.com/shxyzn/gpu-timeline/status/",
