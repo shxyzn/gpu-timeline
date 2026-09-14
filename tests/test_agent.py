@@ -3,9 +3,12 @@ import io
 import json
 from pathlib import Path
 import tempfile
+import sys
 import unittest
 from unittest.mock import patch
 from urllib.error import HTTPError
+
+sys.path.insert(0, str(Path(__file__).parents[1] / "agent"))
 
 spec = importlib.util.spec_from_file_location('agent', Path(__file__).parents[1] / 'agent/gpu_agent.py')
 agent = importlib.util.module_from_spec(spec)

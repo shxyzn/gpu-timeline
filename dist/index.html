@@ -54,13 +54,14 @@
 
 • 새 실험: gputl run --name "실험명" --owner "공개 표시 이름" --gpus 물리번호 -- 원래명령 형태로 실행해. 시작·종료는 자동 기록되니 add/finish를 중복 호출하지 마.
 • 이미 실행 중인 실험: 재실행하지 말고 add로 실제 시작시간과 정보를 기록해. 결과 확인 후 finish로 완료·실패·취소를 구분해.
-• 예상 종료를 알면 --end로 입력하고, 변경은 list에서 ID를 확인해 update해. 모르면 추측하지 마.
+• 예상 종료를 알면 --end로 입력해. 진행량을 알면 update --completed 완료수 --total 전체수로 기록해. 사이트가 진행률로 완료 예정을 추정해.
 
 공개 표시 이름은 내가 지정한 이름을 사용하고 없으면 확인해. --gpus는 기록용이므로 실제 GPU 선택 설정도 일치시켜야 해. 원래 명령은 작업이 끝날 때까지 기다리는 형태로 실행하고, 장시간 작업은 tmux를 사용해.
 
 종료 기록 전송 실패 안내가 나오면 수집기 복구 후 replay로 재전송해. 강제 종료·서버 재부팅 등으로 결과를 못 받으면 완료로 단정하지 말고 실제 상태를 확인해.
 
-업로드는 공용 수집기가 처리하고 status에서 결과를 확인해. 개인 수집기·토큰·서비스를 만들거나 sudo로 실험을 실행하지 마. run이 없으면 관리자에게 공용 수집기 업데이트를 요청해.</pre>
+v1.1 이상 서버에서는 list의 reference가 사이트의 실험 ID와 같아. 사이트에서 복사한 서버/실험 ID를 update와 finish의 --id에 그대로 써도 돼. 이전 서버에서는 기존 명령어용 ID를 사용해.
+업로드는 공용 수집기가 처리하고 status에서 결과와 설치 버전을 확인해. 개인 수집기·토큰·서비스를 만들거나 sudo로 실험을 실행하지 마. run이 없으면 관리자에게 공용 수집기 업데이트를 요청해.</pre>
       </div>
       <p class="usage-card-note">각 사용자는 자기 실험만 수정합니다. GPU 사용률·VRAM 수집과 GitHub 업로드는 서버의 공용 수집기가 담당합니다.</p>
     </article>
@@ -70,5 +71,5 @@
   <p id="usage-feedback" class="usage-feedback" role="status" aria-live="polite"></p>
 </section>
 
-<footer><span>CVML GPU TIMELINE</span><span>읽기 전용 · 서버에서 전달한 상태를 표시합니다.</span></footer></main>
+<footer><div class="footer-version"><span>CVML GPU TIMELINE</span><a id="dashboard-version" class="version-tag" target="_blank" rel="noopener noreferrer">대시보드 버전 확인 중</a><span id="deployment-version"></span></div><span>읽기 전용 · 서버에서 전달한 상태를 표시합니다.</span></footer></main>
 <dialog id="detail-dialog"><div class="dialog-heading"><span class="eyebrow">EXPERIMENT</span><button id="close-detail" aria-label="상세 닫기">×</button></div><div id="job-detail"></div></dialog><script type="module" src="./app.js"></script><script type="module" src="./usage.js"></script></body></html>

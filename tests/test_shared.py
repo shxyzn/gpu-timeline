@@ -120,9 +120,51 @@ class SharedTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             installer.service_text("cvml", "/tmp/python\nUser=root")
 
+
+    def test_public_reference_matches_dashboard_and_preserves_account_isolation(self):
+        result = self.add(1001)
+        reference = result["reference"]
+        one = self.broker.dispatch(["list"], 1001)["jobs"][0]
+        public = agent.make_snapshot(self.config)["jobs"][0]
+        self.assertEqual(reference, self.config["server_id"] + "/" + public["id"])
+        self.assertEqual(one["reference"], reference)
+        self.assertEqual(one["id"], "exp01")
+        self.broker.dispatch(["update", "--id", reference, "--name", "Renamed"], 1001)
+        for argv in (["finish", "--id", reference],
+                     ["update", "--id", reference, "--name", "Forbidden"]):
+            with self.assertRaises(ValueError):
+                self.broker.dispatch(argv, 1002)
+        with self.assertRaises(ValueError):
+            self.broker.dispatch(["finish", "--id", "wrong-server/" + public["id"]], 1001)
+        self.broker.dispatch(["finish", "--id", reference], 1001)
+        own = self.broker.dispatch(["list"], 1001)["jobs"][0]
+        self.assertEqual((own["name"], own["status"]), ("Renamed", "completed"))
+
+    def test_qualified_ids_cannot_be_used_to_register_or_escape_paths(self):
+        for job_id in ("test-server/job-example", "../example", "test-server/../example"):
+            with self.assertRaises(ValueError):
+                self.add(1001, job_id)
+
+    def test_progress_timestamp_is_published_and_restart_drops_old_progress(self):
+        self.add(1001)
+        stamp = agent.now_iso()
+        with patch.object(agent, "now_iso", return_value=stamp):
+            self.broker.dispatch(["update", "--id", "exp01", "--completed", "25", "--total", "100"], 1001)
+        self.assertEqual(agent.make_snapshot(self.config)["jobs"][0]["progress"],
+                         {"completed": 25, "total": 100, "updated_at": stamp})
+        self.broker.dispatch(["update", "--id", "exp01", "--start", stamp], 1001)
+        self.assertNotIn("progress", agent.make_snapshot(self.config)["jobs"][0])
+
+    def test_status_and_snapshot_report_the_same_installed_version(self):
+        version = {"version": "1.1.0", "deployment_version": "1.1", "revision": "a" * 40,
+                   "dirty": False, "installed_at": agent.now_iso()}
+        with patch.object(agent.version_info, "runtime_version", return_value=version):
+            self.assertEqual(self.broker.dispatch(["status"], 1001)["agent_version"], version)
+            self.assertEqual(agent.make_snapshot(self.config)["agent_version"], version)
+
     def test_shared_client_and_imports_parse_on_python38(self):
         root = Path(__file__).parents[1] / "agent"
-        for name in ("shared_cli.py", "gpu_agent.py"):
+        for name in ("shared_cli.py", "gpu_agent.py", "version_info.py"):
             ast.parse((root / name).read_text(), feature_version=(3, 8))
 
     def test_unix_socket_rejects_claimed_uid_and_uses_kernel_identity(self):

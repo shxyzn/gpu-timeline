@@ -15,9 +15,28 @@ export function gpuState(server,gpu,now,staleSeconds){
   if(gpu.process_count===null||gpu.process_count===undefined||gpu.utilization===null||gpu.memory_used_mib===null)return 'unknown';
   return 'idle';
 }
-export function layoutJobs(jobs,start,end,now){
+
+export function jobETA(job, snapshotAt){
+  const supplied=timestamp(job.expected_end_at);
+  if(supplied!==null&&job.eta_source!=='progress')return {at:supplied,source:'manual',approximate:false};
+  if(job.status!=='running')return {at:null,source:null};
+  const p=job.progress, start=timestamp(job.started_at);
+  if(!p||!Number.isFinite(p.completed)||!Number.isFinite(p.total)||p.completed<=0||p.total<=0||p.completed>=p.total||start===null)return {at:null,source:null};
+  const recorded=timestamp(p.updated_at), observed=recorded??timestamp(snapshotAt);
+  if(observed===null||observed<=start)return {at:null,source:null};
+  const at=start+(observed-start)*p.total/p.completed;
+  if(!Number.isFinite(at)||at>8.64e15)return {at:null,source:null};
+  return {at,source:'progress',observedAt:observed,approximate:recorded===null};
+}
+export function versionLabel(info){
+  if(!info||typeof info.version!=='string'||!/^\d+\.\d+\.\d+$/.test(info.version))return null;
+  const revision=/^[0-9a-f]{40}$/.test(info.revision||'')?info.revision.slice(0,7):'unknown';
+  return 'v'+info.version+'+'+revision+(info.dirty===true?'.dirty':'');
+}
+
+export function layoutJobs(jobs,start,end,now,snapshotAt=null){
   const visible=jobs.map(job=>{
-    const from=timestamp(job.started_at);const plannedEnd=timestamp(job.expected_end_at);const actual=timestamp(job.ended_at);
+    const from=timestamp(job.started_at);const plannedEnd=jobETA(job,snapshotAt).at;const actual=timestamp(job.ended_at);
     const terminal=['completed','failed','cancelled','stopped'].includes(job.status);
     // Completion requires an actual end; never draw a finished job into the future.
     let to=terminal?actual:plannedEnd;
