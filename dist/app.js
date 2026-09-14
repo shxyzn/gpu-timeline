@@ -84,8 +84,27 @@ function fillDetail(server,id){
   if(Number.isInteger(j.stop_signal))fields.push(['종료 신호',String(j.stop_signal)]);
   if(j.end_source==='launch_error')fields.push(['실행 결과','명령을 시작하지 못했거나 시작 전 취소됨']);
   if(j.end_source==='tracking_lost')fields.push(['실행 확인',`${time(j.tracking_lost_at)} 추적 연결 끊김 · 종료 결과 미확인`]);
-  $('job-detail').innerHTML=`<h3>${escape(j.name)}</h3><p>${escape(j.description||'')}</p><dl>${fields.map(([k,v])=>`<dt>${k}</dt><dd>${escape(v)}</dd>`).join('')}</dl>${!health(s,now,config.stale_after_seconds||1200).ok?'<p>갱신이 지연되어 마지막 수신 정보입니다.</p>':''}`;
+  const reference=`${s.server_id}/${j.id}`;
+  $('job-detail').innerHTML=`<h3>${escape(j.name)}</h3><div class="experiment-reference"><div class="experiment-reference-text"><span>실험 ID</span><code id="experiment-reference-value">${escape(reference)}</code></div><button type="button" data-copy-experiment-id aria-label="실험 ID 복사">복사</button></div><p id="experiment-copy-feedback" class="experiment-copy-feedback" role="status" aria-live="polite"></p><p>${escape(j.description||'')}</p><dl>${fields.map(([k,v])=>`<dt>${k}</dt><dd>${escape(v)}</dd>`).join('')}</dl>${!health(s,now,config.stale_after_seconds||1200).ok?'<p>갱신이 지연되어 마지막 수신 정보입니다.</p>':''}`;
 }
+$('job-detail').addEventListener('click',async e=>{
+  const button=e.target.closest('button[data-copy-experiment-id]');if(!button)return;
+  const value=$('experiment-reference-value')?.textContent;if(!value)return;
+  button.disabled=true;
+  try{
+    await navigator.clipboard.writeText(value);
+    if(!button.isConnected)return;
+    button.textContent='복사됨';
+    $('experiment-copy-feedback').textContent='실험 ID를 복사했어요. 이 ID로 실험을 알려주세요.';
+  }catch{
+    if(!button.isConnected)return;
+    button.textContent='복사 실패';
+    $('experiment-copy-feedback').textContent='위 ID를 직접 선택해서 복사해 주세요.';
+  }finally{
+    button.disabled=false;
+    setTimeout(()=>{if(button.isConnected)button.textContent='복사';},2200);
+  }
+});
 $('timeline').addEventListener('click',e=>{const b=e.target.closest('[data-job]');if(!b)return;selected={server:b.dataset.server,id:b.dataset.job};fillDetail(selected.server,selected.id);$('detail-dialog').showModal();});
 $('close-detail').onclick=()=>$('detail-dialog').close();
 $('detail-dialog').addEventListener('click',e=>{if(e.target===$('detail-dialog')){const r=e.target.getBoundingClientRect();if(e.clientX<r.left||e.clientX>r.right||e.clientY<r.top||e.clientY>r.bottom)e.target.close();}});
