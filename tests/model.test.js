@@ -33,3 +33,11 @@ test('stopped experiments use observed end, completed experiments use actual end
   assert.equal(bars[0].from,now-3*HOUR);assert.equal(bars[0].to,now-2*HOUR);
   assert.equal(bars[1].to,now);assert.ok(bars.every(b=>!b.uncertain));
 });
+
+test('lost runner tracking stays visible without an invented end or free GPU',()=>{
+  const job={status:'unknown',started_at:iso(-2),expected_end_at:iso(5),ended_at:null,gpu_uuids:['GPU-0']};
+  assert.equal(gpuState({...server,jobs:[job]},gpu,now,1200),'unknown');
+  assert.equal(gpuState({...server,jobs:[job]},{...gpu,process_count:1},now,1200),'busy');
+  const [bar]=layoutJobs([job],now-6*HOUR,now+6*HOUR,now);
+  assert.equal(bar.to,now);assert.equal(bar.uncertain,true);
+});

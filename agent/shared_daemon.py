@@ -34,6 +34,8 @@ def validate_request(argv, uid):
         raise ValueError("잘못된 요청입니다.")
     if any(v in ("-h", "--help") for v in argv):
         raise ValueError("도움말은 gputl --help로 확인하세요.")
+    if argv[0] not in ("add", "update", "finish", "list", "status", "sync"):
+        raise ValueError("공용 수집기는 실험 실행 명령을 받지 않습니다.")
     args = agent.parser(shared=True, parser_class=RequestParser).parse_args(argv)
     if args.action in ("add", "update", "finish"):
         if not agent.re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9_.-]{0,127}", args.id):
@@ -43,8 +45,14 @@ def validate_request(argv, uid):
             if value is not None and (not value.strip() or len(value) > limit
                                       or any(ord(c) < 32 for c in value)):
                 raise ValueError(f"{key}: 비어 있지 않은 {limit}자 이하 한 줄을 입력하세요.")
-        pid = getattr(args, "pid", None)
-        if pid is not None:
+        token = getattr(args, "run_token", None)
+        if token is not None and not agent.re.fullmatch(r"[0-9a-f]{32}", token):
+            raise ValueError("잘못된 자동 실행 식별자입니다.")
+        if getattr(args, "runner_pid", None) is not None and not token:
+            raise ValueError("실행 추적에는 자동 실행 식별자가 필요합니다.")
+        for pid in (getattr(args, "pid", None), getattr(args, "runner_pid", None)):
+            if pid is None:
+                continue
             if pid <= 0:
                 raise ValueError("PID는 양수여야 합니다.")
             try:
@@ -72,6 +80,7 @@ class Broker:
             with self.status_lock:
                 return {"ok": True, "server_id": self.config["server_id"],
                         "name": self.config["name"], **self.upload,
+                        "capabilities": ["run-recording-v1"],
                         "upload_requested": self.pending.is_set()}
         if args.action == "list":
             with agent.locked(Path(self.config["state_dir"]) / "jobs.lock"):
@@ -79,7 +88,8 @@ class Broker:
             own = [j for j in jobs if j.get("_owner_uid") == uid][-100:]
             return {"ok": True, "jobs": [{"id": j["_local_id"], "name": j["name"],
                     "owner": j.get("owner"), "status": j["status"],
-                    "started_at": j["started_at"], "expected_end_at": j.get("expected_end_at")}
+                    "started_at": j["started_at"], "expected_end_at": j.get("expected_end_at"),
+                    "ended_at": j.get("ended_at"), "exit_code": j.get("exit_code")}
                     for j in own]}
         if args.action != "sync":
             agent.metadata_command(self.config, args, owner_uid=uid)

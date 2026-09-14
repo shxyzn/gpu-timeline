@@ -51,8 +51,9 @@ runuser -u gputl_admin -- /usr/local/bin/gputl list > /tmp/gputl-ci-legacy.json
 "$test_python" -c 'import json; assert json.load(open("/tmp/gputl-ci-legacy.json"))["jobs"][0]["status"] == "running"'
 if runuser -u gputl_member -- test -r /etc/gpu-timeline/agent.env; then exit 1; fi
 if runuser -u gputl_member -- test -r /var/lib/gpu-timeline/jobs.json; then exit 1; fi
+runuser -u gputl_member -- /usr/bin/python3 tests/ci_run_client.py
 # Reinstall must preserve both accounts' current records and administrator config.
 "$test_python" agent/install_shared.py --user gputl_admin --python "$test_python"
-"$test_python" -c 'import json; jobs=json.load(open("/var/lib/gpu-timeline/jobs.json")); assert len(jobs)==2; assert len({j["_owner_uid"] for j in jobs})==2'
+"$test_python" -c 'import json; jobs=json.load(open("/var/lib/gpu-timeline/jobs.json")); assert len(jobs)==5; assert len({j["_owner_uid"] for j in jobs})==2'
 systemctl stop gpu-timeline-shared.service
 echo 'Shared install, legacy migration, cross-account use, private file permissions and reinstall passed.'

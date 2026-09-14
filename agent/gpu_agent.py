@@ -150,8 +150,13 @@ def metadata_command(c, args, owner_uid=None):
         else:
             item = next((j for j in jobs if j.get("_owner_uid") == owner_uid
                          and j.get("_local_id") == args.id), None)
+        run_token = getattr(args, "run_token", None)
+        if run_token and args.action != "add" and item and item.get("_run_token") != run_token:
+            raise ValueError("이 실행의 기록이 아닙니다. 실험 ID와 현재 기록을 확인하세요.")
         if args.action == "add":
             if item:
+                if run_token and item.get("_run_token") == run_token:
+                    return item  # Safe retry after a lost registration acknowledgement.
                 raise ValueError("이미 존재하는 실험 id입니다. update를 사용하세요.")
             started = args.start or now_iso()
             parse_time(started)
@@ -169,6 +174,16 @@ def metadata_command(c, args, owner_uid=None):
                 item.update(id="job-" + uuid.uuid4().hex, _owner_uid=owner_uid, _local_id=args.id)
             if args.owner:
                 item["owner"] = args.owner
+            if run_token:
+                item.update(_run_token=run_token, execution_source="gputl-run")
+                runner = getattr(args, "runner_pid", None)
+                if runner:
+                    try:
+                        identity = pid_identity(runner)
+                    except OSError:
+                        identity = None  # Restricted /proc is not evidence of termination.
+                    if identity:
+                        item.update(_runner_pid=runner, _runner_identity=identity)
             if args.pid:
                 identity = pid_identity(args.pid)
                 if not identity:
@@ -180,10 +195,32 @@ def metadata_command(c, args, owner_uid=None):
             raise ValueError("실험 id를 찾을 수 없습니다.")
         elif args.action == "finish":
             end = args.at or now_iso()
-            if parse_time(end) < parse_time(item["started_at"]):
+            actual_start = getattr(args, "start", None)
+            if actual_start and not run_token:
+                raise ValueError("finish --start는 자동 실행 결과에만 사용합니다.")
+            started = actual_start or item["started_at"]
+            if parse_time(end) < parse_time(started):
                 raise ValueError("종료시간은 시작시간 이후여야 합니다.")
-            item.update(status=args.status, ended_at=end, end_source="manual")
+            exit_code = getattr(args, "exit_code", None)
+            stop_signal = getattr(args, "stop_signal", None)
+            if exit_code is not None and not -64 <= exit_code <= 255:
+                raise ValueError("지원하지 않는 종료 코드입니다.")
+            if stop_signal is not None and not 1 <= stop_signal <= 64:
+                raise ValueError("지원하지 않는 종료 신호입니다.")
+            if run_token and args.status == "completed" and (exit_code != 0 or stop_signal is not None):
+                raise ValueError("완료 기록에는 정상 종료 코드가 필요합니다.")
+            item.update(status=args.status, started_at=started, ended_at=end,
+                        end_source=("exit_code" if exit_code is not None else "launch_error") if run_token else "manual")
+            for key, value in (("exit_code", exit_code), ("stop_signal", stop_signal)):
+                item.pop(key, None)
+                if value is not None:
+                    item[key] = value
+            item.pop("tracking_lost_at", None)
+            if not run_token:
+                item.pop("_run_token", None)  # Explicit manual decisions supersede delayed receipts.
         elif args.action == "update":
+            if run_token and item["status"] in ("completed", "failed", "cancelled"):
+                return item  # A delayed start update cannot reopen a finished run.
             if args.owner:
                 item["owner"] = args.owner
             if args.name:
@@ -201,6 +238,11 @@ def metadata_command(c, args, owner_uid=None):
                 if item.get("expected_end_at") and parse_time(item["expected_end_at"]) <= parse_time(args.start):
                     raise ValueError("새 시작시간은 예상 종료시간 이전이어야 합니다.")
                 item.update(status="running", started_at=args.start, ended_at=None)
+                for key in ("exit_code", "stop_signal", "end_source", "tracking_lost_at"):
+                    item.pop(key, None)
+                if not run_token:
+                    for key in ("_run_token", "_runner_pid", "_runner_identity", "execution_source"):
+                        item.pop(key, None)
                 item.pop("_pid", None)
                 item.pop("_pid_identity", None)
             if args.pid:
@@ -236,6 +278,19 @@ def make_snapshot(c):
         jobs = read_jobs(state)
         changed = False
         for item in jobs:
+            if item["status"] == "running" and item.get("_run_token"):
+                if item.get("_runner_identity"):
+                    try:
+                        identity = pid_identity(item["_runner_pid"])
+                    except (OSError, IndexError):
+                        continue
+                    if identity != item["_runner_identity"]:
+                        item.update(status="unknown", ended_at=None, end_source="tracking_lost",
+                                    tracking_lost_at=stamp)
+                        changed = True
+                # Only the runner can report a known exit result. Its child may
+                # still run after the runner is killed or its final send fails.
+                continue
             if item["status"] == "running" and item.get("_pid"):
                 try:
                     identity = pid_identity(item["_pid"])
@@ -251,7 +306,8 @@ def make_snapshot(c):
     # owner is an explicitly supplied public label, never an OS username lookup.
     # UID, local IDs, PIDs, commands, local paths and credentials stay private.
     fields = ("id", "name", "description", "gpu_uuids", "status", "started_at",
-              "expected_end_at", "ended_at", "eta_source", "progress", "end_source", "owner")
+              "expected_end_at", "ended_at", "eta_source", "progress", "end_source", "owner",
+              "execution_source", "exit_code", "stop_signal", "tracking_lost_at")
     for item in jobs:
         if item.get("ended_at") and parse_time(item["ended_at"]).timestamp() < cutoff:
             continue
@@ -309,7 +365,7 @@ def publish(c, snapshot):
             raise RuntimeError(f"GitHub 업로드 실패 (HTTP {error.code}). 저장소·토큰 권한·status 브랜치를 확인하세요.") from None
 
 
-def parser(shared=False, parser_class=argparse.ArgumentParser):
+def parser(shared=False, parser_class=argparse.ArgumentParser, local_commands=False):
     p = parser_class(prog="gputl" if shared else None,
                      description="공용 GPU Timeline 실험 기록" if shared else __doc__)
     if not shared:
@@ -328,6 +384,8 @@ def parser(shared=False, parser_class=argparse.ArgumentParser):
     add.add_argument("--description", default="")
     add.add_argument("--planned", action="store_true")
     add.add_argument("--pid", type=int, help="실험 수명이 일치하는 대표 프로세스 PID")
+    add.add_argument("--run-token", help=argparse.SUPPRESS)
+    add.add_argument("--runner-pid", type=int, help=argparse.SUPPRESS)
     update = sub.add_parser("update", help="실험 정보·진행률·예상 종료시간 변경")
     update.add_argument("--id", required=True)
     update.add_argument("--name")
@@ -340,14 +398,29 @@ def parser(shared=False, parser_class=argparse.ArgumentParser):
     update.add_argument("--pid", type=int)
     update.add_argument("--completed", type=int)
     update.add_argument("--total", type=int)
+    update.add_argument("--run-token", help=argparse.SUPPRESS)
     finish = sub.add_parser("finish", help="실험을 완료/실패/취소로 기록. 프로세스는 건드리지 않습니다.")
     finish.add_argument("--id", required=True)
     finish.add_argument("--status", choices=["completed", "failed", "cancelled"], default="completed")
     finish.add_argument("--at")
+    finish.add_argument("--exit-code", type=int, help="확인한 프로세스 종료 코드")
+    finish.add_argument("--stop-signal", type=int, help=argparse.SUPPRESS)
+    finish.add_argument("--run-token", help=argparse.SUPPRESS)
+    finish.add_argument("--start", help=argparse.SUPPRESS)
     if shared:
         sub.add_parser("list", help="현재 계정의 최근 실험 최대 100개 확인")
         sub.add_parser("status", help="공용 수집기와 마지막 업로드 상태 확인")
         sub.add_parser("sync", help="업로드 요청. 여러 요청은 합쳐서 처리합니다.")
+        if local_commands:
+            run = sub.add_parser("run", help="현재 계정에서 실험을 실행하고 시작·종료 자동 기록")
+            run.add_argument("--id", help="생략하면 고유 ID 자동 생성")
+            run.add_argument("--name", required=True)
+            run.add_argument("--owner", required=True, help="공개할 사용자 표시 이름")
+            run.add_argument("--gpus", required=True, help="기록할 물리 GPU 번호. GPU를 강제 할당하지 않습니다.")
+            run.add_argument("--end", help="예상 종료시간. 모르면 생략")
+            run.add_argument("--description", default="")
+            run.add_argument("command", nargs=argparse.REMAINDER, help="-- 뒤에 원래 실행 명령")
+            sub.add_parser("replay", help="이 계정에 남은 자동 실행 종료 기록 재전송")
     return p
 
 

@@ -22,7 +22,7 @@
 <section id="usage" class="usage" aria-labelledby="usage-title">
   <div class="usage-heading">
     <div><h2 id="usage-title">간단 사용법</h2><p>관리자가 공용 설치를 마치면, 누구나 자기 계정에서 사용할 수 있어요.</p></div>
-    <a href="https://github.com/shxyzn/gpu-timeline/blob/main/README.md">전체 설명서 ↗</a>
+    <a href="https://github.com/shxyzn/gpu-timeline/blob/main/SHARED_SETUP.md">전체 설명서 ↗</a>
   </div>
   <div class="usage-grid">
     <article class="usage-card usage-terminal" aria-labelledby="terminal-guide-title">
@@ -32,17 +32,16 @@
         <pre><code id="usage-alias">/usr/local/bin/gputl status</code></pre>
       </div>
       <div class="usage-command">
-        <div class="usage-command-heading"><span><strong>실험 등록</strong><small>GPU 0 · 종료 예정 6시간 뒤</small></span><button type="button" class="usage-copy" data-copy-target="usage-add" aria-label="실험 등록 명령 복사">복사</button></div>
-        <pre><code id="usage-add">/usr/local/bin/gputl add --id exp01 --name "GEPA" --owner "내 이름" --gpus 0 \
-  --end "$(date -d '+6 hours' --iso-8601=seconds)"</code></pre>
+        <div class="usage-command-heading"><span><strong>실험 실행 + 자동 기록</strong><small>시작부터 완료·실패·취소까지 한 번에</small></span><button type="button" class="usage-copy" data-copy-target="usage-run" aria-label="실험 자동 기록 명령 복사">복사</button></div>
+        <pre><code id="usage-run">/usr/local/bin/gputl run --name "GEPA" --owner "내 이름" --gpus 0 \
+  -- python train.py</code></pre>
       </div>
-      <div class="usage-command">
-        <div class="usage-command-heading"><span><strong>완료 기록</strong><small>실험이 끝난 뒤 실행</small></span><button type="button" class="usage-copy" data-copy-target="usage-finish" aria-label="실험 완료 명령 복사">복사</button></div>
-        <pre><code id="usage-finish">/usr/local/bin/gputl finish --id exp01</code></pre>
-      </div>
-      <details class="usage-more"><summary>예상 종료시간을 바꾸려면</summary><div class="usage-command"><div class="usage-command-heading"><span><small>지금부터 2시간 뒤로 변경</small></span><button type="button" class="usage-copy" data-copy-target="usage-update" aria-label="예상 종료시간 수정 명령 복사">복사</button></div><pre><code id="usage-update">/usr/local/bin/gputl update --id exp01 \
-  --end "$(date -d '+2 hours' --iso-8601=seconds)"</code></pre></div></details>
-      <p class="usage-card-note"><code>내 이름</code>은 공개할 표시 이름으로, <code>GEPA</code>는 실험명으로 바꾸세요. ID는 내 계정 안에서만 구분하면 돼요. GPU 여러 개는 <code>--gpus 0,1</code>로 입력합니다.</p>
+      <p class="usage-card-note"><code>python train.py</code>를 원래 실행할 명령으로 바꾸세요. 사용할 Conda 환경과 작업 폴더에서 실행하면 돼요. 실험 ID는 자동 생성되며, 별도로 시작·완료를 기록할 필요가 없어요.</p>
+      <details class="usage-more"><summary>이미 실행 중인 실험을 기록하려면</summary><div class="usage-command"><div class="usage-command-heading"><span><small>기존 실험을 재실행하지 않고 등록 · 끝나면 완료 기록</small></span><button type="button" class="usage-copy" data-copy-target="usage-add" aria-label="실행 중 실험 등록 명령 복사">복사</button></div><pre><code id="usage-add">/usr/local/bin/gputl add --id exp01 --name "GEPA" --owner "내 이름" --gpus 0</code></pre></div><div class="usage-command"><div class="usage-command-heading"><span><small>실제 결과를 확인한 뒤 실행</small></span><button type="button" class="usage-copy" data-copy-target="usage-finish" aria-label="실험 완료 명령 복사">복사</button></div><pre><code id="usage-finish">/usr/local/bin/gputl finish --id exp01 --status completed</code></pre></div></details>
+      <details class="usage-more"><summary>예상 종료시간 · 기록 재전송</summary><div class="usage-command"><div class="usage-command-heading"><span><small>list에서 ID 확인 · exp01을 내 실험 ID로 변경</small></span><button type="button" class="usage-copy" data-copy-target="usage-update" aria-label="예상 종료시간 수정 명령 복사">복사</button></div><pre><code id="usage-update">/usr/local/bin/gputl list
+/usr/local/bin/gputl update --id exp01 \
+  --end "$(date -d '+2 hours' --iso-8601=seconds)"</code></pre></div><div class="usage-command"><div class="usage-command-heading"><span><small>종료 기록 전송 실패 안내가 나왔을 때</small></span><button type="button" class="usage-copy" data-copy-target="usage-replay" aria-label="종료 기록 재전송 명령 복사">복사</button></div><pre><code id="usage-replay">/usr/local/bin/gputl replay</code></pre></div></details>
+      <p class="usage-card-note"><code>내 이름</code>은 공개 표시 이름, <code>GEPA</code>는 실험명으로 바꾸세요. <code>--gpus 0,1</code>은 기록할 물리 GPU 번호예요. 실제 GPU 선택은 원래 실험 설정을 따릅니다. 오래 걸리는 실험은 tmux 안에서 실행하세요.</p>
     </article>
     <article class="usage-card usage-agent" aria-labelledby="agent-guide-title">
       <header class="usage-card-heading"><span class="usage-label">AGENT</span><h3 id="agent-guide-title">Agent에게 요청</h3><p>아래 요청문을 복사해 서버에 연결된 Agent에게 보내세요.</p></header>
@@ -51,23 +50,23 @@
         <pre id="usage-agent-prompt">앞으로 이 서버에서 내가 요청하는 실험을 실행할 때 GPU Timeline에도 기록해줘.
 
 공용 명령: /usr/local/bin/gputl
-먼저 status로 연결을 확인하고, --help로 옵션을 확인해. 작업 폴더와 관계없이 현재 로그인 계정으로 실행해.
+먼저 status와 run --help로 연결과 옵션을 확인해. 현재 로그인 계정의 작업 폴더·Conda 환경에서 실행해.
 
-• 시작하면: add로 실험 ID, 실험명, 공개 표시 이름(--owner), 물리 GPU 번호, 실제 시작시간을 등록해.
-• 계획이 바뀌면: 같은 ID를 update하고, 예상 종료시간도 알 수 있을 때 갱신해.
-• 끝나면: 결과를 확인하고 finish로 완료·실패·취소를 구분해 기록해.
+• 새 실험: gputl run --name "실험명" --owner "공개 표시 이름" --gpus 물리번호 -- 원래명령 형태로 실행해. 시작·종료는 자동 기록되니 add/finish를 중복 호출하지 마.
+• 이미 실행 중인 실험: 재실행하지 말고 add로 실제 시작시간과 정보를 기록해. 결과 확인 후 finish로 완료·실패·취소를 구분해.
+• 예상 종료를 알면 --end로 입력하고, 변경은 list에서 ID를 확인해 update해. 모르면 추측하지 마.
 
-공개 표시 이름은 내가 지정한 이름을 사용하고, 없으면 먼저 확인해. 예상 종료시간을 모르면 생략해. nvidia-smi의 물리 GPU 번호를 사용하고, list로 내 기록을 확인해 중복 등록을 피해야 해.
+공개 표시 이름은 내가 지정한 이름을 사용하고 없으면 확인해. --gpus는 기록용이므로 실제 GPU 선택 설정도 일치시켜야 해. 원래 명령은 작업이 끝날 때까지 기다리는 형태로 실행하고, 장시간 작업은 tmux를 사용해.
 
-저장하면 공용 수집기가 업로드를 요청받아 처리해. status에서 마지막 업로드와 오류를 확인할 수 있어.
+종료 기록 전송 실패 안내가 나오면 수집기 복구 후 replay로 재전송해. 강제 종료·서버 재부팅 등으로 결과를 못 받으면 완료로 단정하지 말고 실제 상태를 확인해.
 
-개인 수집기나 토큰을 새로 만들지 말고, sudo로 기록하지 마. 공용 명령이나 서비스가 없으면 관리자에게 공용 설치를 요청해.</pre>
+업로드는 공용 수집기가 처리하고 status에서 결과를 확인해. 개인 수집기·토큰·서비스를 만들거나 sudo로 실험을 실행하지 마. run이 없으면 관리자에게 공용 수집기 업데이트를 요청해.</pre>
       </div>
       <p class="usage-card-note">각 사용자는 자기 실험만 수정합니다. GPU 사용률·VRAM 수집과 GitHub 업로드는 서버의 공용 수집기가 담당합니다.</p>
     </article>
   </div>
   <div class="usage-bottom"><p>GPU 상태는 10분마다 업로드 · 실험 변경은 자동으로 업로드 요청됩니다. 화면 반영에는 전송·캐시 시간이 걸릴 수 있어요.</p><div class="usage-sync"><code id="usage-sync">/usr/local/bin/gputl sync</code><button type="button" class="usage-copy" data-copy-target="usage-sync" aria-label="즉시 업로드 명령 복사">복사</button></div></div>
-  <p class="usage-card-note">공용 명령이 없으면 관리자에게 <a href="https://github.com/shxyzn/gpu-timeline/blob/main/SHARED_SETUP.md">서버당 한 번 설치</a>를 요청하세요.</p>
+  <p class="usage-card-note">공용 명령이나 run 기능이 없으면 관리자에게 <a href="https://github.com/shxyzn/gpu-timeline/blob/main/SHARED_SETUP.md">서버당 한 번 설치·업데이트</a>를 요청하세요.</p>
   <p id="usage-feedback" class="usage-feedback" role="status" aria-live="polite"></p>
 </section>
 

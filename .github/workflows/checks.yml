@@ -33,6 +33,7 @@ jobs:
         run: |
           bash -n agent/install-shared.sh
           python agent/shared_cli.py add --help
+          python agent/shared_cli.py run --help
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
