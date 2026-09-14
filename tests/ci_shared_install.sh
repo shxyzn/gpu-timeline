@@ -51,7 +51,9 @@ runuser -u gputl_admin -- /usr/local/bin/gputl list > /tmp/gputl-ci-legacy.json
 "$test_python" -c 'import json; assert json.load(open("/tmp/gputl-ci-legacy.json"))["jobs"][0]["status"] == "running"'
 if runuser -u gputl_member -- test -r /etc/gpu-timeline/agent.env; then exit 1; fi
 if runuser -u gputl_member -- test -r /var/lib/gpu-timeline/jobs.json; then exit 1; fi
-runuser -u gputl_member -- /usr/bin/python3 tests/ci_run_client.py
+# The checkout belongs to the runner account and may have private parent dirs.
+install -o gputl_member -g gputl_member -m 600 tests/ci_run_client.py /home/gputl_member/ci_run_client.py
+runuser -u gputl_member -- /usr/bin/python3 /home/gputl_member/ci_run_client.py
 # Reinstall must preserve both accounts' current records and administrator config.
 "$test_python" agent/install_shared.py --user gputl_admin --python "$test_python"
 "$test_python" -c 'import json; jobs=json.load(open("/var/lib/gpu-timeline/jobs.json")); assert len(jobs)==5; assert len({j["_owner_uid"] for j in jobs})==2'
