@@ -2,9 +2,9 @@ name: Check collector and shared access
 on:
   push:
     branches: [main]
-    paths: ['agent/**', 'tests/**', 'dist/**', '.github/workflows/checks.yml']
+    paths: ['agent/**', 'tests/**', 'dist/**', 'VERSION', '.github/workflows/checks.yml']
   pull_request:
-    paths: ['agent/**', 'tests/**', 'dist/**', '.github/workflows/checks.yml']
+    paths: ['agent/**', 'tests/**', 'dist/**', 'VERSION', '.github/workflows/checks.yml']
   workflow_dispatch:
 permissions:
   contents: read
@@ -34,8 +34,13 @@ jobs:
           bash -n agent/install-shared.sh
           python agent/shared_cli.py add --help
           python agent/shared_cli.py run --help
+          python agent/version_info.py --output /tmp/gpu-timeline-build.json
+          python -c "import json; d=json.load(open('/tmp/gpu-timeline-build.json')); assert len(d['revision']) == 40; assert d['dirty'] is False"
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
       - name: Dashboard behavior
-        run: node --test tests/model.test.js
+        run: |
+          node --check dist/app.js
+          node --check dist/model.js
+          node --test tests/model.test.js

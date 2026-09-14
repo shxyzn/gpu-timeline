@@ -38,8 +38,11 @@ def validate_request(argv, uid):
         raise ValueError("공용 수집기는 실험 실행 명령을 받지 않습니다.")
     args = agent.parser(shared=True, parser_class=RequestParser).parse_args(argv)
     if args.action in ("add", "update", "finish"):
-        if not agent.re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9_.-]{0,127}", args.id):
-            raise ValueError("실험 ID는 영문·숫자로 시작하는 128자 이하 영문·숫자·._-만 사용하세요.")
+        local = r"[A-Za-z0-9][A-Za-z0-9_.-]{0,127}"
+        qualified = r"[a-z0-9]+(?:-[a-z0-9]+)*/" + local
+        if not (agent.re.fullmatch(local, args.id) or
+                (args.action != "add" and agent.re.fullmatch(qualified, args.id))):
+            raise ValueError("올바른 실험 ID 또는 사이트에서 복사한 서버/실험 공유 ID를 사용하세요.")
         for key, limit in (("name", 200), ("owner", 80)):
             value = getattr(args, key, None)
             if value is not None and (not value.strip() or len(value) > limit
@@ -80,23 +83,27 @@ class Broker:
             with self.status_lock:
                 return {"ok": True, "server_id": self.config["server_id"],
                         "name": self.config["name"], **self.upload,
-                        "capabilities": ["run-recording-v1"],
+                        "agent_version": agent.version_info.runtime_version(),
+                        "capabilities": ["run-recording-v1", "experiment-reference-v1", "progress-time-v1"],
                         "upload_requested": self.pending.is_set()}
         if args.action == "list":
             with agent.locked(Path(self.config["state_dir"]) / "jobs.lock"):
                 jobs = agent.read_jobs(self.config["state_dir"])
             own = [j for j in jobs if j.get("_owner_uid") == uid][-100:]
             return {"ok": True, "jobs": [{"id": j["_local_id"], "name": j["name"],
+                    "reference": self.config["server_id"] + "/" + j["id"], "progress": j.get("progress"),
                     "owner": j.get("owner"), "status": j["status"],
                     "started_at": j["started_at"], "expected_end_at": j.get("expected_end_at"),
                     "ended_at": j.get("ended_at"), "exit_code": j.get("exit_code")}
                     for j in own]}
+        item = None
         if args.action != "sync":
-            agent.metadata_command(self.config, args, owner_uid=uid)
+            item = agent.metadata_command(self.config, args, owner_uid=uid)
         self.pending.set()
         return {"ok": True, "message": "업로드를 요청했어요." if args.action == "sync" else
                 f"실험 정보 저장: {args.id}. 업로드를 요청했어요.",
-                "note": "저장은 완료되었습니다. 업로드 결과는 gputl status로 확인하세요."}
+                "note": "저장은 완료되었습니다. 업로드 결과는 gputl status로 확인하세요.",
+                **({"reference": self.config["server_id"] + "/" + item["id"]} if item else {})}
 
     def publish_once(self):
         with self.status_lock:

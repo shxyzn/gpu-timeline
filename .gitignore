@@ -5,3 +5,5 @@ agent/config.json
 agent/jobs.json
 agent/state/
 .env
+agent/version.json
+dist/version.json

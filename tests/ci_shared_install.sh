@@ -43,6 +43,18 @@ for attempt in $(seq 1 15); do
   if runuser -u gputl_member -- /usr/local/bin/gputl status > /tmp/gputl-ci-status.json; then break; fi
   sleep 1
 done
+"$test_python" - <<'PY'
+import json
+import subprocess
+from pathlib import Path
+installed = json.loads(Path("/opt/gpu-timeline/version.json").read_text())
+status = json.loads(Path("/tmp/gputl-ci-status.json").read_text())
+assert installed == status["agent_version"]
+assert installed["version"] == Path("VERSION").read_text().strip()
+assert installed["revision"] == subprocess.check_output(["git", "-c", "safe.directory=" + str(Path.cwd()), "rev-parse", "HEAD"], text=True).strip()
+assert installed["dirty"] is False
+assert installed["installed_at"]
+PY
 runuser -u gputl_admin -- /usr/local/bin/gputl list > /tmp/gputl-ci-legacy.json
 "$test_python" -c 'import json; assert json.load(open("/tmp/gputl-ci-legacy.json"))["jobs"][0]["id"] == "legacy"'
 runuser -u gputl_member -- /usr/local/bin/gputl add --id legacy --name 'Member experiment' --owner 'Member label' --gpus 0

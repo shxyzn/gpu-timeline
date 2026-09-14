@@ -166,7 +166,7 @@ def run_experiment(args):
             if args.end:
                 add.extend(["--end", args.end])
             try:
-                send_retry(add)
+                registration = send_retry(add)
             except ValueError:
                 path.unlink(missing_ok=True)
                 path.with_suffix(".lock").unlink(missing_ok=True)
@@ -179,6 +179,8 @@ def run_experiment(args):
                 note("실험 명령은 실행하지 않았습니다. 등록 여부 확인 및 정리를 위해 gputl replay를 실행하세요.")
                 raise
             note("실험 등록: " + job_id + " · " + args.name)
+            if registration.get("reference"):
+                note("공유 ID: " + registration["reference"])
             started = gpu_agent.now_iso()
             exit_code = None
             status = "cancelled" if interrupted else "failed"
@@ -234,6 +236,8 @@ def main(argv=None):
         result = request(argv)
         if "message" in result:
             print(result["message"])
+            if result.get("reference"):
+                print("공유 ID: " + result["reference"])
             print(result.get("note", ""))
         else:
             print(json.dumps(result, ensure_ascii=False, indent=2))

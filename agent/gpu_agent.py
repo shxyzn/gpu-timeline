@@ -28,6 +28,8 @@ from urllib.error import HTTPError
 from urllib.parse import quote, urlencode
 from urllib.request import Request, urlopen
 
+import version_info
+
 
 def now_iso():
     return datetime.now(timezone.utc).isoformat(timespec="seconds")
@@ -147,6 +149,12 @@ def metadata_command(c, args, owner_uid=None):
         jobs = read_jobs(state)
         if owner_uid is None:
             item = next((j for j in jobs if j["id"] == args.id), None)
+        elif "/" in args.id:
+            server_id, public_id = args.id.split("/", 1)
+            if args.action == "add" or server_id != c["server_id"]:
+                raise ValueError("공유 ID의 서버가 현재 서버와 다르거나 등록용 ID가 아닙니다.")
+            item = next((j for j in jobs if j.get("_owner_uid") == owner_uid
+                         and j["id"] == public_id), None)
         else:
             item = next((j for j in jobs if j.get("_owner_uid") == owner_uid
                          and j.get("_local_id") == args.id), None)
@@ -238,7 +246,7 @@ def metadata_command(c, args, owner_uid=None):
                 if item.get("expected_end_at") and parse_time(item["expected_end_at"]) <= parse_time(args.start):
                     raise ValueError("새 시작시간은 예상 종료시간 이전이어야 합니다.")
                 item.update(status="running", started_at=args.start, ended_at=None)
-                for key in ("exit_code", "stop_signal", "end_source", "tracking_lost_at"):
+                for key in ("exit_code", "stop_signal", "end_source", "tracking_lost_at", "progress"):
                     item.pop(key, None)
                 if not run_token:
                     for key in ("_run_token", "_runner_pid", "_runner_identity", "execution_source"):
@@ -255,7 +263,7 @@ def metadata_command(c, args, owner_uid=None):
             if args.completed is not None or args.total is not None:
                 if args.completed is None or args.total is None or not 0 <= args.completed <= args.total or args.total <= 0:
                     raise ValueError("--completed와 --total을 함께 입력하세요. 0 ≤ completed ≤ total, total > 0")
-                item["progress"] = {"completed": args.completed, "total": args.total}
+                item["progress"] = {"completed": args.completed, "total": args.total, "updated_at": now_iso()}
         atomic_json(state / "jobs.json", jobs)
     if owner_uid is None:
         print(f"실험 정보 저장: {args.id}")
@@ -313,7 +321,8 @@ def make_snapshot(c):
             continue
         public_jobs.append({k: item[k] for k in fields if k in item})
     snapshot = {"schema_version": 1, "server_id": c["server_id"], "name": c["name"],
-                "updated_at": stamp, "collector_ok": ok, "gpus": gpus, "jobs": public_jobs}
+                "updated_at": stamp, "collector_ok": ok, "gpus": gpus, "jobs": public_jobs,
+                "agent_version": version_info.runtime_version()}
     if not ok:
         snapshot["collector_error"] = "GPU 상태 수집 실패"
     atomic_json(state / "snapshot.json", snapshot)
@@ -387,7 +396,7 @@ def parser(shared=False, parser_class=argparse.ArgumentParser, local_commands=Fa
     add.add_argument("--run-token", help=argparse.SUPPRESS)
     add.add_argument("--runner-pid", type=int, help=argparse.SUPPRESS)
     update = sub.add_parser("update", help="실험 정보·진행률·예상 종료시간 변경")
-    update.add_argument("--id", required=True)
+    update.add_argument("--id", required=True, help="내 실험 ID 또는 사이트에서 복사한 서버/실험 공유 ID")
     update.add_argument("--name")
     update.add_argument("--owner", help="공개 표시 이름 수정. 실험 소유 계정은 변경되지 않습니다.")
     update.add_argument("--description")
@@ -400,7 +409,7 @@ def parser(shared=False, parser_class=argparse.ArgumentParser, local_commands=Fa
     update.add_argument("--total", type=int)
     update.add_argument("--run-token", help=argparse.SUPPRESS)
     finish = sub.add_parser("finish", help="실험을 완료/실패/취소로 기록. 프로세스는 건드리지 않습니다.")
-    finish.add_argument("--id", required=True)
+    finish.add_argument("--id", required=True, help="내 실험 ID 또는 사이트에서 복사한 서버/실험 공유 ID")
     finish.add_argument("--status", choices=["completed", "failed", "cancelled"], default="completed")
     finish.add_argument("--at")
     finish.add_argument("--exit-code", type=int, help="확인한 프로세스 종료 코드")

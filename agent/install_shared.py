@@ -109,6 +109,7 @@ def install(args):
     home = Path(account.pw_dir)
     source_dir = Path(__file__).resolve().parent
     text = service_text(args.user, args.python)
+    build_version = agent.version_info.source_version(source_dir.parent)
     source_config = Path(args.config) if args.config else (
         ETC / "config.json" if (ETC / "config.json").exists() else home / ".config/gpu-timeline/config.json")
     source_env = Path(args.env_file) if args.env_file else (
@@ -161,8 +162,10 @@ def install(args):
     STATE.mkdir(parents=True, exist_ok=True)
     os.chmod(STATE, 0o700)
     os.chown(STATE, account.pw_uid, account.pw_gid)
-    for filename in ("gpu_agent.py", "shared_daemon.py", "shared_cli.py"):
+    for filename in ("gpu_agent.py", "shared_daemon.py", "shared_cli.py", "version_info.py"):
         write_owned(ROOT / filename, (source_dir / filename).read_text())
+    build_version["installed_at"] = agent.now_iso()
+    write_owned(ROOT / "version.json", json.dumps(build_version, indent=2) + "\n")
     write_owned(ETC / "config.json", json.dumps(config, ensure_ascii=False, indent=2) + "\n")
     write_owned(ETC / "agent.env", credentials, mode=0o600)
     if not (STATE / "jobs.json").exists() and (old_state / "jobs.json").exists():

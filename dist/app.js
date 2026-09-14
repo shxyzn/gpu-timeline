@@ -1,11 +1,30 @@
 import {demoSnapshot} from './demo.js';
-import {HOUR,timestamp,health,gpuState,layoutJobs} from './model.js';
+import {HOUR,timestamp,health,gpuState,layoutJobs,jobETA,versionLabel} from './model.js';
 const $=id=>document.getElementById(id);
 const escape=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const fmt=(value,options={})=>{const t=typeof value==='number'?value:timestamp(value);return t===null?'미등록':new Intl.DateTimeFormat('ko-KR',{timeZone:'Asia/Seoul',...options}).format(t);};
 const time=v=>fmt(v,{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit',hourCycle:'h23'});
 const ago=t=>{const minutes=Math.max(0,Math.floor((Date.now()-(timestamp(t)??Date.now()))/60000));return minutes<1?'방금':minutes<60?`${minutes}분 전`:`${Math.floor(minutes/60)}시간 ${minutes%60}분 전`;};
 const jobLabel=j=>[j.name,j.owner].filter(Boolean).join(' · ');
+function etaText(job,snapshotAt){const eta=jobETA(job,snapshotAt);return eta.at===null?'종료 미정':time(eta.at)+(eta.source==='progress'?' 예상':' 예정');}
+async function showVersion(){
+  const element=$('dashboard-version');if(!element)return;
+  try{
+    const info=await readJSON('./version.json');
+    const label=versionLabel(info);if(!label)throw new Error('version');
+    $('dashboard-version').textContent='대시보드 '+label;
+    if(/^[0-9a-f]{40}$/.test(info.revision||''))$('dashboard-version').href='https://github.com/shxyzn/gpu-timeline/commit/'+info.revision;
+    $('deployment-version').textContent='서버 배포 기준 v'+info.version.split('.').slice(0,2).join('.');
+  }catch{$('dashboard-version').textContent='대시보드 버전 확인 불가';}
+}
+function serverVersion(info){
+  const label=versionLabel(info);
+  if(!label)return '<p class="server-version"><span>설치 버전 미보고</span><small>다음 서버 업데이트 후 자동 표시</small></p>';
+  const title=info.installed_at?'설치 '+time(info.installed_at):'설치된 수집기 코드 버전';
+  const revision=/^[0-9a-f]{40}$/.test(info.revision||'')?info.revision:null;
+  const value=revision?'<a href="https://github.com/shxyzn/gpu-timeline/commit/'+revision+'" target="_blank" rel="noopener noreferrer">'+escape(label)+'</a>':escape(label);
+  return '<p class="server-version" title="'+escape(title)+'"><span>설치 버전 '+value+'</span></p>';
+}
 const statusLabels={running:'실행 중',planned:'예정',completed:'완료',failed:'실패',cancelled:'취소',stopped:'프로세스 종료 · 결과 미확인',unknown:'확인 필요'};
 let config,servers=[],hours=72,offset=0,lastFetch=null,fetchErrors=0,selected=null;
 const demo=demoSnapshot();
@@ -48,10 +67,10 @@ function render(){
   servers.forEach((s,si)=>{
     if(!s.gpus.length){html+=`<div class="lane group-start"><div class="gpu-label"><strong>${escape(s.name)}</strong></div><div class="track"><span class="empty-track">서버 데이터 수신 대기</span></div></div>`;return;}
     s.gpus.forEach((g,gi)=>{
-      const jobs=s.jobs.filter(j=>j.gpu_uuids.includes(g.uuid));const bars=layoutJobs(jobs,start,end,now);const height=Math.max(84,(Math.max(0,...bars.map(b=>b.lane))+1)*54+30);
+      const jobs=s.jobs.filter(j=>j.gpu_uuids.includes(g.uuid));const bars=layoutJobs(jobs,start,end,now,s.updated_at);const height=Math.max(84,(Math.max(0,...bars.map(b=>b.lane))+1)*54+30);
       const ok=health(s,now,stale).ok;
       const empty=bars.length?'':!ok?'마지막 상태 · 수신 확인 필요':gpuState(s,g,now,stale)==='busy'?'점유 중 · 표시할 실험 일정 없음':'표시할 실험 없음';
-      html+=`<div class="lane ${gi===0?'group-start':''} ${ok?'':'stale'}" style="min-height:${height}px"><div class="gpu-label"><div><strong>${escape(s.name)}</strong><small>${escape(g.name)}</small></div><span class="gpu-num">GPU ${g.index}</span></div><div class="track" style="--grid:${step/hours*100}%">${line}${empty?`<span class="empty-track">${empty}</span>`:''}${bars.map(b=>`<button class="job-bar ${b.job.status==='running'?['','violet','green'][si%3]:escape(b.job.status)} ${b.uncertain?'uncertain':''}" style="left:${b.left}%;width:${Math.min(b.width,100-b.left)}%;top:${20+b.lane*54}px" data-server="${escape(s.server_id)}" data-job="${escape(b.job.id)}" aria-label="${escape(jobLabel(b.job))} · ${escape(statusLabels[b.job.status]||b.job.status)} · ${b.uncertain?'종료 미정 또는 예정 초과':time(b.job.expected_end_at)}">${escape(jobLabel(b.job))}${b.uncertain?' · 종료 확인':''}</button>`).join('')}</div></div>`;
+      html+=`<div class="lane ${gi===0?'group-start':''} ${ok?'':'stale'}" style="min-height:${height}px"><div class="gpu-label"><div><strong>${escape(s.name)}</strong><small>${escape(g.name)}</small></div><span class="gpu-num">GPU ${g.index}</span></div><div class="track" style="--grid:${step/hours*100}%">${line}${empty?`<span class="empty-track">${empty}</span>`:''}${bars.map(b=>`<button class="job-bar ${b.job.status==='running'?['','violet','green'][si%3]:escape(b.job.status)} ${b.uncertain?'uncertain':''}" style="left:${b.left}%;width:${Math.min(b.width,100-b.left)}%;top:${20+b.lane*54}px" data-server="${escape(s.server_id)}" data-job="${escape(b.job.id)}" aria-label="${escape(jobLabel(b.job))} · ${escape(statusLabels[b.job.status]||b.job.status)} · ${b.uncertain?'종료 미정 또는 예정 초과':etaText(b.job,s.updated_at)}">${escape(jobLabel(b.job))}${b.uncertain?' · 종료 확인':''}</button>`).join('')}</div></div>`;
     });
   });
   $('timeline').innerHTML=servers.length?html:'<div class="blank">연결된 서버가 없습니다.</div>';
@@ -66,18 +85,24 @@ function serverCard(s,now,stale){
     const util=Number.isFinite(g.utilization)?g.utilization:null,used=Number.isFinite(g.memory_used_mib)?g.memory_used_mib:null,total=g.memory_total_mib;
     const pct=total>0&&used!==null?Math.min(100,used/total*100):0;
     const giB=v=>Number.isFinite(v)?(v/1024).toFixed(1):'—';
-    return `<div class="gpu-detail"><div class="gpu-detail-title"><strong>GPU ${g.index}</strong><small>${state==='unknown'?'확인 필요':state==='busy'?'점유 중':'현재 여유'}</small></div><div class="meter-line"><span>GPU 사용률${h.ok?'':' · 마지막 수신'}</span><span>${util===null?'—':util+'%'}</span></div><div class="meter"><div class="meter-fill" style="width:${Math.max(0,Math.min(100,util||0))}%"></div></div><div class="meter-line"><span>VRAM</span><span>${giB(used)} / ${giB(total)} GiB</span></div><div class="meter"><div class="meter-fill vram" style="width:${pct}%"></div></div>${running.map(j=>`<div class="gpu-experiment"><span>${escape(jobLabel(j))}</span><span>${j.status==='unknown'?'실행 상태 확인 필요':j.expected_end_at?time(j.expected_end_at)+' 예정':'종료 미정'}</span></div>`).join('')}${!running.length&&state==='busy'?'<div class="gpu-experiment"><span>미등록 GPU 사용 감지</span></div>':''}</div>`;
+    return `<div class="gpu-detail"><div class="gpu-detail-title"><strong>GPU ${g.index}</strong><small>${state==='unknown'?'확인 필요':state==='busy'?'점유 중':'현재 여유'}</small></div><div class="meter-line"><span>GPU 사용률${h.ok?'':' · 마지막 수신'}</span><span>${util===null?'—':util+'%'}</span></div><div class="meter"><div class="meter-fill" style="width:${Math.max(0,Math.min(100,util||0))}%"></div></div><div class="meter-line"><span>VRAM</span><span>${giB(used)} / ${giB(total)} GiB</span></div><div class="meter"><div class="meter-fill vram" style="width:${pct}%"></div></div>${running.map(j=>`<div class="gpu-experiment"><span>${escape(jobLabel(j))}</span><span>${j.status==='unknown'?'실행 상태 확인 필요':etaText(j,s.updated_at)}</span></div>`).join('')}${!running.length&&state==='busy'?'<div class="gpu-experiment"><span>미등록 GPU 사용 감지</span></div>':''}</div>`;
   }).join('');
-  return `<article class="server-card"><div class="server-heading"><h3>${escape(s.name)}</h3><span class="state ${h.ok?'':'warning'}">${h.label}</span></div><p class="server-meta">${escape([...new Set(s.gpus.map(g=>g.name))].join(' / ')||'GPU 정보 대기')} · ${s.gpus.length} GPU<br>마지막 수신 ${s.updated_at?ago(s.updated_at):'없음'}</p>${rows||'<p class="server-meta">서버 수집 프로그램의 연결을 확인해 주세요.</p>'}</article>`;
+  return `<article class="server-card"><div class="server-heading"><h3>${escape(s.name)}</h3><span class="state ${h.ok?'':'warning'}">${h.label}</span></div><p class="server-meta">${escape([...new Set(s.gpus.map(g=>g.name))].join(' / ')||'GPU 정보 대기')} · ${s.gpus.length} GPU<br>마지막 수신 ${s.updated_at?ago(s.updated_at):'없음'}</p>${serverVersion(s.agent_version)}${rows||'<p class="server-meta">서버 수집 프로그램의 연결을 확인해 주세요.</p>'}</article>`;
 }
 function fillDetail(server,id){
   const s=servers.find(x=>x.server_id===server),j=s?.jobs.find(x=>x.id===id);if(!j)return;
   const now=Date.now(),started=timestamp(j.started_at),actualEnd=timestamp(j.ended_at);
   const elapsed=j.status==='unknown'?'실행 상태 확인 필요':started===null||j.status==='planned'?'—':`${Math.max(0,((actualEnd??now)-started)/HOUR).toFixed(1)}시간`;
-  const eta=timestamp(j.expected_end_at),isOver=j.status==='running'&&eta!==null&&eta<now;
-  const fields=[['서버',s.name],['GPU',s.gpus.filter(g=>j.gpu_uuids.includes(g.uuid)).map(g=>`GPU ${g.index}`).join(', ')],['상태',statusLabels[j.status]||j.status],['시작',time(j.started_at)],['사용 시간',elapsed],['예상 종료',eta===null?'미등록':time(eta)+(isOver?' · 예정 초과':'')],['종료 기준',j.eta_source==='progress'?'진행률 기반 추정':'직접 입력'],['실제 종료',time(j.ended_at)]];
+  const estimate=jobETA(j,s.updated_at),eta=estimate.at,isOver=j.status==='running'&&eta!==null&&eta<now;
+  const fields=[['서버',s.name],['GPU',s.gpus.filter(g=>j.gpu_uuids.includes(g.uuid)).map(g=>`GPU ${g.index}`).join(', ')],['상태',statusLabels[j.status]||j.status],['시작',time(j.started_at)],['사용 시간',elapsed],['완료 예정',eta===null?'미등록':time(eta)+(estimate.source==='progress'?' · 추정':'')+(isOver?' · 예정 초과':'')],['예정 산정',estimate.source==='progress'?'진행률 기반 선형 추정':estimate.source==='manual'?'직접 입력':'—'],['실제 종료',time(j.ended_at)]];
   if(j.owner)fields.splice(1,0,['등록자',j.owner]);
-  if(j.progress)fields.push(['진행',`${j.progress.completed} / ${j.progress.total}`]);
+  if(j.progress)fields.push(['진행',String(j.progress.completed)+' / '+j.progress.total+(j.progress.total>0?' ('+(j.progress.completed/j.progress.total*100).toFixed(1)+'%)':'')]);
+  if(estimate.source==='progress'){
+    fields.push(['계산 기준',time(estimate.observedAt)+(estimate.approximate?' · 수신시각 사용':' · 진행률 기록시각')]);
+    fields.push(['추정 범위','등록된 진행 단계 기준 · 최종 테스트 등 후속 작업 시간은 별도']);
+    if(estimate.approximate)fields.push(['참고','기존 수집기는 진행률 기록시각을 보내지 않아 수신시각으로 대략 계산합니다.']);
+  }
+  if(j.status==='running'&&j.progress?.total>0&&j.progress.completed===j.progress.total)fields.push(['진행 상태','등록 단계 100% · 실제 종료 결과 대기']);
   if(j.end_source==='observed')fields.push(['종료 관측','수집 시점에 PID 종료 감지 · 성공 여부 미확인']);
   if(j.execution_source==='gputl-run')fields.push(['기록 방식','gputl run 자동 기록']);
   if(Number.isInteger(j.exit_code))fields.push(['종료 코드',String(j.exit_code)]);
@@ -110,4 +135,5 @@ $('close-detail').onclick=()=>$('detail-dialog').close();
 $('detail-dialog').addEventListener('click',e=>{if(e.target===$('detail-dialog')){const r=e.target.getBoundingClientRect();if(e.clientX<r.left||e.clientX>r.right||e.clientY<r.top||e.clientY>r.bottom)e.target.close();}});
 document.querySelectorAll('[data-hours]').forEach(b=>b.onclick=()=>{hours=Number(b.dataset.hours);offset=0;document.querySelectorAll('[data-hours]').forEach(x=>{x.classList.toggle('active',x===b);x.setAttribute('aria-pressed',String(x===b));});render();});
 $('previous').onclick=()=>{offset--;render();};$('next').onclick=()=>{offset++;render();};$('today').onclick=()=>{offset=0;render();};$('refresh').onclick=refresh;
+showVersion();
 try{config=await readJSON('./config.json');if(!['demo','live'].includes(config.mode))throw new Error('mode');if(config.mode==='live'&&!Array.isArray(config.servers))throw new Error('servers');await refresh();setInterval(refresh,Math.max(30,config.refresh_seconds||60)*1000);setInterval(()=>render(),30000);}catch(error){$('mode').textContent='설정 확인 필요';$('notice').textContent='설정을 불러오지 못했습니다. config.json과 웹 서버 연결을 확인해 주세요.';$('notice').className='notice error';$('timeline').innerHTML='<div class="blank">표시할 데이터가 없습니다.</div>';}
