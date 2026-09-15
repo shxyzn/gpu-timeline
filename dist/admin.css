@@ -49,3 +49,8 @@
 .usage-dashboard strong{color:#59647a;font-size:.875rem}
 .usage-dashboard p{margin:8px 0 0;color:var(--muted);font-size:.8125rem;line-height:1.9}
 @media(max-width:640px){.admin-tools{margin:0 19px 16px;align-items:flex-start}.admin-tools-actions{width:100%}.edit-feedback{padding:0 19px 14px}.admin-dialog{padding:21px}.field-grid{grid-template-columns:1fr}.admin-tools-copy span{line-height:1.7}.header-right .edit-button{font-size:.75rem;padding:7px 9px}}
+
+.detail-edit{gap:8px;flex-wrap:wrap}
+.record-actions{display:flex;gap:7px;flex-shrink:0}
+#manual-edit-note{padding:12px 14px;background:#f7f5fb;border:1px solid #e9e3f4;border-radius:8px;color:#6d5d92}
+@media(max-width:640px){.record-item{flex-wrap:wrap}.record-actions{margin-left:auto}}

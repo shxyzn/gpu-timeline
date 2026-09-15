@@ -14,7 +14,7 @@
 </aside>
 <section class="overview" aria-label="사용 현황 요약" id="overview"></section>
 <section class="workspace" aria-labelledby="timeline-title"><div class="toolbar"><div><h2 id="timeline-title">실험 타임라인</h2><p id="window-label"></p></div><div class="controls"><div class="segmented" aria-label="표시 기간"><button data-hours="24">24시간</button><button data-hours="72" class="active" aria-pressed="true">3일</button><button data-hours="168">7일</button></div><div class="stepper"><button id="previous" aria-label="이전 기간">‹</button><button id="today">현재</button><button id="next" aria-label="다음 기간">›</button></div><button id="refresh">새로고침</button></div></div>
-<div id="admin-tools" class="admin-tools" hidden><div class="admin-tools-copy"><strong id="admin-account">관리자</strong><span>수동 기록을 등록하고 삭제할 수 있어요.</span></div><div class="admin-tools-actions"><button id="manual-add" class="edit-button primary">＋ 실험 추가</button><button id="record-list" class="edit-button">기록 관리</button><button id="admin-logout" class="edit-button">로그아웃</button></div></div>
+<div id="admin-tools" class="admin-tools" hidden><div class="admin-tools-copy"><strong id="admin-account">관리자</strong><span>실험 기록을 추가·수정·삭제할 수 있어요.</span></div><div class="admin-tools-actions"><button id="manual-add" class="edit-button primary">＋ 실험 추가</button><button id="record-list" class="edit-button">기록 관리</button><button id="admin-logout" class="edit-button">로그아웃</button></div></div>
 <p id="edit-feedback" class="edit-feedback" role="status" aria-live="polite"></p>
 <div class="legend"><span><i class="running"></i>실행 중</span><span><i class="planned"></i>예정</span><span><i class="completed"></i>완료</span><span><i class="uncertain"></i>종료 미정·초과</span><span class="legend-note">막대를 누르면 실험 상세를 볼 수 있어요.</span></div>
 <div id="edit-notice" class="notice" role="status"></div><div id="notice" class="notice" role="status"></div><div class="timeline-scroll"><div id="timeline" class="timeline" aria-label="GPU별 실험 일정"></div></div><div class="timeline-foot"><span id="sync-label">상태 확인 중</span><span>Asia/Seoul · 예상 종료시간은 변경될 수 있습니다.</span></div></section>
@@ -70,7 +70,7 @@ v1.1 이상 서버에서는 list의 reference가 사이트의 실험 ID와 같�
   </div>
   <div class="usage-bottom"><p>GPU 상태는 10분마다 업로드 · 실험 변경은 자동으로 업로드 요청됩니다. 화면 반영에는 전송·캐시 시간이 걸릴 수 있어요.</p><div class="usage-sync"><code id="usage-sync">/usr/local/bin/gputl sync</code><button type="button" class="usage-copy" data-copy-target="usage-sync" aria-label="즉시 업로드 명령 복사">복사</button></div></div>
   <p class="usage-card-note">공용 명령이나 run 기능이 없으면 관리자에게 <a href="https://github.com/shxyzn/gpu-timeline/blob/main/SHARED_SETUP.md">서버당 한 번 설치·업데이트</a>를 요청하세요.</p>
-  <div class="usage-dashboard"><strong>대시보드에서 직접 기록하기</strong><p>오른쪽 위 <b>관리자 로그인</b> → <b>실험 추가</b>로 수동 등록하세요. 실험 막대를 누르면 삭제할 수 있고, <b>기록 관리</b>에서 복구할 수 있어요. 처음 쓰는 브라우저에서는 GitHub 연결 키와 사용할 비밀번호를 한 번 설정합니다.</p><p>수동 기록은 모두에게 공유되며 서버에서 실험을 실행하거나 종료하지 않아요. 상태도 자동으로 바뀌지 않습니다. 삭제해도 실제 GPU 점유·서버 로그는 유지됩니다.</p></div>
+  <div class="usage-dashboard"><strong>대시보드에서 직접 기록하기</strong><p>오른쪽 위 <b>관리자 로그인</b> → <b>실험 추가</b>로 수동 등록하세요. 실험 막대를 누르면 이름·시간·설명 수정과 삭제가 가능하고, <b>기록 관리</b>에서 복구할 수 있어요. 처음 쓰는 브라우저에서는 GitHub 연결 키와 사용할 비밀번호를 한 번 설정합니다.</p><p>서버에서 수집한 실험도 이름·시간·설명을 수정할 수 있고, 수정 화면에서 서버 수집값으로 되돌릴 수 있어요. 수동 기록은 모두에게 공유되며 서버에서 실험을 실행하거나 종료하지 않아요. 상태도 자동으로 바뀌지 않습니다. 삭제해도 실제 GPU 점유·서버 로그는 유지됩니다.</p></div>
   <p id="usage-feedback" class="usage-feedback" role="status" aria-live="polite"></p>
 </section>
 
@@ -94,17 +94,17 @@ v1.1 이상 서버에서는 list의 reference가 사이트의 실험 ID와 같�
 </dialog>
 <dialog id="manual-dialog" class="admin-dialog" aria-labelledby="manual-title">
   <div class="dialog-heading"><span class="eyebrow">MANUAL EXPERIMENT</span><button type="button" data-close-dialog="manual-dialog" aria-label="실험 추가 닫기">×</button></div>
-  <h2 id="manual-title">실험 추가</h2><p class="admin-help">대시보드에 공유할 기록을 입력하세요. 실제 실험 실행·자동 종료 추적은 서버에서 진행합니다.</p>
+  <h2 id="manual-title">실험 추가</h2><p id="manual-edit-note" class="admin-help" hidden></p><p class="admin-help">대시보드에 공유할 기록을 입력하세요. 실제 실험 실행·자동 종료 추적은 서버에서 진행합니다.</p>
   <form id="manual-form">
     <label class="field">실험명<input id="manual-name" required maxlength="160" placeholder="예: GEPA · Qwen3-8B"></label>
     <div class="field-grid"><label class="field">등록자<input id="manual-owner" maxlength="100" placeholder="공개 표시 이름"></label><label class="field">서버<select id="manual-server" required></select></label></div>
     <fieldset class="gpu-fieldset"><legend>GPU · 여러 개 선택 가능</legend><div id="manual-gpus" class="gpu-options"></div></fieldset>
-    <div class="field-grid"><label class="field">상태<select id="manual-status"><option value="running">실행 중</option><option value="planned">예정</option><option value="completed">완료</option><option value="failed">실패</option><option value="cancelled">취소</option></select></label><label class="field">시작시간 · 한국시간<input id="manual-start" type="datetime-local" required></label></div>
+    <div class="field-grid"><label class="field">상태<select id="manual-status"><option value="running">실행 중</option><option value="planned">예정</option><option value="completed">완료</option><option value="failed">실패</option><option value="cancelled">취소</option><option value="stopped" data-collector-status hidden>프로세스 종료 · 결과 미확인</option><option value="unknown" data-collector-status hidden>확인 필요</option></select></label><label class="field">시작시간 · 한국시간<input id="manual-start" type="datetime-local" required></label></div>
     <div class="field-grid"><label class="field">예상 종료시간 · 선택<input id="manual-end" type="datetime-local"></label><label id="manual-ended-field" class="field" hidden>실제 종료시간<input id="manual-ended" type="datetime-local"></label></div>
     <label class="field">설명 · 선택<textarea id="manual-description" maxlength="2000" placeholder="모델, 데이터셋 등 공유할 내용"></textarea></label>
     <p class="admin-help">시간은 모두 Asia/Seoul 기준입니다. 실행 중 실험의 예상 종료를 비워 두면 현재까지 표시합니다. 예정 실험은 예상 종료시간도 입력하세요. 수동 기록의 상태는 자동으로 바뀌지 않습니다.</p>
     <p id="manual-error" class="admin-error" role="alert"></p>
-    <div class="dialog-actions"><button type="button" class="edit-button" data-close-dialog="manual-dialog">취소</button><button type="submit" class="edit-button primary">실험 등록</button></div>
+    <div class="dialog-actions"><button type="button" class="edit-button" data-close-dialog="manual-dialog">취소</button><button id="manual-reset" type="button" class="edit-button" hidden>서버 수집값으로 되돌리기</button><button id="manual-submit" type="submit" class="edit-button primary">실험 등록</button></div>
   </form>
 </dialog>
 <dialog id="records-dialog" class="admin-dialog" aria-labelledby="records-title">

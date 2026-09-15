@@ -101,6 +101,7 @@ function fillDetail(server,id){
   const estimate=jobETA(j,s.updated_at),eta=estimate.at,isOver=j.status==='running'&&eta!==null&&eta<now;
   const fields=[['서버',s.name],['GPU',s.gpus.filter(g=>j.gpu_uuids.includes(g.uuid)).map(g=>`GPU ${g.index}`).join(', ')],['상태',statusLabels[j.status]||j.status],['시작',time(j.started_at)],['사용 시간',elapsed],['완료 예정',eta===null?'미등록':time(eta)+(estimate.source==='progress'?' · 추정':'')+(isOver?' · 예정 초과':'')],['예정 산정',estimate.source==='progress'?'진행률 기반 선형 추정':estimate.source==='manual'?'직접 입력':'—'],['실제 종료',time(j.ended_at)]];
   if(j.dashboard_manual)fields.push(['기록 방식','대시보드 수동 등록 · 자동 종료 추적 없음']);
+  if(j.dashboard_override_fields?.length)fields.push(['웹 수정','이름·시간 등 수정한 항목 우선 표시 · 실행 상태는 서버 수집값']);
   if(j.owner)fields.splice(1,0,['등록자',j.owner]);
   if(j.progress)fields.push(['진행',String(j.progress.completed)+' / '+j.progress.total+(j.progress.total>0?' ('+(j.progress.completed/j.progress.total*100).toFixed(1)+'%)':'')]);
   if(estimate.source==='progress'){
@@ -116,9 +117,14 @@ function fillDetail(server,id){
   if(j.end_source==='launch_error')fields.push(['실행 결과','명령을 시작하지 못했거나 시작 전 취소됨']);
   if(j.end_source==='tracking_lost')fields.push(['실행 확인',`${time(j.tracking_lost_at)} 추적 연결 끊김 · 종료 결과 미확인`]);
   const reference=`${s.server_id}/${j.id}`;
-  $('job-detail').innerHTML=`<h3>${escape(j.name)} ${j.dashboard_manual?'<span class="manual-tag">수동 등록</span>':''}</h3><div class="experiment-reference"><div class="experiment-reference-text"><span>실험 ID</span><code id="experiment-reference-value">${escape(reference)}</code></div><button type="button" data-copy-experiment-id aria-label="실험 ID 복사">복사</button></div><p id="experiment-copy-feedback" class="experiment-copy-feedback" role="status" aria-live="polite"></p><p>${escape(j.description||'')}</p><dl>${fields.map(([k,v])=>`<dt>${k}</dt><dd>${escape(v)}</dd>`).join('')}</dl>${!health(s,now,config.stale_after_seconds||1200).ok?'<p>갱신이 지연되어 마지막 수신 정보입니다.</p>':''}${editor?.unlocked?'<div class="detail-edit"><button type="button" class="edit-button danger" data-delete-experiment>삭제</button></div>':''}`;
+  $('job-detail').innerHTML=`<h3>${escape(j.name)} ${j.dashboard_manual?'<span class="manual-tag">수동 등록</span>':''}</h3><div class="experiment-reference"><div class="experiment-reference-text"><span>실험 ID</span><code id="experiment-reference-value">${escape(reference)}</code></div><button type="button" data-copy-experiment-id aria-label="실험 ID 복사">복사</button></div><p id="experiment-copy-feedback" class="experiment-copy-feedback" role="status" aria-live="polite"></p><p>${escape(j.description||'')}</p><dl>${fields.map(([k,v])=>`<dt>${k}</dt><dd>${escape(v)}</dd>`).join('')}</dl>${!health(s,now,config.stale_after_seconds||1200).ok?'<p>갱신이 지연되어 마지막 수신 정보입니다.</p>':''}${editor?.unlocked?'<div class="detail-edit"><button type="button" class="edit-button" data-edit-experiment>수정</button><button type="button" class="edit-button danger" data-delete-experiment>삭제</button></div>':''}`;
 }
 $('job-detail').addEventListener('click',async e=>{
+  if(e.target.closest('[data-edit-experiment]')){
+    const s=servers.find(x=>x.server_id===selected?.server),j=s?.jobs.find(x=>x.id===selected?.id);
+    if(j&&editor?.unlocked&&!editor.busy)editor.showEdit(s.server_id,j);
+    return;
+  }
   if(e.target.closest('[data-delete-experiment]')){
     const s=servers.find(x=>x.server_id===selected?.server),j=s?.jobs.find(x=>x.id===selected?.id);
     if(j&&editor?.unlocked&&!editor.busy)editor.showDelete(s.server_id,j);

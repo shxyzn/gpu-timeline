@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {emptyEdits, validateEdits, makeManualJob, applyOperation, mergeEdits, encodeJSON, decodeJSON, GitHubEditsStore} from '../dist/edits.js';
-import {gpuState} from '../dist/model.js';
+import {emptyEdits, validateEdits, makeManualJob, makeEditOperation, applyOperation, mergeEdits, encodeJSON, decodeJSON, GitHubEditsStore} from '../dist/edits.js';
+import {gpuState, jobETA} from '../dist/model.js';
 import {sealToken, openToken} from '../dist/vault.js';
 import {kstInput, fromKstInput} from '../dist/admin.js';
 
@@ -172,4 +172,97 @@ test('form times always use Korea time independently of the browser timezone', (
   assert.equal(kstInput(new Date(now)), '2026-09-15T10:00');
   assert.equal(fromKstInput('2026-09-15T10:00'), now);
   assert.equal(fromKstInput(''), null);
+});
+
+const collector = {...server.jobs[0], owner: '상현', description: '', started_at: '2026-09-15T00:00:17.123Z', expected_end_at: null, ended_at: null,
+  progress: {completed: 25, total: 100, updated_at: now}};
+const editCollector = (patch, data = emptyEdits(), visible = collector) =>
+  makeEditOperation({...visible, ...patch}, server.server_id, visible, [server], data, now);
+
+test('manual editing preserves ID and creation time, updates times/GPU/status, and retries idempotently', () => {
+  const data = applyOperation(emptyEdits(), add());
+  const [visible] = mergeEdits([server], data);
+  const before = visible.jobs.find(j => j.dashboard_manual);
+  const op = makeEditOperation({...before, name: 'GEPA 수정', status: 'completed', ended_at: now}, 'server-a', before, [server], data, now);
+  const next = applyOperation(data, op);
+  assert.equal(next.manual_jobs.length, 1);
+  assert.equal(next.manual_jobs[0].id, before.id);
+  assert.equal(next.manual_jobs[0].created_at, before.created_at);
+  assert.equal(next.manual_jobs[0].status, 'completed');
+  assert.equal(next.manual_jobs[0].ended_at, now);
+  assert.deepEqual(applyOperation(next, op), next);
+});
+
+test('collector edits contain only changed fields, keep timestamp precision, and cannot alter identity or status', () => {
+  const op = editCollector({name: '이름 수정', status: 'completed', id: 'other'});
+  assert.deepEqual(op.changes, {name: '이름 수정'});
+  const next = applyOperation(emptyEdits(), op);
+  const visible = mergeEdits([{...server, jobs: [collector]}], next)[0].jobs[0];
+  assert.equal(visible.started_at, collector.started_at);
+  assert.equal(visible.status, 'running');
+  assert.equal(visible.id, collector.id);
+  assert.throws(() => applyOperation(emptyEdits(), {...op, changes: {status: 'completed'}}), /수정할 수 없는/);
+});
+
+test('edited times/metadata survive collector upload while completion and progress remain live', () => {
+  const op = editCollector({name: 'GEPA 웹 수정', started_at: '2026-09-14T23:00:00Z', expected_end_at: '2026-09-15T05:00:00Z'});
+  const data = applyOperation(emptyEdits(), op);
+  const uploaded = {...collector, status: 'completed', ended_at: now, progress: {completed: 100, total: 100}};
+  const visible = mergeEdits([{...server, jobs: [uploaded]}], data)[0].jobs[0];
+  assert.equal(visible.name, 'GEPA 웹 수정');
+  assert.equal(visible.started_at, op.changes.started_at);
+  assert.equal(visible.expected_end_at, op.changes.expected_end_at);
+  assert.equal(visible.status, 'completed');
+  assert.equal(visible.ended_at, now);
+  assert.equal(visible.progress.completed, 100);
+  assert.equal(uploaded.name, collector.name);
+});
+
+test('explicit ETA edit wins over progress; clearing and reset restore the intended behavior', () => {
+  const source = {...collector, eta_source: 'progress'};
+  let data = applyOperation(emptyEdits(), editCollector({expected_end_at: '2026-09-15T06:00:00Z'}, emptyEdits(), source));
+  const view = () => mergeEdits([{...server, jobs: [source]}], data)[0].jobs[0];
+  assert.equal(jobETA(view(), now).at, Date.parse('2026-09-15T06:00:00Z'));
+  data = applyOperation(data, editCollector({expected_end_at: null}, data, view()));
+  assert.equal(jobETA(view(), now).at, null);
+  const reset = {type: 'reset_collector', reference: 'server-a/job-1', before: data.job_overrides[0].fields, at: now};
+  data = applyOperation(data, reset);
+  assert.equal(jobETA(view(), now).source, 'progress');
+  assert.deepEqual(applyOperation(data, reset), data);
+  const clearAuto = editCollector({expected_end_at: null, force_expected_end: true}, emptyEdits(), source);
+  assert.deepEqual(clearAuto.changes, {expected_end_at: null});
+});
+
+test('concurrent edits merge different fields and reject stale same-field updates or resets', () => {
+  const first = editCollector({name: 'A'}), second = editCollector({owner: '다른 등록자'}), conflict = editCollector({name: 'B'});
+  const data = applyOperation(emptyEdits(), first);
+  const merged = applyOperation(data, second);
+  assert.deepEqual(merged.job_overrides[0].fields, {name: 'A', owner: '다른 등록자'});
+  assert.throws(() => applyOperation(merged, conflict), /같은 항목/);
+  assert.deepEqual(applyOperation(merged, first), merged);
+  assert.throws(() => applyOperation(merged, {type: 'reset_collector', reference: 'server-a/job-1', before: data.job_overrides[0].fields, at: now}), /다른 관리자/);
+});
+
+test('concurrent manual edits merge independent fields and reject invalid time combinations', () => {
+  const data = applyOperation(emptyEdits(), add()), before = {...data.manual_jobs[0], dashboard_manual: true};
+  const make = patch => makeEditOperation({...before, ...patch}, 'server-a', before, [server], data, now);
+  const first = applyOperation(data, make({name: 'A'}));
+  const second = applyOperation(first, make({description: '추가 메모'}));
+  assert.equal(second.manual_jobs[0].name, 'A');
+  assert.equal(second.manual_jobs[0].description, '추가 메모');
+  assert.throws(() => applyOperation(second, make({name: 'B'})), /같은 항목/);
+  const end = make({expected_end_at: '2026-09-15T00:30:00Z'});
+  const start = applyOperation(data, make({started_at: '2026-09-15T00:45:00Z'}));
+  assert.throws(() => applyOperation(start, end), /형식/);
+});
+
+test('legacy documents remain valid; overlays are isolated by server, kept through hide/restore and do not invent expired records', () => {
+  assert.equal(validateEdits(emptyEdits()).job_overrides, undefined);
+  let data = applyOperation(emptyEdits(), editCollector({name: '웹 이름'}));
+  data = applyOperation(data, hide);
+  assert.equal(mergeEdits([{...server, jobs: [collector]}], data)[0].jobs.length, 0);
+  data = applyOperation(data, {type: 'restore', reference: hide.reference, at: now});
+  assert.equal(mergeEdits([{...server, jobs: [collector]}], data)[0].jobs[0].name, '웹 이름');
+  assert.equal(mergeEdits([{...server, server_id: 'server-b', jobs: [collector]}], data)[0].jobs[0].name, collector.name);
+  assert.equal(mergeEdits([{...server, jobs: []}], data)[0].jobs.length, 0);
 });
