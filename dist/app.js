@@ -1,3 +1,5 @@
+import {DashboardEditor} from './admin.js';
+import {mergeEdits} from './edits.js';
 import {demoSnapshot} from './demo.js';
 import {HOUR,timestamp,health,gpuState,layoutJobs,jobETA,versionLabel} from './model.js';
 const $=id=>document.getElementById(id);
@@ -26,8 +28,11 @@ function serverVersion(info){
   return '<p class="server-version" title="'+escape(title)+'"><span>설치 버전 '+value+'</span></p>';
 }
 const statusLabels={running:'실행 중',planned:'예정',completed:'완료',failed:'실패',cancelled:'취소',stopped:'프로세스 종료 · 결과 미확인',unknown:'확인 필요'};
-let config,servers=[],hours=72,offset=0,lastFetch=null,fetchErrors=0,selected=null;
+let editor,telemetryServers=[],config,servers=[],hours=72,offset=0,lastFetch=null,fetchErrors=0,selected=null;
 const demo=demoSnapshot();
+const telemetry = server => telemetryServers.find(s=>s.server_id===server.server_id)||server;
+function applyDashboardEdits(){servers=editor?.enabled?mergeEdits(telemetryServers,editor.data):telemetryServers;}
+function editorChanged(){applyDashboardEdits();if(config)render();}
 function viewWindow(){const now=Date.now();const anchor=Math.floor((now+9*HOUR)/(24*HOUR))*24*HOUR-9*HOUR;return {now,start:anchor+(offset*hours)*HOUR,end:anchor+(offset*hours+hours)*HOUR};}
 async function readJSON(url){const u=new URL(url,location.href);u.searchParams.set('_',String(Math.floor(Date.now()/60000)));const r=await fetch(u,{cache:'no-store',signal:AbortSignal.timeout(15000)});if(!r.ok)throw new Error(`HTTP ${r.status}`);return r.json();}
 function checkServer(s,id){
@@ -39,20 +44,20 @@ function checkServer(s,id){
 async function refresh(){
   $('refresh').disabled=true;
   try{
-    if(config.mode==='demo'){servers=demo;fetchErrors=0;}
+    if(config.mode==='demo'){telemetryServers=demo;fetchErrors=0;}
     else{
-      const results=await Promise.allSettled(config.servers.map(async item=>checkServer(await readJSON(new URL(item.file,config.data_base_url).href),item.id)));
+      const [results]=await Promise.all([Promise.allSettled(config.servers.map(async item=>checkServer(await readJSON(new URL(item.file,config.data_base_url).href),item.id))),editor?.refresh()]);
       fetchErrors=0;
-      servers=results.map((r,i)=>{if(r.status==='fulfilled')return r.value;fetchErrors++;const item=config.servers[i],previous=servers.find(s=>s.server_id===item.id);return {...(previous||{server_id:item.id,name:item.name,gpus:[],jobs:[],updated_at:null,collector_ok:false}),fetch_error:true};});
+      telemetryServers=results.map((r,i)=>{if(r.status==='fulfilled')return r.value;fetchErrors++;const item=config.servers[i],previous=telemetryServers.find(s=>s.server_id===item.id);return {...(previous||{server_id:item.id,name:item.name,gpus:[],jobs:[],updated_at:null,collector_ok:false}),fetch_error:true};});
     }
-    lastFetch=Date.now();render();
+    applyDashboardEdits();lastFetch=Date.now();render();
   }catch(error){$('notice').textContent='데이터를 불러오지 못했습니다. 마지막 수신 상태를 표시합니다.';$('notice').className='notice error';}
   finally{$('refresh').disabled=false;}
 }
 function render(){
   const {now,start,end}=viewWindow();const stale=config.stale_after_seconds||1200;
-  document.title=config.title||'CVML GPU Timeline';$('clock').textContent=fmt(now,{hour:'2-digit',minute:'2-digit',hourCycle:'h23'})+' KST';$('mode').textContent=config.mode==='demo'?'예시 데이터':'조회 전용';
-  const states=servers.flatMap(s=>s.gpus.map(g=>gpuState(s,g,now,stale)));
+  document.title=config.title||'CVML GPU Timeline';$('clock').textContent=fmt(now,{hour:'2-digit',minute:'2-digit',hourCycle:'h23'})+' KST';$('mode').textContent=config.mode==='demo'?'예시 데이터':editor?.unlocked?'관리자 모드':'현황 조회';
+  const states=servers.flatMap(s=>s.gpus.map(g=>gpuState(telemetry(s),g,now,stale)));
   const unknownServers=servers.filter(s=>!health(s,now,stale).ok).length;
   const stats=[['전체 GPU',states.length,'개',`${servers.length}개 서버`,''],['현재 점유',states.filter(x=>x==='busy').length,'개','등록 실험·실제 사용 기준','purple'],['현재 여유',states.filter(x=>x==='idle').length,'개','예약·독점 사용은 보장하지 않음','green'],['확인 필요',states.filter(x=>x==='unknown').length,'개',`${unknownServers}개 서버 수신 상태 확인`,'amber']];
   $('overview').innerHTML=stats.map(([label,value,unit,note,color])=>`<div class="stat"><span>${label}</span><strong class="${color}">${value}<small>${unit}</small></strong><p>${note}</p></div>`).join('');
@@ -69,8 +74,8 @@ function render(){
     s.gpus.forEach((g,gi)=>{
       const jobs=s.jobs.filter(j=>j.gpu_uuids.includes(g.uuid));const bars=layoutJobs(jobs,start,end,now,s.updated_at);const height=Math.max(84,(Math.max(0,...bars.map(b=>b.lane))+1)*54+30);
       const ok=health(s,now,stale).ok;
-      const empty=bars.length?'':!ok?'마지막 상태 · 수신 확인 필요':gpuState(s,g,now,stale)==='busy'?'점유 중 · 표시할 실험 일정 없음':'표시할 실험 없음';
-      html+=`<div class="lane ${gi===0?'group-start':''} ${ok?'':'stale'}" style="min-height:${height}px"><div class="gpu-label"><div><strong>${escape(s.name)}</strong><small>${escape(g.name)}</small></div><span class="gpu-num">GPU ${g.index}</span></div><div class="track" style="--grid:${step/hours*100}%">${line}${empty?`<span class="empty-track">${empty}</span>`:''}${bars.map(b=>`<button class="job-bar ${b.job.status==='running'?['','violet','green'][si%3]:escape(b.job.status)} ${b.uncertain?'uncertain':''}" style="left:${b.left}%;width:${Math.min(b.width,100-b.left)}%;top:${20+b.lane*54}px" data-server="${escape(s.server_id)}" data-job="${escape(b.job.id)}" aria-label="${escape(jobLabel(b.job))} · ${escape(statusLabels[b.job.status]||b.job.status)} · ${b.uncertain?'종료 미정 또는 예정 초과':etaText(b.job,s.updated_at)}">${escape(jobLabel(b.job))}${b.uncertain?' · 종료 확인':''}</button>`).join('')}</div></div>`;
+      const empty=bars.length?'':!ok?'마지막 상태 · 수신 확인 필요':gpuState(telemetry(s),g,now,stale)==='busy'?'점유 중 · 표시할 실험 일정 없음':'표시할 실험 없음';
+      html+=`<div class="lane ${gi===0?'group-start':''} ${ok?'':'stale'}" style="min-height:${height}px"><div class="gpu-label"><div><strong>${escape(s.name)}</strong><small>${escape(g.name)}</small></div><span class="gpu-num">GPU ${g.index}</span></div><div class="track" style="--grid:${step/hours*100}%">${line}${empty?`<span class="empty-track">${empty}</span>`:''}${bars.map(b=>`<button class="job-bar ${b.job.status==='running'?['','violet','green'][si%3]:escape(b.job.status)} ${b.uncertain?'uncertain':''} ${b.job.dashboard_manual?'manual':''}" style="left:${b.left}%;width:${Math.min(b.width,100-b.left)}%;top:${20+b.lane*54}px" data-server="${escape(s.server_id)}" data-job="${escape(b.job.id)}" aria-label="${escape(jobLabel(b.job))} · ${escape(statusLabels[b.job.status]||b.job.status)} · ${b.uncertain?'종료 미정 또는 예정 초과':etaText(b.job,s.updated_at)}">${b.job.dashboard_manual?'[수동] ':''}${escape(jobLabel(b.job))}${b.uncertain?' · 종료 확인':''}</button>`).join('')}</div></div>`;
     });
   });
   $('timeline').innerHTML=servers.length?html:'<div class="blank">연결된 서버가 없습니다.</div>';
@@ -81,20 +86,21 @@ function render(){
 function serverCard(s,now,stale){
   const h=health(s,now,stale);
   const rows=s.gpus.map(g=>{
-    const state=gpuState(s,g,now,stale),running=s.jobs.filter(j=>['running','unknown'].includes(j.status)&&j.gpu_uuids.includes(g.uuid));
+    const state=gpuState(telemetry(s),g,now,stale),running=s.jobs.filter(j=>['running','unknown'].includes(j.status)&&j.gpu_uuids.includes(g.uuid));
     const util=Number.isFinite(g.utilization)?g.utilization:null,used=Number.isFinite(g.memory_used_mib)?g.memory_used_mib:null,total=g.memory_total_mib;
     const pct=total>0&&used!==null?Math.min(100,used/total*100):0;
     const giB=v=>Number.isFinite(v)?(v/1024).toFixed(1):'—';
-    return `<div class="gpu-detail"><div class="gpu-detail-title"><strong>GPU ${g.index}</strong><small>${state==='unknown'?'확인 필요':state==='busy'?'점유 중':'현재 여유'}</small></div><div class="meter-line"><span>GPU 사용률${h.ok?'':' · 마지막 수신'}</span><span>${util===null?'—':util+'%'}</span></div><div class="meter"><div class="meter-fill" style="width:${Math.max(0,Math.min(100,util||0))}%"></div></div><div class="meter-line"><span>VRAM</span><span>${giB(used)} / ${giB(total)} GiB</span></div><div class="meter"><div class="meter-fill vram" style="width:${pct}%"></div></div>${running.map(j=>`<div class="gpu-experiment"><span>${escape(jobLabel(j))}</span><span>${j.status==='unknown'?'실행 상태 확인 필요':etaText(j,s.updated_at)}</span></div>`).join('')}${!running.length&&state==='busy'?'<div class="gpu-experiment"><span>미등록 GPU 사용 감지</span></div>':''}</div>`;
+    return `<div class="gpu-detail"><div class="gpu-detail-title"><strong>GPU ${g.index}</strong><small>${state==='unknown'?'확인 필요':state==='busy'?'점유 중':'현재 여유'}</small></div><div class="meter-line"><span>GPU 사용률${h.ok?'':' · 마지막 수신'}</span><span>${util===null?'—':util+'%'}</span></div><div class="meter"><div class="meter-fill" style="width:${Math.max(0,Math.min(100,util||0))}%"></div></div><div class="meter-line"><span>VRAM</span><span>${giB(used)} / ${giB(total)} GiB</span></div><div class="meter"><div class="meter-fill vram" style="width:${pct}%"></div></div>${running.map(j=>`<div class="gpu-experiment"><span>${j.dashboard_manual?'[수동] ':''}${escape(jobLabel(j))}</span><span>${j.status==='unknown'?'실행 상태 확인 필요':etaText(j,s.updated_at)}</span></div>`).join('')}${!running.length&&state==='busy'?'<div class="gpu-experiment"><span>GPU 점유 감지 · 표시할 실험 기록 없음</span></div>':''}</div>`;
   }).join('');
   return `<article class="server-card"><div class="server-heading"><h3>${escape(s.name)}</h3><span class="state ${h.ok?'':'warning'}">${h.label}</span></div><p class="server-meta">${escape([...new Set(s.gpus.map(g=>g.name))].join(' / ')||'GPU 정보 대기')} · ${s.gpus.length} GPU<br>마지막 수신 ${s.updated_at?ago(s.updated_at):'없음'}</p>${serverVersion(s.agent_version)}${rows||'<p class="server-meta">서버 수집 프로그램의 연결을 확인해 주세요.</p>'}</article>`;
 }
 function fillDetail(server,id){
-  const s=servers.find(x=>x.server_id===server),j=s?.jobs.find(x=>x.id===id);if(!j)return;
+  const s=servers.find(x=>x.server_id===server),j=s?.jobs.find(x=>x.id===id);if(!j){$('detail-dialog').close();return;}
   const now=Date.now(),started=timestamp(j.started_at),actualEnd=timestamp(j.ended_at);
   const elapsed=j.status==='unknown'?'실행 상태 확인 필요':started===null||j.status==='planned'?'—':`${Math.max(0,((actualEnd??now)-started)/HOUR).toFixed(1)}시간`;
   const estimate=jobETA(j,s.updated_at),eta=estimate.at,isOver=j.status==='running'&&eta!==null&&eta<now;
   const fields=[['서버',s.name],['GPU',s.gpus.filter(g=>j.gpu_uuids.includes(g.uuid)).map(g=>`GPU ${g.index}`).join(', ')],['상태',statusLabels[j.status]||j.status],['시작',time(j.started_at)],['사용 시간',elapsed],['완료 예정',eta===null?'미등록':time(eta)+(estimate.source==='progress'?' · 추정':'')+(isOver?' · 예정 초과':'')],['예정 산정',estimate.source==='progress'?'진행률 기반 선형 추정':estimate.source==='manual'?'직접 입력':'—'],['실제 종료',time(j.ended_at)]];
+  if(j.dashboard_manual)fields.push(['기록 방식','대시보드 수동 등록 · 자동 종료 추적 없음']);
   if(j.owner)fields.splice(1,0,['등록자',j.owner]);
   if(j.progress)fields.push(['진행',String(j.progress.completed)+' / '+j.progress.total+(j.progress.total>0?' ('+(j.progress.completed/j.progress.total*100).toFixed(1)+'%)':'')]);
   if(estimate.source==='progress'){
@@ -110,9 +116,14 @@ function fillDetail(server,id){
   if(j.end_source==='launch_error')fields.push(['실행 결과','명령을 시작하지 못했거나 시작 전 취소됨']);
   if(j.end_source==='tracking_lost')fields.push(['실행 확인',`${time(j.tracking_lost_at)} 추적 연결 끊김 · 종료 결과 미확인`]);
   const reference=`${s.server_id}/${j.id}`;
-  $('job-detail').innerHTML=`<h3>${escape(j.name)}</h3><div class="experiment-reference"><div class="experiment-reference-text"><span>실험 ID</span><code id="experiment-reference-value">${escape(reference)}</code></div><button type="button" data-copy-experiment-id aria-label="실험 ID 복사">복사</button></div><p id="experiment-copy-feedback" class="experiment-copy-feedback" role="status" aria-live="polite"></p><p>${escape(j.description||'')}</p><dl>${fields.map(([k,v])=>`<dt>${k}</dt><dd>${escape(v)}</dd>`).join('')}</dl>${!health(s,now,config.stale_after_seconds||1200).ok?'<p>갱신이 지연되어 마지막 수신 정보입니다.</p>':''}`;
+  $('job-detail').innerHTML=`<h3>${escape(j.name)} ${j.dashboard_manual?'<span class="manual-tag">수동 등록</span>':''}</h3><div class="experiment-reference"><div class="experiment-reference-text"><span>실험 ID</span><code id="experiment-reference-value">${escape(reference)}</code></div><button type="button" data-copy-experiment-id aria-label="실험 ID 복사">복사</button></div><p id="experiment-copy-feedback" class="experiment-copy-feedback" role="status" aria-live="polite"></p><p>${escape(j.description||'')}</p><dl>${fields.map(([k,v])=>`<dt>${k}</dt><dd>${escape(v)}</dd>`).join('')}</dl>${!health(s,now,config.stale_after_seconds||1200).ok?'<p>갱신이 지연되어 마지막 수신 정보입니다.</p>':''}${editor?.unlocked?'<div class="detail-edit"><button type="button" class="edit-button danger" data-delete-experiment>삭제</button></div>':''}`;
 }
 $('job-detail').addEventListener('click',async e=>{
+  if(e.target.closest('[data-delete-experiment]')){
+    const s=servers.find(x=>x.server_id===selected?.server),j=s?.jobs.find(x=>x.id===selected?.id);
+    if(j&&editor?.unlocked&&!editor.busy)editor.showDelete(s.server_id,j);
+    return;
+  }
   const button=e.target.closest('button[data-copy-experiment-id]');if(!button)return;
   const value=$('experiment-reference-value')?.textContent;if(!value)return;
   button.disabled=true;
@@ -136,4 +147,4 @@ $('detail-dialog').addEventListener('click',e=>{if(e.target===$('detail-dialog')
 document.querySelectorAll('[data-hours]').forEach(b=>b.onclick=()=>{hours=Number(b.dataset.hours);offset=0;document.querySelectorAll('[data-hours]').forEach(x=>{x.classList.toggle('active',x===b);x.setAttribute('aria-pressed',String(x===b));});render();});
 $('previous').onclick=()=>{offset--;render();};$('next').onclick=()=>{offset++;render();};$('today').onclick=()=>{offset=0;render();};$('refresh').onclick=refresh;
 showVersion();
-try{config=await readJSON('./config.json');if(!['demo','live'].includes(config.mode))throw new Error('mode');if(config.mode==='live'&&!Array.isArray(config.servers))throw new Error('servers');await refresh();setInterval(refresh,Math.max(30,config.refresh_seconds||60)*1000);setInterval(()=>render(),30000);}catch(error){$('mode').textContent='설정 확인 필요';$('notice').textContent='설정을 불러오지 못했습니다. config.json과 웹 서버 연결을 확인해 주세요.';$('notice').className='notice error';$('timeline').innerHTML='<div class="blank">표시할 데이터가 없습니다.</div>';}
+try{config=await readJSON('./config.json');if(!['demo','live'].includes(config.mode))throw new Error('mode');if(config.mode==='live'&&!Array.isArray(config.servers))throw new Error('servers');editor=new DashboardEditor(config,()=>telemetryServers,editorChanged);await refresh();setInterval(refresh,Math.max(30,config.refresh_seconds||60)*1000);setInterval(()=>render(),30000);}catch(error){$('mode').textContent='설정 확인 필요';$('notice').textContent='설정을 불러오지 못했습니다. config.json과 웹 서버 연결을 확인해 주세요.';$('notice').className='notice error';$('timeline').innerHTML='<div class="blank">표시할 데이터가 없습니다.</div>';}

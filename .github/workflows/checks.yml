@@ -2,9 +2,9 @@ name: Check collector and shared access
 on:
   push:
     branches: [main]
-    paths: ['agent/**', 'tests/**', 'dist/**', 'VERSION', '.github/workflows/checks.yml']
+    paths: ['agent/**', 'tests/**', 'dist/**', 'VERSION', 'package*.json', '.github/workflows/checks.yml']
   pull_request:
-    paths: ['agent/**', 'tests/**', 'dist/**', 'VERSION', '.github/workflows/checks.yml']
+    paths: ['agent/**', 'tests/**', 'dist/**', 'VERSION', 'package*.json', '.github/workflows/checks.yml']
   workflow_dispatch:
 permissions:
   contents: read
@@ -43,4 +43,12 @@ jobs:
         run: |
           node --check dist/app.js
           node --check dist/model.js
-          node --test tests/model.test.js
+          node --check dist/admin.js
+          node --check dist/edits.js
+          npm test
+      - name: Browser editor workflow (mock GitHub; no real writes)
+        if: matrix.python == '3.11'
+        run: |
+          npm ci
+          npx playwright install --with-deps chromium
+          npm run test:browser

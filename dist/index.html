@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="description" content="서버별 GPU 실험과 예상 종료시간을 한눈에 확인하는 타임라인"><title>CVML GPU Timeline</title><link rel="stylesheet" href="./styles.css"><link rel="stylesheet" href="./usage.css"><style id="development-info-styles">
+<html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="description" content="서버별 GPU 실험과 예상 종료시간을 한눈에 확인하는 타임라인"><title>CVML GPU Timeline</title><link rel="stylesheet" href="./styles.css"><link rel="stylesheet" href="./usage.css"><link rel="stylesheet" href="./admin.css"><style id="development-info-styles">
 .development-info{display:flex;align-items:flex-start;gap:12px;margin:0 0 24px;padding:16px 20px;background:#fff9e6;border:1px solid #f1e4ba;border-radius:12px;color:#766338;font-size:.875rem;line-height:1.75}
 .development-info-icon{flex:0 0 20px;width:20px;height:20px;margin-top:2px;color:#a58430}
 .development-info-copy{display:flex;align-items:baseline;flex-wrap:wrap;gap:3px 12px;min-width:0}
@@ -7,15 +7,17 @@
 .development-info p{margin:0;word-break:keep-all;overflow-wrap:anywhere}
 @media(max-width:640px){.development-info{gap:10px;padding:14px 16px;margin-bottom:20px}.development-info-copy{display:block}.development-info p{margin-top:4px}}
 </style></head>
-<body><main><header><div class="brand"><span class="brand-mark" aria-hidden="true"></span><div><p class="eyebrow">GPU UTILIZATION DASHBOARD</p><h1>CVML GPU <span>Timeline</span></h1></div></div><div class="header-right"><span id="mode" class="badge">불러오는 중</span><span id="clock"></span></div></header>
+<body><main><header><div class="brand"><span class="brand-mark" aria-hidden="true"></span><div><p class="eyebrow">GPU UTILIZATION DASHBOARD</p><h1>CVML GPU <span>Timeline</span></h1></div></div><div class="header-right"><span id="mode" class="badge">불러오는 중</span><span id="clock"></span><button id="admin-login" class="edit-button" hidden>관리자 로그인</button></div></header>
 <aside id="development-info" class="development-info" role="note" aria-label="개발 안내">
   <svg class="development-info-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M12 11v6"></path><circle cx="12" cy="7.5" r=".8" fill="currentColor" stroke="none"></circle></svg>
   <div class="development-info-copy"><strong>개발 중 안내</strong><p>현재 개발 중인 대시보드입니다. 표시 정보가 부정확하거나 실제 상태보다 늦게 반영될 수 있습니다.</p></div>
 </aside>
 <section class="overview" aria-label="사용 현황 요약" id="overview"></section>
 <section class="workspace" aria-labelledby="timeline-title"><div class="toolbar"><div><h2 id="timeline-title">실험 타임라인</h2><p id="window-label"></p></div><div class="controls"><div class="segmented" aria-label="표시 기간"><button data-hours="24">24시간</button><button data-hours="72" class="active" aria-pressed="true">3일</button><button data-hours="168">7일</button></div><div class="stepper"><button id="previous" aria-label="이전 기간">‹</button><button id="today">현재</button><button id="next" aria-label="다음 기간">›</button></div><button id="refresh">새로고침</button></div></div>
+<div id="admin-tools" class="admin-tools" hidden><div class="admin-tools-copy"><strong id="admin-account">관리자</strong><span>수동 기록을 등록하고 삭제할 수 있어요.</span></div><div class="admin-tools-actions"><button id="manual-add" class="edit-button primary">＋ 실험 추가</button><button id="record-list" class="edit-button">기록 관리</button><button id="admin-logout" class="edit-button">로그아웃</button></div></div>
+<p id="edit-feedback" class="edit-feedback" role="status" aria-live="polite"></p>
 <div class="legend"><span><i class="running"></i>실행 중</span><span><i class="planned"></i>예정</span><span><i class="completed"></i>완료</span><span><i class="uncertain"></i>종료 미정·초과</span><span class="legend-note">막대를 누르면 실험 상세를 볼 수 있어요.</span></div>
-<div id="notice" class="notice" role="status"></div><div class="timeline-scroll"><div id="timeline" class="timeline" aria-label="GPU별 실험 일정"></div></div><div class="timeline-foot"><span id="sync-label">상태 확인 중</span><span>Asia/Seoul · 예상 종료시간은 변경될 수 있습니다.</span></div></section>
+<div id="edit-notice" class="notice" role="status"></div><div id="notice" class="notice" role="status"></div><div class="timeline-scroll"><div id="timeline" class="timeline" aria-label="GPU별 실험 일정"></div></div><div class="timeline-foot"><span id="sync-label">상태 확인 중</span><span>Asia/Seoul · 예상 종료시간은 변경될 수 있습니다.</span></div></section>
 <section class="details" aria-labelledby="details-title"><div class="section-title"><h2 id="details-title">서버 상세</h2><span>GPU 상태와 실행 정보</span></div><div id="servers" class="server-grid"></div></section>
 
 <!-- 간단 사용법: 이 section의 문구와 명령어를 수정하세요. -->
@@ -68,8 +70,51 @@ v1.1 이상 서버에서는 list의 reference가 사이트의 실험 ID와 같�
   </div>
   <div class="usage-bottom"><p>GPU 상태는 10분마다 업로드 · 실험 변경은 자동으로 업로드 요청됩니다. 화면 반영에는 전송·캐시 시간이 걸릴 수 있어요.</p><div class="usage-sync"><code id="usage-sync">/usr/local/bin/gputl sync</code><button type="button" class="usage-copy" data-copy-target="usage-sync" aria-label="즉시 업로드 명령 복사">복사</button></div></div>
   <p class="usage-card-note">공용 명령이나 run 기능이 없으면 관리자에게 <a href="https://github.com/shxyzn/gpu-timeline/blob/main/SHARED_SETUP.md">서버당 한 번 설치·업데이트</a>를 요청하세요.</p>
+  <div class="usage-dashboard"><strong>대시보드에서 직접 기록하기</strong><p>오른쪽 위 <b>관리자 로그인</b> → <b>실험 추가</b>로 수동 등록하세요. 실험 막대를 누르면 삭제할 수 있고, <b>기록 관리</b>에서 복구할 수 있어요. 처음 쓰는 브라우저에서는 GitHub 연결 키와 사용할 비밀번호를 한 번 설정합니다.</p><p>수동 기록은 모두에게 공유되며 서버에서 실험을 실행하거나 종료하지 않아요. 상태도 자동으로 바뀌지 않습니다. 삭제해도 실제 GPU 점유·서버 로그는 유지됩니다.</p></div>
   <p id="usage-feedback" class="usage-feedback" role="status" aria-live="polite"></p>
 </section>
 
-<footer><div class="footer-version"><span>CVML GPU TIMELINE</span><a id="dashboard-version" class="version-tag" target="_blank" rel="noopener noreferrer">대시보드 버전 확인 중</a><span id="deployment-version"></span></div><span>읽기 전용 · 서버에서 전달한 상태를 표시합니다.</span></footer></main>
-<dialog id="detail-dialog"><div class="dialog-heading"><span class="eyebrow">EXPERIMENT</span><button id="close-detail" aria-label="상세 닫기">×</button></div><div id="job-detail"></div></dialog><script type="module" src="./app.js"></script><script type="module" src="./usage.js"></script></body></html>
+<footer><div class="footer-version"><span>CVML GPU TIMELINE</span><a id="dashboard-version" class="version-tag" target="_blank" rel="noopener noreferrer">대시보드 버전 확인 중</a><span id="deployment-version"></span></div><span>서버 수집 상태 · 관리자 수동 기록</span></footer></main>
+<dialog id="detail-dialog"><div class="dialog-heading"><span class="eyebrow">EXPERIMENT</span><button id="close-detail" aria-label="상세 닫기">×</button></div><div id="job-detail"></div></dialog>
+<dialog id="admin-dialog" class="admin-dialog" aria-labelledby="admin-title">
+  <div class="dialog-heading"><span class="eyebrow">ADMIN ACCESS</span><button type="button" data-close-dialog="admin-dialog" aria-label="로그인 닫기">×</button></div>
+  <h2 id="admin-title">관리자 로그인</h2><p id="admin-description" class="admin-help"></p>
+  <form id="admin-form">
+    <label class="field">관리자 비밀번호<input id="admin-password" type="password" required autocomplete="current-password" maxlength="200"></label>
+    <div id="admin-setup" class="admin-setup" hidden>
+      <label class="field">비밀번호 확인<input id="admin-password-confirm" type="password" autocomplete="new-password" maxlength="200"></label>
+      <label class="field">GitHub 연결 키<input id="admin-token" type="password" autocomplete="off" spellcheck="false" placeholder="github_pat_…"></label>
+      <details><summary>연결 키는 어디서 만드나요?</summary><ol><li><a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener noreferrer">GitHub에서 Fine-grained token 만들기 ↗</a></li><li>Repository access에서 <b>Only select repositories</b> → <b>gpu-timeline</b> 선택</li><li>Repository permissions → <b>Contents: Read and write</b> 설정</li><li>생성한 토큰을 위 연결 키에 붙여넣으세요.</li></ol><p>토큰은 이 저장소의 내용을 수정할 권한이 있으니 관리자만 사용하세요. 코드에 붙여넣지 않습니다.</p></details>
+      <label class="admin-check"><input id="admin-remember" type="checkbox" checked>이 브라우저에 연결 기억</label>
+      <p class="admin-help">연결 키는 비밀번호로 암호화해 이 브라우저에만 저장합니다. 다른 브라우저에서는 다시 연결해야 해요. 비밀번호를 잊었거나 토큰이 만료되면 연결을 다시 설정하세요.</p>
+    </div>
+    <p id="admin-error" class="admin-error" role="alert"></p>
+    <div class="dialog-actions"><button id="admin-connect-again" type="button" class="edit-button">연결 다시 설정</button><button id="admin-submit" type="submit" class="edit-button primary">로그인</button></div>
+  </form>
+</dialog>
+<dialog id="manual-dialog" class="admin-dialog" aria-labelledby="manual-title">
+  <div class="dialog-heading"><span class="eyebrow">MANUAL EXPERIMENT</span><button type="button" data-close-dialog="manual-dialog" aria-label="실험 추가 닫기">×</button></div>
+  <h2 id="manual-title">실험 추가</h2><p class="admin-help">대시보드에 공유할 기록을 입력하세요. 실제 실험 실행·자동 종료 추적은 서버에서 진행합니다.</p>
+  <form id="manual-form">
+    <label class="field">실험명<input id="manual-name" required maxlength="160" placeholder="예: GEPA · Qwen3-8B"></label>
+    <div class="field-grid"><label class="field">등록자<input id="manual-owner" maxlength="100" placeholder="공개 표시 이름"></label><label class="field">서버<select id="manual-server" required></select></label></div>
+    <fieldset class="gpu-fieldset"><legend>GPU · 여러 개 선택 가능</legend><div id="manual-gpus" class="gpu-options"></div></fieldset>
+    <div class="field-grid"><label class="field">상태<select id="manual-status"><option value="running">실행 중</option><option value="planned">예정</option><option value="completed">완료</option><option value="failed">실패</option><option value="cancelled">취소</option></select></label><label class="field">시작시간 · 한국시간<input id="manual-start" type="datetime-local" required></label></div>
+    <div class="field-grid"><label class="field">예상 종료시간 · 선택<input id="manual-end" type="datetime-local"></label><label id="manual-ended-field" class="field" hidden>실제 종료시간<input id="manual-ended" type="datetime-local"></label></div>
+    <label class="field">설명 · 선택<textarea id="manual-description" maxlength="2000" placeholder="모델, 데이터셋 등 공유할 내용"></textarea></label>
+    <p class="admin-help">시간은 모두 Asia/Seoul 기준입니다. 실행 중 실험의 예상 종료를 비워 두면 현재까지 표시합니다. 예정 실험은 예상 종료시간도 입력하세요. 수동 기록의 상태는 자동으로 바뀌지 않습니다.</p>
+    <p id="manual-error" class="admin-error" role="alert"></p>
+    <div class="dialog-actions"><button type="button" class="edit-button" data-close-dialog="manual-dialog">취소</button><button type="submit" class="edit-button primary">실험 등록</button></div>
+  </form>
+</dialog>
+<dialog id="records-dialog" class="admin-dialog" aria-labelledby="records-title">
+  <div class="dialog-heading"><span class="eyebrow">EXPERIMENT RECORDS</span><button type="button" data-close-dialog="records-dialog" aria-label="기록 관리 닫기">×</button></div>
+  <h2 id="records-title">기록 관리</h2><p class="admin-help">표시 기간 밖의 수동 기록도 관리할 수 있어요. 삭제된 실험은 원본 기록이 남아 있을 때 다시 표시됩니다.</p>
+  <div id="record-items"></div><p id="records-error" class="admin-error" role="alert"></p>
+</dialog>
+<dialog id="delete-dialog" class="admin-dialog" aria-labelledby="delete-title">
+  <div class="dialog-heading"><span class="eyebrow">DELETE RECORD</span><button type="button" data-close-dialog="delete-dialog" aria-label="삭제 창 닫기">×</button></div>
+  <h2 id="delete-title">대시보드에서 삭제할까요?</h2><p id="delete-name"></p><code id="delete-reference"></code><p class="admin-help">모든 사용자의 대시보드에서 이 기록을 숨깁니다. 실제 실험·서버 로그는 그대로 유지되며, 기록 관리에서 복구할 수 있어요.</p>
+  <form id="delete-form"><p id="delete-error" class="admin-error" role="alert"></p><div class="dialog-actions"><button type="button" class="edit-button" data-close-dialog="delete-dialog">취소</button><button type="submit" class="edit-button danger">삭제</button></div></form>
+</dialog>
+<script type="module" src="./app.js"></script><script type="module" src="./usage.js"></script></body></html>

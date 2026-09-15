@@ -20,5 +20,10 @@
       "name": "Server C",
       "file": "servers/server-c.json"
     }
-  ]
+  ],
+  "dashboard": {
+    "repository": "shxyzn/gpu-timeline",
+    "branch": "status",
+    "path": "dashboard/edits.json"
+  }
 }
