@@ -156,7 +156,7 @@ class SharedTests(unittest.TestCase):
         self.assertNotIn("progress", agent.make_snapshot(self.config)["jobs"][0])
 
     def test_status_and_snapshot_report_the_same_installed_version(self):
-        version = {"version": "1.1.0", "deployment_version": "1.1", "revision": "a" * 40,
+        version = {"version": "1.1.3", "revision": "a" * 40,
                    "dirty": False, "installed_at": agent.now_iso()}
         with patch.object(agent.version_info, "runtime_version", return_value=version):
             self.assertEqual(self.broker.dispatch(["status"], 1001)["agent_version"], version)

@@ -32,8 +32,9 @@ try {
   page.on('pageerror', error => errors.push(error.message));
   const now = new Date(), iso = hours => new Date(now.getTime() + hours * 3600000).toISOString();
   let data = emptyEdits(), staleRaw = false, failRaw = false, forbidden = false, writes = 0;
-  let collectorFinished = false, progressCompleted = 25;
-  const telemetry = id => ({server_id: id, name: `Server ${id.slice(-1).toUpperCase()}`, updated_at: iso(0), collector_ok: true,
+  let collectorFinished = false, progressCompleted = 25, serverUpgraded = false, serverCStale = false;
+  const telemetry = id => ({server_id: id, name: `Server ${id.slice(-1).toUpperCase()}`, updated_at: iso(id === 'server-c' && serverCStale ? -2 : 0), collector_ok: true,
+    agent_version: id === 'server-b' ? {version: '1.1.2', revision: 'b'.repeat(40)} : id === 'server-a' && serverUpgraded ? {version: '1.1.3', revision: 'a'.repeat(40)} : null,
     gpus: [{uuid: `${id}-gpu`, index: 0, name: 'NVIDIA GeForce RTX 4090', process_count: 0, utilization: 0,
       memory_used_mib: 0, memory_total_mib: 24564}],
     jobs: id === 'server-a' ? [{id: 'job-original', name: 'GEPA collector', owner: '상현', gpu_uuids: [`${id}-gpu`],
@@ -43,7 +44,13 @@ try {
   const fulfill = (route, body, status = 200) => route.fulfill({status, contentType: 'application/json', body: JSON.stringify(body)});
   await context.route('https://fonts.googleapis.com/**', route => route.fulfill({body: '', contentType: 'text/css'}));
   await context.route('https://fonts.gstatic.com/**', route => route.abort());
-  await context.route('**/version.json*', route => fulfill(route, {version: '1.1.2', revision: 'a'.repeat(40)}));
+  await context.route('**/version.json*', route => fulfill(route, {version: '1.1.3', revision: 'a'.repeat(40)}));
+  await context.grantPermissions(['clipboard-read', 'clipboard-write']);
+  await context.route('**/config.json*', async route => {
+    const config = JSON.parse(await fs.readFile(path.join(root, 'dist/config.json'), 'utf8'));
+    config.servers[2].actions = [{title: '서버 C 점검 <script>', description: '이 서버에서만 보이는 안내', command: 'echo \"점검 & 확인\"'}];
+    return fulfill(route, config);
+  });
   await context.route('https://raw.githubusercontent.com/**', route => {
     const url = new URL(route.request().url());
     if (url.pathname.endsWith('/dashboard/edits.json')) {
@@ -76,6 +83,7 @@ try {
   const base = `http://127.0.0.1:${host.address().port}`;
   await page.goto(base);
   await page.locator('[data-job="job-original"]').waitFor();
+  assert.equal(await page.locator('[data-manage-server]').count(), 0);
   await page.locator('#admin-login').click();
   await page.locator('#admin-password').fill('cvml-test');
   await page.locator('#admin-password-confirm').fill('cvml-test');
@@ -88,6 +96,61 @@ try {
   const storage = await page.evaluate(() => JSON.stringify(localStorage));
   assert.equal(storage.includes('test-browser-only-token'), false);
   assert.equal(storage.includes('cvml-test'), false);
+
+  // Server management is visible only after login; viewing/copying writes nothing.
+  assert.equal(await page.locator('[data-manage-server]').count(), 3);
+  assert.equal(await page.locator('#deployment-version').count(), 0);
+  assert.match(await page.locator('#dashboard-version').innerText(), /v1\.1\.3\+aaaaaaa/);
+  assert.match(await page.locator('.server-version').nth(0).innerText(), /v1\.0\.0/);
+  assert.match(await page.locator('.server-version').nth(1).innerText(), /v1\.1\.2\+bbbbbbb/);
+  await page.locator('[data-manage-server=server-a]').click();
+  assert.equal(await page.locator('#server-manage-installed').innerText(), 'v1.0.0');
+  assert.match(await page.locator('#server-manage-source').innerText(), /관리자 지정/);
+  const upgradeCommand = await page.locator('#server-update-command').innerText();
+  assert.ok(upgradeCommand.includes("'server-a'"));
+  assert.ok(upgradeCommand.includes("'" + 'a'.repeat(40) + "'"));
+  assert.equal(upgradeCommand.includes('--server-id'), false);
+  await page.locator('[data-copy-server-command=server-update-command]').click();
+  assert.equal(await page.evaluate(() => navigator.clipboard.readText()), upgradeCommand);
+  await page.locator('.server-update > summary').click();
+  await page.locator('#server-manage-refresh').click();
+  await page.waitForFunction(() => !document.getElementById('server-manage-refresh').disabled);
+  assert.equal(await page.locator('.server-update').evaluate(e => e.open), false);
+  serverUpgraded = true;
+  await page.locator('#server-manage-refresh').click();
+  await page.waitForFunction(() => document.getElementById('server-manage-installed').textContent === 'v1.1.3+aaaaaaa');
+  assert.equal(await page.locator('#server-update-command').count(), 0);
+  assert.match(await page.locator('#server-manage-source').innerText(), /수집기/);
+  await page.locator('#server-manage-close').click();
+  await page.locator('[data-manage-server=server-b]').click();
+  assert.match(await page.locator('.server-action-overview').innerText(), /추가 적용할 서버 기능 안내가 없/);
+  await page.locator('#server-manage-close').click();
+  serverCStale = true;
+  await page.locator('#refresh').click();
+  await page.waitForFunction(() => !document.getElementById('refresh').disabled);
+  await page.locator('[data-manage-server=server-c]').click();
+  assert.equal(await page.locator('#server-manage-health').innerText(), '갱신 지연');
+  assert.equal(await page.locator('#server-inspect-command').isVisible(), true);
+  assert.match(await page.locator('#server-update-command').innerText(), /'server-c'/);
+  assert.match(await page.locator('#server-manage-body').innerText(), /서버 C 점검 <script>/);
+  assert.equal(await page.locator('#server-manage-body script').count(), 0);
+  await page.setViewportSize({width: 390, height: 844});
+  assert.ok(await page.locator('#server-manage-dialog').evaluate(e => e.scrollWidth <= e.clientWidth));
+  await page.screenshot({path: path.join(output, 'server-management-mobile.png')});
+  await page.setViewportSize({width: 1440, height: 1000});
+  await page.screenshot({path: path.join(output, 'server-management-desktop.png')});
+  // Logout must also close a management dialog even when it is currently open.
+  await page.evaluate(() => document.getElementById('admin-logout').click());
+  assert.equal(await page.locator('#server-manage-dialog').evaluate(e => e.open), false);
+  assert.equal(await page.locator('[data-manage-server]').count(), 0);
+  assert.equal(writes, 0);
+  serverCStale = false;
+  await page.locator('#refresh').click();
+  await page.waitForFunction(() => !document.getElementById('refresh').disabled);
+  await page.locator('#admin-login').click();
+  await page.locator('#admin-password').fill('cvml-test');
+  await page.locator('#admin-submit').click();
+  await page.locator('#admin-tools').waitFor();
 
   await page.locator('#manual-add').click();
   await page.locator('#manual-name').fill('Qwen3 · 수동 실험 <script> 🧪');
@@ -252,7 +315,7 @@ try {
   await page.screenshot({path: path.join(output, 'dashboard-mobile.png'), fullPage: true});
   assert.deepEqual(errors, []);
   assert.equal(writes, 8);
-  console.log('Browser checks passed: login, add/hide/restore, manual editing, collector time overrides and reset, automatic completion/progress, no-op and precision, conflicts/errors, KST, mobile.');
+  console.log('Browser checks passed: per-server management, baseline/report versions, copied pinned commands, no management writes, logout, mobile, login, add/hide/restore, manual editing, collector time overrides and reset, automatic completion/progress, no-op and precision, conflicts/errors, KST, mobile.');
   console.log(`Screenshots: ${output}`);
 } catch (error) {
   if (page) await page.screenshot({path: path.join(output, 'failure.png'), fullPage: true}).catch(() => {});

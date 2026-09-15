@@ -8,22 +8,40 @@
     {
       "id": "server-a",
       "name": "Server A",
-      "file": "servers/server-a.json"
+      "file": "servers/server-a.json",
+      "installed_version_baseline": "1.0.0",
+      "actions": []
     },
     {
       "id": "server-b",
       "name": "Server B",
-      "file": "servers/server-b.json"
+      "file": "servers/server-b.json",
+      "installed_version_baseline": "1.0.0",
+      "actions": []
     },
     {
       "id": "server-c",
       "name": "Server C",
-      "file": "servers/server-c.json"
+      "file": "servers/server-c.json",
+      "installed_version_baseline": "1.0.0",
+      "actions": []
     }
   ],
   "dashboard": {
     "repository": "shxyzn/gpu-timeline",
     "branch": "status",
     "path": "dashboard/edits.json"
+  },
+  "server_management": {
+    "releases": [
+      {
+        "version": "1.1.0",
+        "features": [
+          "웹과 서버 CLI에서 같은 실험 ID 사용",
+          "설치한 전체 버전·커밋을 수집기가 자동 보고",
+          "진행률 기록시각을 함께 전송해 완료 예정 계산 개선"
+        ]
+      }
+    ]
   }
 }

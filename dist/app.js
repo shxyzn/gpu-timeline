@@ -1,4 +1,5 @@
 import {DashboardEditor} from './admin.js';
+import {ServerManager,installedVersion} from './server-management.js';
 import {mergeEdits} from './edits.js';
 import {demoSnapshot} from './demo.js';
 import {HOUR,timestamp,health,gpuState,layoutJobs,jobETA,versionLabel} from './model.js';
@@ -14,21 +15,23 @@ async function showVersion(){
   try{
     const info=await readJSON('./version.json');
     const label=versionLabel(info);if(!label)throw new Error('version');
+    dashboardBuild=info;
     $('dashboard-version').textContent='대시보드 '+label;
     if(/^[0-9a-f]{40}$/.test(info.revision||''))$('dashboard-version').href='https://github.com/shxyzn/gpu-timeline/commit/'+info.revision;
-    $('deployment-version').textContent='서버 배포 기준 v'+info.version.split('.').slice(0,2).join('.');
+    if(config)render();
   }catch{$('dashboard-version').textContent='대시보드 버전 확인 불가';}
 }
-function serverVersion(info){
-  const label=versionLabel(info);
-  if(!label)return '<p class="server-version"><span>설치 버전 미보고</span><small>다음 서버 업데이트 후 자동 표시</small></p>';
-  const title=info.installed_at?'설치 '+time(info.installed_at):'설치된 수집기 코드 버전';
-  const revision=/^[0-9a-f]{40}$/.test(info.revision||'')?info.revision:null;
+function serverVersion(server){
+  const info=server.agent_version;
+  const installed=installedVersion(server,config.servers?.find(item=>item.id===server.server_id));
+  const label=installed.label;
+  const title=info?.installed_at?'설치 '+time(info.installed_at):installed.note;
+  const revision=installed.source==='reported'&&/^[0-9a-f]{40}$/.test(info?.revision||'')?info.revision:null;
   const value=revision?'<a href="https://github.com/shxyzn/gpu-timeline/commit/'+revision+'" target="_blank" rel="noopener noreferrer">'+escape(label)+'</a>':escape(label);
-  return '<p class="server-version" title="'+escape(title)+'"><span>설치 버전 '+value+'</span></p>';
+  return '<p class="server-version" title="'+escape(title)+'"><span>설치 버전 '+value+'</span>'+(installed.source==='baseline'?'<small>관리자 지정 기준</small>':'')+'</p>';
 }
 const statusLabels={running:'실행 중',planned:'예정',completed:'완료',failed:'실패',cancelled:'취소',stopped:'프로세스 종료 · 결과 미확인',unknown:'확인 필요'};
-let editor,telemetryServers=[],config,servers=[],hours=72,offset=0,lastFetch=null,fetchErrors=0,selected=null;
+let editor,serverManager,dashboardBuild=null,telemetryServers=[],config,servers=[],hours=72,offset=0,lastFetch=null,fetchErrors=0,selected=null;
 const demo=demoSnapshot();
 const telemetry = server => telemetryServers.find(s=>s.server_id===server.server_id)||server;
 function applyDashboardEdits(){servers=editor?.enabled?mergeEdits(telemetryServers,editor.data):telemetryServers;}
@@ -81,6 +84,7 @@ function render(){
   $('timeline').innerHTML=servers.length?html:'<div class="blank">연결된 서버가 없습니다.</div>';
   $('sync-label').textContent=`화면 조회 ${lastFetch?time(lastFetch):'—'} · ${config.refresh_seconds||60}초마다 확인`;
   $('servers').innerHTML=servers.map(s=>serverCard(s,now,stale)).join('');
+  serverManager?.render();
   if(selected&&$('detail-dialog').open)fillDetail(selected.server,selected.id);
 }
 function serverCard(s,now,stale){
@@ -92,7 +96,7 @@ function serverCard(s,now,stale){
     const giB=v=>Number.isFinite(v)?(v/1024).toFixed(1):'—';
     return `<div class="gpu-detail"><div class="gpu-detail-title"><strong>GPU ${g.index}</strong><small>${state==='unknown'?'확인 필요':state==='busy'?'점유 중':'현재 여유'}</small></div><div class="meter-line"><span>GPU 사용률${h.ok?'':' · 마지막 수신'}</span><span>${util===null?'—':util+'%'}</span></div><div class="meter"><div class="meter-fill" style="width:${Math.max(0,Math.min(100,util||0))}%"></div></div><div class="meter-line"><span>VRAM</span><span>${giB(used)} / ${giB(total)} GiB</span></div><div class="meter"><div class="meter-fill vram" style="width:${pct}%"></div></div>${running.map(j=>`<div class="gpu-experiment"><span>${j.dashboard_manual?'[수동] ':''}${escape(jobLabel(j))}</span><span>${j.status==='unknown'?'실행 상태 확인 필요':etaText(j,s.updated_at)}</span></div>`).join('')}${!running.length&&state==='busy'?'<div class="gpu-experiment"><span>GPU 점유 감지 · 표시할 실험 기록 없음</span></div>':''}</div>`;
   }).join('');
-  return `<article class="server-card"><div class="server-heading"><h3>${escape(s.name)}</h3><span class="state ${h.ok?'':'warning'}">${h.label}</span></div><p class="server-meta">${escape([...new Set(s.gpus.map(g=>g.name))].join(' / ')||'GPU 정보 대기')} · ${s.gpus.length} GPU<br>마지막 수신 ${s.updated_at?ago(s.updated_at):'없음'}</p>${serverVersion(s.agent_version)}${rows||'<p class="server-meta">서버 수집 프로그램의 연결을 확인해 주세요.</p>'}</article>`;
+  return `<article class="server-card"><div class="server-heading"><h3>${escape(s.name)}</h3><span class="state ${h.ok?'':'warning'}">${h.label}</span></div><p class="server-meta">${escape([...new Set(s.gpus.map(g=>g.name))].join(' / ')||'GPU 정보 대기')} · ${s.gpus.length} GPU<br>마지막 수신 ${s.updated_at?ago(s.updated_at):'없음'}</p>${serverVersion(s)}${rows||'<p class="server-meta">서버 수집 프로그램의 연결을 확인해 주세요.</p>'}${serverManager?.button(s)||''}</article>`;
 }
 function fillDetail(server,id){
   const s=servers.find(x=>x.server_id===server),j=s?.jobs.find(x=>x.id===id);if(!j){$('detail-dialog').close();return;}
@@ -153,4 +157,4 @@ $('detail-dialog').addEventListener('click',e=>{if(e.target===$('detail-dialog')
 document.querySelectorAll('[data-hours]').forEach(b=>b.onclick=()=>{hours=Number(b.dataset.hours);offset=0;document.querySelectorAll('[data-hours]').forEach(x=>{x.classList.toggle('active',x===b);x.setAttribute('aria-pressed',String(x===b));});render();});
 $('previous').onclick=()=>{offset--;render();};$('next').onclick=()=>{offset++;render();};$('today').onclick=()=>{offset=0;render();};$('refresh').onclick=refresh;
 showVersion();
-try{config=await readJSON('./config.json');if(!['demo','live'].includes(config.mode))throw new Error('mode');if(config.mode==='live'&&!Array.isArray(config.servers))throw new Error('servers');editor=new DashboardEditor(config,()=>telemetryServers,editorChanged);await refresh();setInterval(refresh,Math.max(30,config.refresh_seconds||60)*1000);setInterval(()=>render(),30000);}catch(error){$('mode').textContent='설정 확인 필요';$('notice').textContent='설정을 불러오지 못했습니다. config.json과 웹 서버 연결을 확인해 주세요.';$('notice').className='notice error';$('timeline').innerHTML='<div class="blank">표시할 데이터가 없습니다.</div>';}
+try{config=await readJSON('./config.json');if(!['demo','live'].includes(config.mode))throw new Error('mode');if(config.mode==='live'&&!Array.isArray(config.servers))throw new Error('servers');editor=new DashboardEditor(config,()=>telemetryServers,editorChanged);serverManager=new ServerManager(config,editor,()=>telemetryServers,()=>dashboardBuild,refresh);await refresh();setInterval(refresh,Math.max(30,config.refresh_seconds||60)*1000);setInterval(()=>render(),30000);}catch(error){$('mode').textContent='설정 확인 필요';$('notice').textContent='설정을 불러오지 못했습니다. config.json과 웹 서버 연결을 확인해 주세요.';$('notice').className='notice error';$('timeline').innerHTML='<div class="blank">표시할 데이터가 없습니다.</div>';}
