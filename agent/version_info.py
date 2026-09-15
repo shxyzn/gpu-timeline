@@ -31,8 +31,7 @@ def source_version(root):
         dirty = bool(changes.stdout.strip())
     except (OSError, subprocess.SubprocessError):
         pass
-    return {"version": version, "deployment_version": ".".join(version.split(".")[:2]),
-            "revision": revision, "dirty": dirty}
+    return {"version": version, "revision": revision, "dirty": dirty}
 
 
 @lru_cache(maxsize=1)
@@ -49,7 +48,7 @@ def runtime_version():
             if revision is not None and (not isinstance(revision, str) or
                                          not re.fullmatch(r"[0-9a-f]{40}", revision)):
                 return None
-            return {k: data[k] for k in ("version", "deployment_version", "revision", "dirty",
+            return {k: data[k] for k in ("version", "revision", "dirty",
                                          "installed_at") if k in data}
         except (OSError, ValueError, AttributeError, TypeError):
             return None

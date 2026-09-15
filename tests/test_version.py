@@ -22,7 +22,7 @@ class VersionTests(unittest.TestCase):
             try:
                 with patch.object(version, "__file__", str(module)), \
                      patch.object(version, "source_version", side_effect=AssertionError("must read installed copy")):
-                    self.assertEqual(version.runtime_version(), stored)
+                    self.assertEqual(version.runtime_version(), {k: v for k, v in stored.items() if k != "deployment_version"})
             finally:
                 version.runtime_version.cache_clear()
 
@@ -41,7 +41,8 @@ class VersionTests(unittest.TestCase):
                 "commit", "-qm", "fixture")
             info = version.source_version(root)
             self.assertEqual(info["revision"], git("rev-parse", "HEAD"))
-            self.assertEqual(info["deployment_version"], "1.1")
+            self.assertEqual(info["version"], "1.1.0")
+            self.assertNotIn("deployment_version", info)
             self.assertFalse(info["dirty"])
             code.write_text("changed\n")
             self.assertTrue(version.source_version(root)["dirty"])

@@ -14,7 +14,7 @@
 </aside>
 <section class="overview" aria-label="사용 현황 요약" id="overview"></section>
 <section class="workspace" aria-labelledby="timeline-title"><div class="toolbar"><div><h2 id="timeline-title">실험 타임라인</h2><p id="window-label"></p></div><div class="controls"><div class="segmented" aria-label="표시 기간"><button data-hours="24">24시간</button><button data-hours="72" class="active" aria-pressed="true">3일</button><button data-hours="168">7일</button></div><div class="stepper"><button id="previous" aria-label="이전 기간">‹</button><button id="today">현재</button><button id="next" aria-label="다음 기간">›</button></div><button id="refresh">새로고침</button></div></div>
-<div id="admin-tools" class="admin-tools" hidden><div class="admin-tools-copy"><strong id="admin-account">관리자</strong><span>실험 기록을 추가·수정·삭제할 수 있어요.</span></div><div class="admin-tools-actions"><button id="manual-add" class="edit-button primary">＋ 실험 추가</button><button id="record-list" class="edit-button">기록 관리</button><button id="admin-logout" class="edit-button">로그아웃</button></div></div>
+<div id="admin-tools" class="admin-tools" hidden><div class="admin-tools-copy"><strong id="admin-account">관리자</strong><span>실험 기록과 서버 조치 안내를 관리할 수 있어요.</span></div><div class="admin-tools-actions"><button id="manual-add" class="edit-button primary">＋ 실험 추가</button><button id="record-list" class="edit-button">기록 관리</button><button id="admin-logout" class="edit-button">로그아웃</button></div></div>
 <p id="edit-feedback" class="edit-feedback" role="status" aria-live="polite"></p>
 <div class="legend"><span><i class="running"></i>실행 중</span><span><i class="planned"></i>예정</span><span><i class="completed"></i>완료</span><span><i class="uncertain"></i>종료 미정·초과</span><span class="legend-note">막대를 누르면 실험 상세를 볼 수 있어요.</span></div>
 <div id="edit-notice" class="notice" role="status"></div><div id="notice" class="notice" role="status"></div><div class="timeline-scroll"><div id="timeline" class="timeline" aria-label="GPU별 실험 일정"></div></div><div class="timeline-foot"><span id="sync-label">상태 확인 중</span><span>Asia/Seoul · 예상 종료시간은 변경될 수 있습니다.</span></div></section>
@@ -62,7 +62,7 @@
 
 종료 기록 전송 실패 안내가 나오면 수집기 복구 후 replay로 재전송해. 강제 종료·서버 재부팅 등으로 결과를 못 받으면 완료로 단정하지 말고 실제 상태를 확인해.
 
-v1.1 이상 서버에서는 list의 reference가 사이트의 실험 ID와 같아. 사이트에서 복사한 서버/실험 ID를 update와 finish의 --id에 그대로 써도 돼. 이전 서버에서는 기존 명령어용 ID를 사용해.
+v1.1.0 이상 서버에서는 list의 reference가 사이트의 실험 ID와 같아. 사이트에서 복사한 서버/실험 ID를 update와 finish의 --id에 그대로 써도 돼. 이전 서버에서는 기존 명령어용 ID를 사용해.
 업로드는 공용 수집기가 처리하고 status에서 결과와 설치 버전을 확인해. 개인 수집기·토큰·서비스를 만들거나 sudo로 실험을 실행하지 마. run이 없으면 관리자에게 공용 수집기 업데이트를 요청해.</pre>
       </div>
       <p class="usage-card-note">각 사용자는 자기 실험만 수정합니다. GPU 사용률·VRAM 수집과 GitHub 업로드는 서버의 공용 수집기가 담당합니다.</p>
@@ -71,11 +71,21 @@ v1.1 이상 서버에서는 list의 reference가 사이트의 실험 ID와 같�
   <div class="usage-bottom"><p>GPU 상태는 10분마다 업로드 · 실험 변경은 자동으로 업로드 요청됩니다. 화면 반영에는 전송·캐시 시간이 걸릴 수 있어요.</p><div class="usage-sync"><code id="usage-sync">/usr/local/bin/gputl sync</code><button type="button" class="usage-copy" data-copy-target="usage-sync" aria-label="즉시 업로드 명령 복사">복사</button></div></div>
   <p class="usage-card-note">공용 명령이나 run 기능이 없으면 관리자에게 <a href="https://github.com/shxyzn/gpu-timeline/blob/main/SHARED_SETUP.md">서버당 한 번 설치·업데이트</a>를 요청하세요.</p>
   <div class="usage-dashboard"><strong>대시보드에서 직접 기록하기</strong><p>오른쪽 위 <b>관리자 로그인</b> → <b>실험 추가</b>로 수동 등록하세요. 실험 막대를 누르면 이름·시간·설명 수정과 삭제가 가능하고, <b>기록 관리</b>에서 복구할 수 있어요. 처음 쓰는 브라우저에서는 GitHub 연결 키와 사용할 비밀번호를 한 번 설정합니다.</p><p>서버에서 수집한 실험도 이름·시간·설명을 수정할 수 있고, 수정 화면에서 서버 수집값으로 되돌릴 수 있어요. 수동 기록은 모두에게 공유되며 서버에서 실험을 실행하거나 종료하지 않아요. 상태도 자동으로 바뀌지 않습니다. 삭제해도 실제 GPU 점유·서버 로그는 유지됩니다.</p></div>
+  <div class="usage-dashboard"><strong>서버에 적용할 조치 확인하기</strong><p><b>관리자 로그인</b> 후 서버 상세의 <b>서버 관리</b>를 누르세요. 설치 버전과 필요한 조치를 확인하고 명령어를 복사해 해당 서버의 SSH 터미널에서 실행하면 돼요. 웹 버전마다 서버를 업데이트할 필요는 없습니다.</p></div>
   <p id="usage-feedback" class="usage-feedback" role="status" aria-live="polite"></p>
 </section>
 
-<footer><div class="footer-version"><span>CVML GPU TIMELINE</span><a id="dashboard-version" class="version-tag" target="_blank" rel="noopener noreferrer">대시보드 버전 확인 중</a><span id="deployment-version"></span></div><span>서버 수집 상태 · 관리자 수동 기록</span></footer></main>
+<footer><div class="footer-version"><span>CVML GPU TIMELINE</span><a id="dashboard-version" class="version-tag" target="_blank" rel="noopener noreferrer">대시보드 버전 확인 중</a></div><span>서버 수집 상태 · 관리자 수동 기록</span></footer></main>
 <dialog id="detail-dialog"><div class="dialog-heading"><span class="eyebrow">EXPERIMENT</span><button id="close-detail" aria-label="상세 닫기">×</button></div><div id="job-detail"></div></dialog>
+<dialog id="server-manage-dialog" class="admin-dialog server-manage-dialog" aria-labelledby="server-manage-title">
+  <div class="dialog-heading"><span class="eyebrow">SERVER MANAGEMENT</span><button id="server-manage-close" type="button" aria-label="서버 관리 닫기">×</button></div>
+  <h2 id="server-manage-title">서버 관리</h2><code id="server-manage-id" class="server-manage-id"></code>
+  <p class="admin-help">이 서버에 적용할 조치를 확인하고 명령어를 복사하세요. 실행은 해당 서버의 SSH 터미널에서 진행합니다.</p>
+  <div class="server-version-grid"><div><span>서버 설치 버전</span><strong id="server-manage-installed"></strong><small id="server-manage-source"></small></div><div><span>대시보드 버전</span><strong id="server-manage-target"></strong><small>필요한 서버 기능을 원하는 시점에 모아서 설치</small></div></div>
+  <div class="server-receipt"><div><strong id="server-manage-health"></strong><span id="server-manage-received"></span></div><button id="server-manage-refresh" type="button" class="edit-button">수신 다시 확인</button></div>
+  <p id="server-manage-feedback" class="server-copy-feedback" role="status" aria-live="polite"></p>
+  <div id="server-manage-body"></div>
+</dialog>
 <dialog id="admin-dialog" class="admin-dialog" aria-labelledby="admin-title">
   <div class="dialog-heading"><span class="eyebrow">ADMIN ACCESS</span><button type="button" data-close-dialog="admin-dialog" aria-label="로그인 닫기">×</button></div>
   <h2 id="admin-title">관리자 로그인</h2><p id="admin-description" class="admin-help"></p>
