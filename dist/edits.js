@@ -117,7 +117,7 @@ class GitHubError extends Error {
 }
 
 export class GitHubEditsStore {
-  constructor(config, fetcher = globalThis.fetch, pause = ms => new Promise(resolve => setTimeout(resolve, ms))) {
+  constructor(config, fetcher = (...args) => globalThis.fetch(...args), pause = ms => new Promise(resolve => setTimeout(resolve, ms))) {
     if (!config || !/^[\w.-]+\/[\w.-]+$/.test(config.repository || '') ||
         config.branch !== 'status' || config.path !== 'dashboard/edits.json') {
       throw new Error('대시보드 저장소 설정을 확인해 주세요.');

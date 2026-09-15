@@ -22,11 +22,12 @@ const host = http.createServer(async (request, response) => {
   } catch { response.writeHead(404).end('not found'); }
 });
 await new Promise(resolve => host.listen(0, '127.0.0.1', resolve));
-let browser;
+let browser, page;
 try {
-  browser = await chromium.launch({headless: true, args: ['--no-sandbox']});
+  browser = await chromium.launch({headless: true, args: ['--no-sandbox', '--disable-dev-shm-usage'],
+    ...(process.env.GPU_TIMELINE_CHROMIUM ? {executablePath: process.env.GPU_TIMELINE_CHROMIUM} : {})});
   const context = await browser.newContext({viewport: {width: 1440, height: 1000}, timezoneId: 'America/Los_Angeles'});
-  const page = await context.newPage();
+  page = await context.newPage();
   const errors = [];
   page.on('pageerror', error => errors.push(error.message));
   const now = new Date(), iso = hours => new Date(now.getTime() + hours * 3600000).toISOString();
@@ -77,6 +78,8 @@ try {
   await page.locator('#admin-password-confirm').fill('cvml-test');
   await page.locator('#admin-token').fill('test-browser-only-token');
   await page.locator('#admin-submit').click();
+  await page.waitForFunction(() => !document.getElementById('admin-tools').hidden || document.getElementById('admin-error').textContent);
+  assert.equal(await page.locator('#admin-error').innerText(), '');
   await page.locator('#admin-tools').waitFor();
   assert.equal(await page.locator('#admin-dialog').evaluate(e => e.open), false);
   const storage = await page.evaluate(() => JSON.stringify(localStorage));
@@ -143,7 +146,7 @@ try {
   await page.waitForFunction(() => document.getElementById('delete-error').textContent.includes('권한'));
   assert.equal(data.hidden_jobs.length, 0);
   assert.equal(await page.locator('[data-job="job-original"]').count(), 1);
-  await page.locator('[data-close-dialog=delete-dialog]').click();
+  await page.locator('[data-close-dialog=delete-dialog]').first().click();
   await page.locator('#close-detail').click();
   forbidden = false;
 
@@ -169,13 +172,16 @@ try {
   await page.locator('#manual-add').click();
   assert.ok(await page.locator('#manual-dialog').evaluate(e => e.scrollWidth <= e.clientWidth));
   await page.screenshot({path: path.join(output, 'add-mobile.png')});
-  await page.locator('[data-close-dialog=manual-dialog]').click();
+  await page.locator('[data-close-dialog=manual-dialog]').first().click();
   assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
   await page.screenshot({path: path.join(output, 'dashboard-mobile.png'), fullPage: true});
   assert.deepEqual(errors, []);
   assert.equal(writes, 3);
   console.log('Browser checks passed: setup, password unlock, shared add/hide/restore, denied writes, stale/offline reads, telemetry occupancy, reload lock, KST, mobile.');
   console.log(`Screenshots: ${output}`);
+} catch (error) {
+  if (page) await page.screenshot({path: path.join(output, 'failure.png'), fullPage: true}).catch(() => {});
+  throw error;
 } finally {
   if (browser) await browser.close();
   await new Promise(resolve => host.close(resolve));
