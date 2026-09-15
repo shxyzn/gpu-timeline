@@ -18,6 +18,7 @@ export function gpuState(server,gpu,now,staleSeconds){
 
 export function jobETA(job, snapshotAt){
   const supplied=timestamp(job.expected_end_at);
+  if(supplied===null&&job.dashboard_override_fields?.includes('expected_end_at'))return {at:null,source:null};
   if(supplied!==null&&job.eta_source!=='progress')return {at:supplied,source:'manual',approximate:false};
   if(job.status!=='running')return {at:null,source:null};
   const p=job.progress, start=timestamp(job.started_at);

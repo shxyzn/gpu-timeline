@@ -32,15 +32,18 @@ try {
   page.on('pageerror', error => errors.push(error.message));
   const now = new Date(), iso = hours => new Date(now.getTime() + hours * 3600000).toISOString();
   let data = emptyEdits(), staleRaw = false, failRaw = false, forbidden = false, writes = 0;
+  let collectorFinished = false, progressCompleted = 25;
   const telemetry = id => ({server_id: id, name: `Server ${id.slice(-1).toUpperCase()}`, updated_at: iso(0), collector_ok: true,
     gpus: [{uuid: `${id}-gpu`, index: 0, name: 'NVIDIA GeForce RTX 4090', process_count: 0, utilization: 0,
       memory_used_mib: 0, memory_total_mib: 24564}],
     jobs: id === 'server-a' ? [{id: 'job-original', name: 'GEPA collector', owner: '상현', gpu_uuids: [`${id}-gpu`],
-      started_at: iso(-2), expected_end_at: iso(2), ended_at: null, status: 'running'}] : []});
+      started_at: iso(-2), expected_end_at: iso(2), eta_source: 'progress',
+      progress: {completed: progressCompleted, total: 100, updated_at: iso(0)},
+      ended_at: collectorFinished ? iso(0) : null, status: collectorFinished ? 'completed' : 'running'}] : []});
   const fulfill = (route, body, status = 200) => route.fulfill({status, contentType: 'application/json', body: JSON.stringify(body)});
   await context.route('https://fonts.googleapis.com/**', route => route.fulfill({body: '', contentType: 'text/css'}));
   await context.route('https://fonts.gstatic.com/**', route => route.abort());
-  await context.route('**/version.json*', route => fulfill(route, {version: '1.1.1', revision: 'a'.repeat(40)}));
+  await context.route('**/version.json*', route => fulfill(route, {version: '1.1.2', revision: 'a'.repeat(40)}));
   await context.route('https://raw.githubusercontent.com/**', route => {
     const url = new URL(route.request().url());
     if (url.pathname.endsWith('/dashboard/edits.json')) {
@@ -168,6 +171,78 @@ try {
   await page.locator('#admin-password').fill('cvml-test');
   await page.locator('#admin-submit').click();
   await page.locator('#admin-tools').waitFor();
+  // Edit an existing manual experiment without creating a second identity.
+  const manualID = data.manual_jobs[0].id, createdAt = data.manual_jobs[0].created_at;
+  await page.locator('.job-bar.manual').click();
+  await page.locator('[data-edit-experiment]').click();
+  assert.equal(await page.locator('#manual-server').isDisabled(), true);
+  assert.equal(await page.locator('#manual-status').isDisabled(), false);
+  await page.locator('#manual-name').fill('수정한 GEPA');
+  await page.locator('#manual-description').fill('완료 확인');
+  await page.locator('#manual-status').selectOption('completed');
+  await page.locator('#manual-ended').fill(new Date(now.getTime() + 6 * 3600000).toISOString().slice(0, 16));
+  await page.locator('#manual-submit').click();
+  await page.waitForFunction(() => document.getElementById('manual-error').textContent.includes('시작시간 이후'));
+  assert.equal(data.manual_jobs[0].status, 'running');
+  await page.locator('#manual-ended').fill(new Date(now.getTime() + 9 * 3600000).toISOString().slice(0, 16));
+  await page.locator('#manual-submit').click();
+  await page.locator('#manual-dialog').waitFor({state: 'hidden'});
+  assert.equal(data.manual_jobs.length, 1);
+  assert.equal(data.manual_jobs[0].id, manualID);
+  assert.equal(data.manual_jobs[0].created_at, createdAt);
+  assert.equal(data.manual_jobs[0].status, 'completed');
+  assert.equal(data.manual_jobs[0].description, '완료 확인');
+  await page.locator('#close-detail').click();
+
+  // Metadata-only collector edit must not freeze ETA, truncate seconds, or
+  // replace automatically reported status/GPU/progress with a form snapshot.
+  await page.locator('[data-job="job-original"]').click();
+  await page.locator('[data-edit-experiment]').click();
+  assert.equal(await page.locator('#manual-status').isDisabled(), true);
+  assert.equal(await page.locator('#manual-gpus input').isDisabled(), true);
+  await page.locator('#manual-name').fill('수집 실험 이름 수정');
+  await page.locator('#manual-submit').click();
+  await page.locator('#manual-dialog').waitFor({state: 'hidden'});
+  assert.deepEqual(data.job_overrides[0].fields, {name: '수집 실험 이름 수정'});
+  await page.locator('[data-edit-experiment]').click();
+  const newETA = new Date(now.getTime() + 10 * 3600000).toISOString().slice(0, 16);
+  await page.locator('#manual-end').fill(newETA);
+  await page.screenshot({path: path.join(output, 'edit-collector-desktop.png')});
+  await page.locator('#manual-submit').click();
+  await page.locator('#manual-dialog').waitFor({state: 'hidden'});
+  assert.equal(data.job_overrides[0].fields.expected_end_at, new Date(`${newETA}+09:00`).toISOString());
+  await page.locator('#close-detail').click();
+  collectorFinished = true; progressCompleted = 100;
+  await page.locator('#refresh').click();
+  await page.waitForFunction(() => !document.getElementById('refresh').disabled);
+  await page.locator('[data-job="job-original"]').click();
+  const detail = await page.locator('#job-detail').innerText();
+  assert.match(detail, /수집 실험 이름 수정/);
+  assert.match(detail, /완료/);
+  assert.match(detail, /100 \/ 100/);
+  await page.locator('[data-edit-experiment]').click();
+  assert.equal(await page.locator('#manual-status').inputValue(), 'completed');
+  assert.equal(await page.locator('#manual-start').inputValue(), new Date(now.getTime() + 7 * 3600000).toISOString().slice(0, 16));
+  await page.locator('#manual-ended').fill(new Date(now.getTime() + 8.5 * 3600000).toISOString().slice(0, 16));
+  await page.locator('#manual-submit').click();
+  await page.locator('#manual-dialog').waitFor({state: 'hidden'});
+  assert.ok(data.job_overrides[0].fields.ended_at);
+  await page.locator('[data-edit-experiment]').click();
+  const beforeNoop = writes;
+  await page.locator('#manual-submit').click();
+  await page.locator('#manual-dialog').waitFor({state: 'hidden'});
+  assert.equal(writes, beforeNoop);
+  await page.locator('[data-edit-experiment]').click();
+  await page.locator('#manual-reset').click();
+  await page.locator('#manual-dialog').waitFor({state: 'hidden'});
+  assert.equal(data.job_overrides.length, 0);
+  assert.match(await page.locator('#job-detail').innerText(), /GEPA collector/);
+  await page.locator('#close-detail').click();
+  await page.locator('#record-list').click();
+  await page.locator('[data-record-action=edit]').click();
+  assert.equal(await page.locator('#manual-name').inputValue(), '수정한 GEPA');
+  await page.locator('[data-close-dialog=manual-dialog]').first().click();
+  await page.locator('[data-close-dialog=records-dialog]').click();
   await page.setViewportSize({width: 390, height: 844});
   await page.locator('#manual-add').click();
   assert.ok(await page.locator('#manual-dialog').evaluate(e => e.scrollWidth <= e.clientWidth));
@@ -176,8 +251,8 @@ try {
   assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
   await page.screenshot({path: path.join(output, 'dashboard-mobile.png'), fullPage: true});
   assert.deepEqual(errors, []);
-  assert.equal(writes, 3);
-  console.log('Browser checks passed: setup, password unlock, shared add/hide/restore, denied writes, stale/offline reads, telemetry occupancy, reload lock, KST, mobile.');
+  assert.equal(writes, 8);
+  console.log('Browser checks passed: login, add/hide/restore, manual editing, collector time overrides and reset, automatic completion/progress, no-op and precision, conflicts/errors, KST, mobile.');
   console.log(`Screenshots: ${output}`);
 } catch (error) {
   if (page) await page.screenshot({path: path.join(output, 'failure.png'), fullPage: true}).catch(() => {});

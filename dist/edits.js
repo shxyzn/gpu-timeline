@@ -6,6 +6,22 @@ const validTime = s => typeof s === 'string' && Number.isFinite(Date.parse(s));
 const serverID = s => typeof s === 'string' && /^[A-Za-z0-9_-]{1,100}$/.test(s);
 const statuses = ['planned', 'running', 'completed', 'failed', 'cancelled'];
 const terminal = s => ['completed', 'failed', 'cancelled'].includes(s);
+export const collectorEditFields = ['name', 'owner', 'description', 'started_at', 'expected_end_at', 'ended_at'];
+const manualEditFields = [...collectorEditFields, 'status', 'gpu_uuids'];
+const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+const own = (object, key) => Object.prototype.hasOwnProperty.call(object, key);
+const slot = (fields, key) => own(fields, key) ? {value: fields[key]} : {};
+const editableValue = (job, key) => job[key] ?? (['name', 'owner', 'description'].includes(key) ? '' : null);
+
+function validPatch(fields) {
+  if (!fields || typeof fields !== 'object' || Array.isArray(fields) || !Object.keys(fields).length) return false;
+  return Object.entries(fields).every(([key, value]) => {
+    if (!collectorEditFields.includes(key)) return false;
+    if (key === 'name') return validText(value, 160);
+    if (key === 'owner' || key === 'description') return typeof value === 'string' && value.length <= (key === 'owner' ? 100 : 2000);
+    return validTime(value) || (key !== 'started_at' && value === null);
+  });
+}
 
 export function validateEdits(data) {
   const fail = () => { throw new Error('수동 기록 파일 형식이 올바르지 않습니다. 원본을 확인해 주세요.'); };
@@ -33,6 +49,16 @@ export function validateEdits(data) {
     if (!validText(h.reference, 500) || !h.reference.includes('/') || !validText(h.name, 160) ||
         !validTime(h.hidden_at) || ids.has(h.reference)) fail();
     ids.add(h.reference);
+  }
+  ids.clear();
+  if (data.job_overrides !== undefined && !Array.isArray(data.job_overrides)) fail();
+  for (const patch of data.job_overrides || []) {
+    if (!validText(patch.reference, 500) || !patch.reference.includes('/') ||
+        !validPatch(patch.fields) || !validTime(patch.updated_at) || ids.has(patch.reference)) fail();
+    ids.add(patch.reference);
+    const f = patch.fields;
+    if (f.started_at && ((f.expected_end_at && Date.parse(f.expected_end_at) <= Date.parse(f.started_at)) ||
+        (f.ended_at && Date.parse(f.ended_at) < Date.parse(f.started_at)))) fail();
   }
   // GitHub's base64 Contents response is supported for files below 1 MB.
   if (new TextEncoder().encode(JSON.stringify(data)).length > 800000) {
@@ -65,6 +91,36 @@ export function makeManualJob(input, servers, now = new Date().toISOString(), id
   return job;
 }
 
+export function makeEditOperation(input, server, job, servers, openedData, at = new Date().toISOString()) {
+  const manual = job.dashboard_manual === true;
+  let candidate;
+  if (manual) {
+    candidate = makeManualJob({...input, server_id: server}, servers, at, job.id);
+  } else {
+    candidate = {...job};
+    for (const key of collectorEditFields) candidate[key] = editableValue(input, key);
+    for (const key of ['name', 'owner', 'description']) candidate[key] = candidate[key].trim();
+    if (!validPatch(Object.fromEntries(collectorEditFields.map(key => [key, candidate[key]])))) {
+      throw new Error('실험명·시간·설명 입력을 확인해 주세요.');
+    }
+    const start = Date.parse(candidate.started_at), end = Date.parse(candidate.expected_end_at), actual = Date.parse(candidate.ended_at);
+    if (candidate.expected_end_at && end <= start) throw new Error('예상 종료시간은 시작시간 이후여야 합니다.');
+    if (candidate.ended_at && actual < start) throw new Error('실제 종료시간은 시작시간 이후여야 합니다.');
+    if (candidate.status !== 'planned' && start > Date.parse(at)) throw new Error('시작시간을 미래로 변경할 수 없습니다.');
+    if (candidate.ended_at && actual > Date.parse(at)) throw new Error('실제 종료시간은 미래로 입력할 수 없습니다.');
+    if (['completed', 'failed', 'cancelled', 'stopped'].includes(candidate.status) && !candidate.ended_at) throw new Error('종료된 실험에는 실제 종료시간이 필요합니다.');
+    if (['running', 'planned', 'unknown'].includes(candidate.status) && candidate.ended_at) throw new Error('서버가 종료를 보고한 뒤 실제 종료시간을 수정할 수 있습니다.');
+  }
+  const fields = manual ? manualEditFields : collectorEditFields;
+  const changes = Object.fromEntries(fields.filter(key => !same(editableValue(candidate, key), editableValue(job, key)))
+    .map(key => [key, editableValue(candidate, key)]));
+  if (!manual && input.force_expected_end) changes.expected_end_at = candidate.expected_end_at;
+  const ref = reference(server, job.id);
+  const previous = openedData.job_overrides?.find(p => p.reference === ref)?.fields || {};
+  const before = Object.fromEntries(Object.keys(changes).map(key => [key, manual ? editableValue(job, key) : slot(previous, key)]));
+  return {type: manual ? 'edit_manual' : 'edit_collector', reference: ref, changes, before, at};
+}
+
 export function applyOperation(original, operation) {
   const data = structuredClone(validateEdits(original));
   if (operation.type === 'add') {
@@ -81,6 +137,35 @@ export function applyOperation(original, operation) {
   } else if (operation.type === 'restore') {
     if (!data.hidden_jobs.some(h => h.reference === operation.reference)) return data;
     data.hidden_jobs = data.hidden_jobs.filter(h => h.reference !== operation.reference);
+  } else if (['edit_manual', 'edit_collector'].includes(operation.type)) {
+    const manual = operation.type === 'edit_manual';
+    const keys = Object.keys(operation.changes);
+    if (!keys.length) return data;
+    if (keys.some(key => !(manual ? manualEditFields : collectorEditFields).includes(key))) throw new Error('수정할 수 없는 항목입니다.');
+    const job = manual ? data.manual_jobs.find(j => reference(j.server_id, j.id) === operation.reference) : null;
+    if (manual && !job) throw new Error('수동 실험 원본을 찾지 못했습니다. 새로고침해 주세요.');
+    const previous = data.job_overrides?.find(p => p.reference === operation.reference);
+    const current = manual ? job : (previous?.fields || {});
+    let changed = false;
+    for (const key of keys) {
+      const value = operation.changes[key];
+      if (same(manual ? editableValue(current, key) : slot(current, key), manual ? value : {value})) continue;
+      if (!own(operation.before, key) || !same(manual ? editableValue(current, key) : slot(current, key), operation.before[key])) {
+        throw new Error('다른 관리자가 같은 항목을 수정했습니다. 창을 닫고 다시 열어 최신 내용을 확인해 주세요.');
+      }
+      changed = true;
+    }
+    if (!changed) return data;
+    if (manual) Object.assign(job, operation.changes);
+    else {
+      const patch = {reference: operation.reference, fields: {...current, ...operation.changes}, updated_at: operation.at};
+      data.job_overrides = [...(data.job_overrides || []).filter(p => p.reference !== operation.reference), patch];
+    }
+  } else if (operation.type === 'reset_collector') {
+    const previous = data.job_overrides?.find(p => p.reference === operation.reference);
+    if (!previous) return data;
+    if (!same(previous.fields, operation.before)) throw new Error('다른 관리자가 수정한 내용이 있습니다. 창을 다시 열어 확인해 주세요.');
+    data.job_overrides = data.job_overrides.filter(p => p.reference !== operation.reference);
   } else {
     throw new Error('지원하지 않는 편집 요청입니다.');
   }
@@ -93,7 +178,12 @@ export function mergeEdits(servers, data) {
   validateEdits(data);
   const hidden = new Set(data.hidden_jobs.map(h => h.reference));
   return servers.map(server => {
-    const jobs = [...server.jobs];
+    const jobs = server.jobs.map(job => {
+      const patch = data.job_overrides?.find(p => p.reference === reference(server.server_id, job.id));
+      if (!patch) return job;
+      return {...job, ...patch.fields, dashboard_override_fields: Object.keys(patch.fields),
+        ...(own(patch.fields, 'expected_end_at') ? {eta_source: 'manual'} : {})};
+    });
     const existing = new Set(jobs.map(j => j.id));
     for (const j of data.manual_jobs) {
       if (j.server_id === server.server_id && !existing.has(j.id)) jobs.push({...j, dashboard_manual: true});
