@@ -1,0 +1,13 @@
+{
+  "schema_version": 1,
+  "revision": 1,
+  "updated_at": "2026-09-15T04:43:07.267Z",
+  "manual_jobs": [],
+  "hidden_jobs": [
+    {
+      "reference": "server-b/job-a47bfac3070a43a993902e9322d3fd87",
+      "name": "GEPA",
+      "hidden_at": "2026-09-15T04:43:07.267Z"
+    }
+  ]
+}
