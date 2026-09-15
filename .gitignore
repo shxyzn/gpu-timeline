@@ -7,3 +7,4 @@ agent/state/
 .env
 agent/version.json
 dist/version.json
+node_modules/
