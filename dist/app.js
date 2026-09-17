@@ -23,7 +23,7 @@ async function showVersion(){
 }
 function serverVersion(server){
   const info=server.agent_version;
-  const installed=installedVersion(server,config.servers?.find(item=>item.id===server.server_id));
+  const installed=installedVersion(server,config.servers?.find(item=>item.id===server.server_id),dashboardBuild);
   const label=installed.label;
   const title=info?.installed_at?'설치 '+time(info.installed_at):installed.note;
   const revision=installed.source==='reported'&&/^[0-9a-f]{40}$/.test(info?.revision||'')?info.revision:null;

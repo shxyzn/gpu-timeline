@@ -12,9 +12,10 @@ export function compareVersions(a, b) {
   return 0;
 }
 
-export function installedVersion(server, descriptor = {}) {
+export function installedVersion(server, descriptor = {}, build = null) {
   if (validVersion(server.agent_version?.version)) {
-    return {version: server.agent_version.version, label: versionLabel(server.agent_version),
+    const latest = compareVersions(server.agent_version.version, build?.version) === 0 && server.agent_version.dirty !== true;
+    return {version: server.agent_version.version, label: versionLabel(server.agent_version) + (latest ? ' (latest)' : ''),
       source: 'reported', note: '수집기가 마지막으로 보고한 설치 버전'};
   }
   // A baseline is an explicit administrator designation for these servers,
@@ -70,7 +71,7 @@ systemctl is-active gpu-timeline-shared.service
 /usr/local/bin/gputl status`;
 
 export function maintenanceState(server, descriptor, build, releases = [], now = Date.now(), stale = 1200) {
-  const installed = installedVersion(server, descriptor);
+  const installed = installedVersion(server, descriptor, build);
   const pending = (Array.isArray(releases) ? releases : []).filter(release => {
     const available = compareVersions(release?.version, build?.version);
     return available !== null && available <= 0 && installed.version &&

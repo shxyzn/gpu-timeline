@@ -34,7 +34,7 @@ try {
   let data = emptyEdits(), staleRaw = false, failRaw = false, forbidden = false, writes = 0;
   let collectorFinished = false, progressCompleted = 25, serverUpgraded = false, serverCStale = false;
   const telemetry = id => ({server_id: id, name: `Server ${id.slice(-1).toUpperCase()}`, updated_at: iso(id === 'server-c' && serverCStale ? -2 : 0), collector_ok: true,
-    agent_version: id === 'server-b' ? {version: '1.1.2', revision: 'b'.repeat(40)} : id === 'server-a' && serverUpgraded ? {version: '1.1.3', revision: 'a'.repeat(40)} : null,
+    agent_version: id === 'server-b' ? {version: '1.1.2', revision: 'b'.repeat(40)} : id === 'server-a' && serverUpgraded ? {version: '1.1.4', revision: 'a'.repeat(40)} : null,
     gpus: [{uuid: `${id}-gpu`, index: 0, name: 'NVIDIA GeForce RTX 4090', process_count: 0, utilization: 0,
       memory_used_mib: 0, memory_total_mib: 24564}],
     jobs: id === 'server-a' ? [{id: 'job-original', name: 'GEPA collector', owner: '상현', gpu_uuids: [`${id}-gpu`],
@@ -44,7 +44,7 @@ try {
   const fulfill = (route, body, status = 200) => route.fulfill({status, contentType: 'application/json', body: JSON.stringify(body)});
   await context.route('https://fonts.googleapis.com/**', route => route.fulfill({body: '', contentType: 'text/css'}));
   await context.route('https://fonts.gstatic.com/**', route => route.abort());
-  await context.route('**/version.json*', route => fulfill(route, {version: '1.1.3', revision: 'a'.repeat(40)}));
+  await context.route('**/version.json*', route => fulfill(route, {version: '1.1.4', revision: 'a'.repeat(40)}));
   await context.grantPermissions(['clipboard-read', 'clipboard-write']);
   await context.route('**/config.json*', async route => {
     const config = JSON.parse(await fs.readFile(path.join(root, 'dist/config.json'), 'utf8'));
@@ -100,7 +100,7 @@ try {
   // Server management is visible only after login; viewing/copying writes nothing.
   assert.equal(await page.locator('[data-manage-server]').count(), 3);
   assert.equal(await page.locator('#deployment-version').count(), 0);
-  assert.match(await page.locator('#dashboard-version').innerText(), /v1\.1\.3\+aaaaaaa/);
+  assert.match(await page.locator('#dashboard-version').innerText(), /v1\.1\.4\+aaaaaaa/);
   assert.match(await page.locator('.server-version').nth(0).innerText(), /v1\.0\.0/);
   assert.match(await page.locator('.server-version').nth(1).innerText(), /v1\.1\.2\+bbbbbbb/);
   await page.locator('[data-manage-server=server-a]').click();
@@ -118,7 +118,7 @@ try {
   assert.equal(await page.locator('.server-update').evaluate(e => e.open), false);
   serverUpgraded = true;
   await page.locator('#server-manage-refresh').click();
-  await page.waitForFunction(() => document.getElementById('server-manage-installed').textContent === 'v1.1.3+aaaaaaa');
+  await page.waitForFunction(() => document.getElementById('server-manage-installed').textContent === 'v1.1.4+aaaaaaa (latest)');
   assert.equal(await page.locator('#server-update-command').count(), 0);
   assert.match(await page.locator('#server-manage-source').innerText(), /수집기/);
   await page.locator('#server-manage-close').click();
