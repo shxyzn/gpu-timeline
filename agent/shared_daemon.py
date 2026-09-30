@@ -84,7 +84,8 @@ class Broker:
                 return {"ok": True, "server_id": self.config["server_id"],
                         "name": self.config["name"], **self.upload,
                         "agent_version": agent.version_info.runtime_version(),
-                        "capabilities": ["run-recording-v1", "experiment-reference-v1", "progress-time-v1"],
+                        "capabilities": ["run-recording-v1", "experiment-reference-v1", "progress-time-v1",
+                                         "gpu-reassignment-v1"],
                         "upload_requested": self.pending.is_set()}
         if args.action == "list":
             with agent.locked(Path(self.config["state_dir"]) / "jobs.lock"):
@@ -92,6 +93,7 @@ class Broker:
             own = [j for j in jobs if j.get("_owner_uid") == uid][-100:]
             return {"ok": True, "jobs": [{"id": j["_local_id"], "name": j["name"],
                     "reference": self.config["server_id"] + "/" + j["id"], "progress": j.get("progress"),
+                    "gpu_uuids": j.get("gpu_uuids", []),
                     "owner": j.get("owner"), "status": j["status"],
                     "started_at": j["started_at"], "expected_end_at": j.get("expected_end_at"),
                     "ended_at": j.get("ended_at"), "exit_code": j.get("exit_code")}

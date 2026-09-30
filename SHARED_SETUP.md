@@ -103,6 +103,20 @@ gputl finish --id exp01 --status completed
 
 필요하면 `gputl sync`로 업로드를 요청할 수 있습니다. 토큰이나 관리자 서비스 실행 권한은 필요 없습니다.
 
+## 기록된 GPU가 실제 GPU와 다를 때 (v1.1.5 이상)
+
+관리자가 공용 수집기를 업데이트한 뒤, **실험을 등록한 계정**에서 실행합니다. `status`의 설치 버전과 `capabilities`에 `gpu-reassignment-v1`이 있는지 확인하세요.
+
+```bash
+/usr/local/bin/gputl update --id exp01 --gpus 0
+/usr/local/bin/gputl list
+/usr/local/bin/gputl status
+```
+
+`exp01` 대신 사이트에서 복사한 `서버/실험 ID`도 사용할 수 있습니다. `--gpus`는 `nvidia-smi`의 물리 번호 또는 GPU UUID를 받으며 `0,1`처럼 여러 개를 지정하면 **기록의 GPU 목록 전체를 교체**합니다. 기존 ID·PID·진행률·시작/종료시간·자동 종료 추적을 유지합니다. 옵션을 생략하면 기존 GPU 기록이 유지됩니다.
+
+이 명령은 기록만 바꾸므로 실제 프로세스를 이동하거나 `CUDA_VISIBLE_DEVICES`를 변경하지 않습니다. 같은 ID의 이전 구간도 수정된 GPU 행에 표시되며 GPU 이동 이력을 구간별로 나누지는 않습니다. 중간에 실제 GPU를 바꿔 사용한 각 구간을 보존하려면 구간별 실험을 따로 기록하세요. `list`의 `gpu_uuids`로 저장 결과를 확인하고 `status`로 업로드 결과를 확인합니다. `update --help`에 옵션이 없으면 관리자에게 업데이트를 요청하세요.
+
 ## 코딩 Agent에 전달할 규칙
 
 ```text
@@ -121,6 +135,9 @@ gputl run --name "실험명" --owner "공개 표시 이름" --gpus 물리번호 
 --gpus는 기록용이므로 실제 GPU 선택 설정도 물리 번호와 맞춘다.
 예상 종료를 알면 --end로 입력하고 모르면 추측하지 않는다.
 변경은 list에서 ID를 확인해 update한다.
+기록된 GPU가 실제와 다르면 update --help와 status에서 지원을 확인하고,
+v1.1.5 이상에서는 같은 ID에 update --gpus 물리번호로 정정한다.
+실제 프로세스 이동 명령이 아니며 GPU 목록 전체를 교체한다. 지원하지 않으면 관리자에게 업데이트를 요청한다.
 종료 기록 전송에 실패하면 수집기 복구 후 replay한다.
 종료 결과가 없으면 성공을 단정하지 말고 실제 실행 상태를 확인한다.
 

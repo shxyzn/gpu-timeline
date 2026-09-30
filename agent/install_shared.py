@@ -10,6 +10,9 @@ import shutil
 import subprocess
 import sys
 
+# This installer imports source modules as root from an administrator-owned
+# checkout, sometimes temporary. Do not leave root-owned bytecode in it.
+sys.dont_write_bytecode = True
 import gpu_agent as agent
 
 ROOT = Path("/opt/gpu-timeline")

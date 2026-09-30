@@ -13,7 +13,7 @@ else
 fi
 for candidate in "${candidates[@]}"; do
   if [ -x "$candidate" ] && "$candidate" -c 'import sys; sys.exit(sys.version_info < (3, 10))' 2>/dev/null; then
-    exec sudo "$candidate" "$script_dir/install_shared.py" --user "$(id -un)" --python "$candidate" "$@"
+    exec sudo "$candidate" -B "$script_dir/install_shared.py" --user "$(id -un)" --python "$candidate" "$@"
   fi
 done
 echo 'Python 3.10 이상을 찾지 못했습니다. Conda 환경을 활성화하거나 GPU_TIMELINE_PYTHON에 실행 파일의 절대경로를 지정하세요.' >&2

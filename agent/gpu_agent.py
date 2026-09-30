@@ -229,6 +229,8 @@ def metadata_command(c, args, owner_uid=None):
         elif args.action == "update":
             if run_token and item["status"] in ("completed", "failed", "cancelled"):
                 return item  # A delayed start update cannot reopen a finished run.
+            if args.gpus is not None:
+                item["gpu_uuids"] = normalize_gpu_selection(args.gpus, collect_gpus())
             if args.owner:
                 item["owner"] = args.owner
             if args.name:
@@ -397,6 +399,7 @@ def parser(shared=False, parser_class=argparse.ArgumentParser, local_commands=Fa
     add.add_argument("--runner-pid", type=int, help=argparse.SUPPRESS)
     update = sub.add_parser("update", help="실험 정보·진행률·예상 종료시간 변경")
     update.add_argument("--id", required=True, help="내 실험 ID 또는 사이트에서 복사한 서버/실험 공유 ID")
+    update.add_argument("--gpus", help="기록할 물리 GPU index 또는 UUID 변경. 예: 0,1. 실제 프로세스는 이동하지 않습니다.")
     update.add_argument("--name")
     update.add_argument("--owner", help="공개 표시 이름 수정. 실험 소유 계정은 변경되지 않습니다.")
     update.add_argument("--description")
