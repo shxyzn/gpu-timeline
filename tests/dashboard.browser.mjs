@@ -100,7 +100,7 @@ try {
   // Server management is visible only after login; viewing/copying writes nothing.
   assert.equal(await page.locator('[data-manage-server]').count(), 3);
   assert.equal(await page.locator('#deployment-version').count(), 0);
-  assert.match(await page.locator('#dashboard-version').innerText(), /v1\.1\.4\+aaaaaaa/);
+  assert.match(await page.locator('#dashboard-version').innerText(), /v1\.1\.5\+aaaaaaa/);
   assert.match(await page.locator('.server-version').nth(0).innerText(), /v1\.0\.0/);
   assert.match(await page.locator('.server-version').nth(1).innerText(), /v1\.1\.2\+bbbbbbb/);
   await page.locator('[data-manage-server=server-a]').click();
