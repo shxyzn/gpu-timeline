@@ -32,7 +32,7 @@ chown -R gputl_admin:gputl_admin /home/gputl_admin
 cat > /usr/local/bin/nvidia-smi <<'EOF'
 #!/bin/sh
 case "$1" in
-  --query-gpu=*) printf '%s\n' '0, GPU-CI, Test GPU, 24000, 1000, 0' ;;
+  --query-gpu=*) printf '%s\n' '0, GPU-CI, Test GPU, 24000, 1000, 0' '1, GPU-CI-SECOND, Test GPU 2, 24000, 0, 0' ;;
   --query-compute-apps=*) exit 0 ;;
   *) exit 1 ;;
 esac
@@ -54,10 +54,24 @@ assert installed["version"] == Path("VERSION").read_text().strip()
 assert installed["revision"] == subprocess.check_output(["git", "-c", "safe.directory=" + str(Path.cwd()), "rev-parse", "HEAD"], text=True).strip()
 assert installed["dirty"] is False
 assert installed["installed_at"]
+assert "gpu-reassignment-v1" in status["capabilities"]
 PY
 runuser -u gputl_admin -- /usr/local/bin/gputl list > /tmp/gputl-ci-legacy.json
 "$test_python" -c 'import json; assert json.load(open("/tmp/gputl-ci-legacy.json"))["jobs"][0]["id"] == "legacy"'
 runuser -u gputl_member -- /usr/local/bin/gputl add --id legacy --name 'Member experiment' --owner 'Member label' --gpus 0
+runuser -u gputl_member -- /usr/local/bin/gputl list > /tmp/gputl-ci-member-before.json
+runuser -u gputl_member -- /usr/local/bin/gputl update --id legacy --gpus 1
+runuser -u gputl_member -- /usr/local/bin/gputl list > /tmp/gputl-ci-member-after.json
+"$test_python" - <<'PY'
+import json
+before = json.load(open("/tmp/gputl-ci-member-before.json"))["jobs"][0]
+after = json.load(open("/tmp/gputl-ci-member-after.json"))["jobs"][0]
+assert before["reference"] == after["reference"]
+assert before["gpu_uuids"] == ["GPU-CI"]
+assert after["gpu_uuids"] == ["GPU-CI-SECOND"]
+PY
+if runuser -u gputl_member -- /usr/local/bin/gputl update --id ci-server/legacy --gpus 1; then exit 1; fi
+if runuser -u gputl_member -- /usr/local/bin/gputl update --id legacy --gpus 99; then exit 1; fi
 runuser -u gputl_member -- /usr/local/bin/gputl finish --id legacy
 runuser -u gputl_admin -- /usr/local/bin/gputl list > /tmp/gputl-ci-legacy.json
 "$test_python" -c 'import json; assert json.load(open("/tmp/gputl-ci-legacy.json"))["jobs"][0]["status"] == "running"'
@@ -68,6 +82,16 @@ install -o gputl_member -g gputl_member -m 600 tests/ci_run_client.py /home/gput
 runuser -u gputl_member -- /usr/bin/python3 /home/gputl_member/ci_run_client.py
 # Reinstall must preserve both accounts' current records and administrator config.
 "$test_python" agent/install_shared.py --user gputl_admin --python "$test_python"
-"$test_python" -c 'import json; jobs=json.load(open("/var/lib/gpu-timeline/jobs.json")); assert len(jobs)==5; assert len({j["_owner_uid"] for j in jobs})==2'
+"$test_python" - <<'PY'
+import json
+import pwd
+jobs = json.load(open("/var/lib/gpu-timeline/jobs.json"))
+assert len(jobs) == 5
+assert len({j["_owner_uid"] for j in jobs}) == 2
+member_uid = pwd.getpwnam("gputl_member").pw_uid
+member = next(j for j in jobs if j["_owner_uid"] == member_uid and j["_local_id"] == "legacy")
+assert member["gpu_uuids"] == ["GPU-CI-SECOND"]
+assert next(j for j in jobs if j["id"] == "legacy")["gpu_uuids"] == ["GPU-CI"]
+PY
 systemctl stop gpu-timeline-shared.service
 echo 'Shared install, legacy migration, cross-account use, private file permissions and reinstall passed.'
