@@ -6,7 +6,8 @@ import {HOUR,timestamp,health,gpuState,layoutJobs,jobETA,versionLabel} from './m
 const $=id=>document.getElementById(id);
 const escape=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const fmt=(value,options={})=>{const t=typeof value==='number'?value:timestamp(value);return t===null?'미등록':new Intl.DateTimeFormat('ko-KR',{timeZone:'Asia/Seoul',...options}).format(t);};
-const time=v=>fmt(v,{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit',hourCycle:'h23'});
+const time=v=>fmt(v,{month:'numeric',day:'numeric',weekday:'short',hour:'2-digit',minute:'2-digit',hourCycle:'h23'});
+const calendarFormat=new Intl.DateTimeFormat('ko-KR',{timeZone:'Asia/Seoul',month:'numeric',day:'numeric',weekday:'short'});
 const ago=t=>{const minutes=Math.max(0,Math.floor((Date.now()-(timestamp(t)??Date.now()))/60000));return minutes<1?'방금':minutes<60?`${minutes}분 전`:`${Math.floor(minutes/60)}시간 ${minutes%60}분 전`;};
 const jobLabel=j=>[j.name,j.owner].filter(Boolean).join(' · ');
 function etaText(job,snapshotAt){const eta=jobETA(job,snapshotAt);return eta.at===null?'종료 미정':time(eta.at)+(eta.source==='progress'?' 예상':' 예정');}
@@ -64,11 +65,15 @@ function render(){
   const unknownServers=servers.filter(s=>!health(s,now,stale).ok).length;
   const stats=[['전체 GPU',states.length,'개',`${servers.length}개 서버`,''],['현재 점유',states.filter(x=>x==='busy').length,'개','등록 실험·실제 사용 기준','purple'],['현재 여유',states.filter(x=>x==='idle').length,'개','예약·독점 사용은 보장하지 않음','green'],['확인 필요',states.filter(x=>x==='unknown').length,'개',`${unknownServers}개 서버 수신 상태 확인`,'amber']];
   $('overview').innerHTML=stats.map(([label,value,unit,note,color])=>`<div class="stat"><span>${label}</span><strong class="${color}">${value}<small>${unit}</small></strong><p>${note}</p></div>`).join('');
-  $('window-label').textContent=fmt(start,{year:'numeric',month:'long',day:'numeric'})+' — '+fmt(end-1,{month:'long',day:'numeric'});
+  $('window-label').textContent=fmt(start,{year:'numeric',month:'long',day:'numeric',weekday:'short'})+' — '+fmt(end-1,{month:'long',day:'numeric',weekday:'short'});
   $('notice').className=fetchErrors?'notice error':'notice';
   $('notice').textContent=config.mode==='demo'?'화면 확인용 예시입니다. 실제 서버는 아직 연결되지 않았습니다.':fetchErrors?`${fetchErrors}개 서버의 수신에 실패했습니다. 남아 있는 데이터는 마지막 수신 상태입니다.`:unknownServers?`${unknownServers}개 서버의 갱신이 지연되거나 수집에 문제가 있습니다. 마지막 수신 정보로 표시합니다.`:'';
   const step=hours===24?4:hours===72?12:24,ticks=[];
-  for(let h=0;h<=hours;h+=step)ticks.push(`<div class="tick" style="left:${h/hours*100}%"><strong>${fmt(start+h*HOUR,{month:'numeric',day:'numeric'})}</strong><span>${fmt(start+h*HOUR,{hour:'2-digit',hourCycle:'h23'})}</span></div>`);
+  for(let h=0;h<=hours;h+=step){
+    const at=start+h*HOUR,day=Object.fromEntries(calendarFormat.formatToParts(at).map(({type,value})=>[type,value]));
+    const weekend=day.weekday==='토'?'saturday':day.weekday==='일'?'sunday':'';
+    ticks.push(`<div class="tick ${weekend}" style="left:${h/hours*100}%"><strong>${day.month}/${day.day} <b class="tick-weekday">(${day.weekday})</b></strong><span>${fmt(at,{hour:'2-digit',hourCycle:'h23'})}</span></div>`);
+  }
   const nowX=(now-start)/(end-start)*100;
   const line=nowX>=0&&nowX<=100?`<div class="now-line" style="left:${nowX}%"></div>`:'';
   let html=`<div class="axis"><div class="axis-label">서버 / GPU</div><div class="axis-scale">${ticks.join('')}${nowX>=0&&nowX<=100?`<span class="now-tag" style="left:${nowX}%">현재</span>`:''}</div></div>`;

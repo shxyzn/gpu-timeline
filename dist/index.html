@@ -10,7 +10,7 @@
 <body><main><header><div class="brand"><span class="brand-mark" aria-hidden="true"></span><div><p class="eyebrow">GPU UTILIZATION DASHBOARD</p><h1>CVML GPU <span>Timeline</span></h1></div></div><div class="header-right"><span id="mode" class="badge">불러오는 중</span><span id="clock"></span><button id="admin-login" class="edit-button" hidden>관리자 로그인</button></div></header>
 <aside id="patch-notes" class="patch-notes" role="note" aria-label="최신 패치노트">
   <svg class="patch-notes-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="m8 12 2.5 2.5L16 9"></path></svg>
-  <div class="patch-notes-copy"><strong>패치노트 · v1.1.5</strong><p>실험 ID를 유지한 채 GPU 기록을 수정할 수 있어요.<br>서버 업데이트·적용 명령은 관리자 로그인 → 서버 관리에서 확인하세요.</p></div>
+  <div class="patch-notes-copy"><strong>패치노트 · v1.1.5</strong><p>타임라인에 요일을 표시하고 토·일요일을 색으로 구분했어요.<br>GPU 기록 수정 기능은 서버 수집기 v1.1.5 업데이트 후 사용할 수 있어요.</p></div>
 </aside>
 <section class="overview" aria-label="사용 현황 요약" id="overview"></section>
 <section class="workspace" aria-labelledby="timeline-title"><div class="toolbar"><div><h2 id="timeline-title">실험 타임라인</h2><p id="window-label"></p></div><div class="controls"><div class="segmented" aria-label="표시 기간"><button data-hours="24">24시간</button><button data-hours="72" class="active" aria-pressed="true">3일</button><button data-hours="168">7일</button></div><div class="stepper"><button id="previous" aria-label="이전 기간">‹</button><button id="today">현재</button><button id="next" aria-label="다음 기간">›</button></div><button id="refresh">새로고침</button></div></div>
