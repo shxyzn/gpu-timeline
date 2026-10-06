@@ -24,3 +24,7 @@
 .tick .tick-weekday{font-weight:700;color:#3f4c62}
 .tick.saturday .tick-weekday{color:#3568b4}
 .tick.sunday .tick-weekday{color:#b64b54}
+.tick.holiday strong,.tick.holiday .tick-weekday{color:#b64b54}
+.calendar-note{margin:0;padding:0 28px 15px;color:#8a6266;font-size:.75rem;line-height:1.7;overflow-wrap:anywhere}
+.calendar-note:empty{display:none}
+@media(max-width:640px){.calendar-note{padding:0 19px 13px}}
