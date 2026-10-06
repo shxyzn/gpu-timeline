@@ -81,6 +81,20 @@ try {
     return fulfill(route, {type: 'file', encoding: 'base64', sha: `sha-${data.revision}`, content: encodeJSON(data)});
   });
   const base = `http://127.0.0.1:${host.address().port}`;
+  // The browser is in Los Angeles; the calendar must still follow Korean days.
+  // Freeze only this page so the existing live-time editor fixtures stay intact.
+  const calendarPage = await context.newPage();
+  await calendarPage.addInitScript(() => { Date.now = () => Date.parse('2026-10-03T01:00:00Z'); });
+  await calendarPage.goto(base);
+  const nationalDay = calendarPage.locator('.tick.holiday[title="10/3 (토) · 개천절"]').first();
+  await nationalDay.waitFor();
+  assert.equal(await nationalDay.locator('.tick-weekday').evaluate(e => getComputedStyle(e).color), 'rgb(182, 75, 84)');
+  assert.equal(await nationalDay.locator('strong').evaluate(e => getComputedStyle(e).color), 'rgb(182, 75, 84)');
+  assert.match(await calendarPage.locator('#calendar-note').innerText(), /10\/5 대체공휴일 · 개천절/);
+  await calendarPage.setViewportSize({width: 390, height: 844});
+  assert.ok(await calendarPage.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
+  await calendarPage.screenshot({path: path.join(output, 'holidays-mobile.png'), fullPage: true});
+  await calendarPage.close();
   await page.goto(base);
   await page.locator('[data-job="job-original"]').waitFor();
   assert.equal(await page.locator('[data-manage-server]').count(), 0);

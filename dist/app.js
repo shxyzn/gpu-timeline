@@ -2,12 +2,12 @@ import {DashboardEditor} from './admin.js';
 import {ServerManager,installedVersion} from './server-management.js';
 import {mergeEdits} from './edits.js';
 import {demoSnapshot} from './demo.js';
+import {calendarDay} from './calendar.js';
 import {HOUR,timestamp,health,gpuState,layoutJobs,jobETA,versionLabel} from './model.js';
 const $=id=>document.getElementById(id);
 const escape=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const fmt=(value,options={})=>{const t=typeof value==='number'?value:timestamp(value);return t===null?'미등록':new Intl.DateTimeFormat('ko-KR',{timeZone:'Asia/Seoul',...options}).format(t);};
 const time=v=>fmt(v,{month:'numeric',day:'numeric',weekday:'short',hour:'2-digit',minute:'2-digit',hourCycle:'h23'});
-const calendarFormat=new Intl.DateTimeFormat('ko-KR',{timeZone:'Asia/Seoul',month:'numeric',day:'numeric',weekday:'short'});
 const ago=t=>{const minutes=Math.max(0,Math.floor((Date.now()-(timestamp(t)??Date.now()))/60000));return minutes<1?'방금':minutes<60?`${minutes}분 전`:`${Math.floor(minutes/60)}시간 ${minutes%60}분 전`;};
 const jobLabel=j=>[j.name,j.owner].filter(Boolean).join(' · ');
 function etaText(job,snapshotAt){const eta=jobETA(job,snapshotAt);return eta.at===null?'종료 미정':time(eta.at)+(eta.source==='progress'?' 예상':' 예정');}
@@ -70,10 +70,15 @@ function render(){
   $('notice').textContent=config.mode==='demo'?'화면 확인용 예시입니다. 실제 서버는 아직 연결되지 않았습니다.':fetchErrors?`${fetchErrors}개 서버의 수신에 실패했습니다. 남아 있는 데이터는 마지막 수신 상태입니다.`:unknownServers?`${unknownServers}개 서버의 갱신이 지연되거나 수집에 문제가 있습니다. 마지막 수신 정보로 표시합니다.`:'';
   const step=hours===24?4:hours===72?12:24,ticks=[];
   for(let h=0;h<=hours;h+=step){
-    const at=start+h*HOUR,day=Object.fromEntries(calendarFormat.formatToParts(at).map(({type,value})=>[type,value]));
+    const at=start+h*HOUR,day=calendarDay(at);
     const weekend=day.weekday==='토'?'saturday':day.weekday==='일'?'sunday':'';
-    ticks.push(`<div class="tick ${weekend}" style="left:${h/hours*100}%"><strong>${day.month}/${day.day} <b class="tick-weekday">(${day.weekday})</b></strong><span>${fmt(at,{hour:'2-digit',hourCycle:'h23'})}</span></div>`);
+    const description=`${day.month}/${day.day} (${day.weekday})${day.holiday?' · '+day.holiday:''}`;
+    ticks.push(`<div class="tick ${weekend} ${day.holiday?'holiday':''}" style="left:${h/hours*100}%" title="${escape(description)}"><strong>${day.month}/${day.day} <b class="tick-weekday">(${day.weekday})</b></strong><span>${fmt(at,{hour:'2-digit',hourCycle:'h23'})}</span></div>`);
   }
+  const visibleDays=Array.from({length:hours/24},(_,i)=>calendarDay(start+i*24*HOUR));
+  const holidayNotes=visibleDays.filter(day=>day.holiday).map(day=>`${day.month}/${day.day} ${day.holiday}`);
+  const missingYears=[...new Set(visibleDays.filter(day=>!day.covered).map(day=>day.year))];
+  $('calendar-note').textContent=[...holidayNotes,...missingYears.map(year=>`${year}년 공휴일 정보 미등록`)].join(' / ');
   const nowX=(now-start)/(end-start)*100;
   const line=nowX>=0&&nowX<=100?`<div class="now-line" style="left:${nowX}%"></div>`:'';
   let html=`<div class="axis"><div class="axis-label">서버 / GPU</div><div class="axis-scale">${ticks.join('')}${nowX>=0&&nowX<=100?`<span class="now-tag" style="left:${nowX}%">현재</span>`:''}</div></div>`;
