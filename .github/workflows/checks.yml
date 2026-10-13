@@ -2,9 +2,9 @@ name: Check collector and shared access
 on:
   push:
     branches: [main]
-    paths: ['agent/**', 'tests/**', 'dist/**', 'VERSION', 'package*.json', '.github/workflows/checks.yml']
+    paths: ['agent/**', 'scripts/**', 'tests/**', 'dist/**', 'VERSION', 'package*.json', '.github/workflows/checks.yml']
   pull_request:
-    paths: ['agent/**', 'tests/**', 'dist/**', 'VERSION', 'package*.json', '.github/workflows/checks.yml']
+    paths: ['agent/**', 'scripts/**', 'tests/**', 'dist/**', 'VERSION', 'package*.json', '.github/workflows/checks.yml']
   workflow_dispatch:
 permissions:
   contents: read
@@ -52,3 +52,10 @@ jobs:
           npm ci
           npx playwright install --with-deps chromium
           npm run test:browser
+      - name: Dashboard screenshots
+        if: always() && matrix.python == '3.11'
+        uses: actions/upload-artifact@v4
+        with:
+          name: dashboard-screenshots
+          path: /tmp/gpu-timeline-browser/*.png
+          retention-days: 7

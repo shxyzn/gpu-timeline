@@ -51,8 +51,9 @@ try {
     config.servers[2].actions = [{title: '서버 C 점검 <script>', description: '이 서버에서만 보이는 안내', command: 'echo \"점검 & 확인\"'}];
     return fulfill(route, config);
   });
-  await context.route('https://raw.githubusercontent.com/**', route => {
+  await context.route('https://raw.githubusercontent.com/**', async route => {
     const url = new URL(route.request().url());
+    if (url.pathname.endsWith('/hardware-prices/prices.json')) return fulfill(route, JSON.parse(await fs.readFile(path.join(root, 'dist/hardware-prices.json'), 'utf8')));
     if (url.pathname.endsWith('/dashboard/edits.json')) {
       assert.equal(route.request().headers().authorization, undefined);
       if (failRaw) return fulfill(route, {}, 503);
@@ -96,6 +97,17 @@ try {
   await calendarPage.screenshot({path: path.join(output, 'holidays-mobile.png'), fullPage: true});
   await calendarPage.close();
   await page.goto(base);
+  await page.locator('.hardware-product').first().waitFor();
+  assert.equal(await page.locator('.hardware-card').count(), 3);
+  assert.equal(await page.locator('.hardware-product').count(), 10);
+  assert.ok(await page.locator('#hardware').evaluate(e => Boolean(e.compareDocumentPosition(document.getElementById('usage')) & Node.DOCUMENT_POSITION_FOLLOWING)));
+  assert.match(await page.locator('.hardware-gpu').innerText(), /판매 가격 없음/);
+  assert.equal(await page.locator('.hardware-product').first().getAttribute('href'), 'https://prod.danawa.com/info/?pcode=63140417');
+  await page.locator('#hardware').screenshot({path:path.join(output, 'hardware-desktop.png')});
+  await page.setViewportSize({width:390, height:844});
+  assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
+  await page.locator('#hardware').screenshot({path:path.join(output, 'hardware-mobile.png')});
+  await page.setViewportSize({width:1440, height:1000});
   await page.locator('[data-job="job-original"]').waitFor();
   assert.equal(await page.locator('[data-manage-server]').count(), 0);
   await page.locator('#admin-login').click();

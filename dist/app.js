@@ -1,3 +1,4 @@
+import {loadHardware} from './hardware.js';
 import {DashboardEditor} from './admin.js';
 import {ServerManager,installedVersion} from './server-management.js';
 import {mergeEdits} from './edits.js';
@@ -167,4 +168,6 @@ $('detail-dialog').addEventListener('click',e=>{if(e.target===$('detail-dialog')
 document.querySelectorAll('[data-hours]').forEach(b=>b.onclick=()=>{hours=Number(b.dataset.hours);offset=0;document.querySelectorAll('[data-hours]').forEach(x=>{x.classList.toggle('active',x===b);x.setAttribute('aria-pressed',String(x===b));});render();});
 $('previous').onclick=()=>{offset--;render();};$('next').onclick=()=>{offset++;render();};$('today').onclick=()=>{offset=0;render();};$('refresh').onclick=refresh;
 showVersion();
+loadHardware(readJSON);
+setInterval(() => loadHardware(readJSON), 15 * 60 * 1000);
 try{config=await readJSON('./config.json');if(!['demo','live'].includes(config.mode))throw new Error('mode');if(config.mode==='live'&&!Array.isArray(config.servers))throw new Error('servers');editor=new DashboardEditor(config,()=>telemetryServers,editorChanged);serverManager=new ServerManager(config,editor,()=>telemetryServers,()=>dashboardBuild,refresh);await refresh();setInterval(refresh,Math.max(30,config.refresh_seconds||60)*1000);setInterval(()=>render(),30000);}catch(error){$('mode').textContent='설정 확인 필요';$('notice').textContent='설정을 불러오지 못했습니다. config.json과 웹 서버 연결을 확인해 주세요.';$('notice').className='notice error';$('timeline').innerHTML='<div class="blank">표시할 데이터가 없습니다.</div>';}

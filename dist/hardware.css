@@ -1,0 +1,24 @@
+.hardware{margin-top:36px}
+.hardware-heading{display:flex;align-items:center;justify-content:space-between;gap:18px;margin-bottom:18px}
+.hardware-heading p{font-size:.8125rem;color:var(--muted);margin:8px 0 0;line-height:1.6}
+.hardware-source{flex-shrink:0;display:inline-flex;align-items:center;gap:7px;padding:8px 11px;border:1px solid #dfe7e8;border-radius:7px;background:#edf6f4;color:#407269;font-size:.75rem;font-weight:600}
+.hardware-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px;align-items:start}
+.hardware-card{background:#fff;border:1px solid var(--line);border-radius:12px;overflow:hidden}
+.hardware-card-heading{display:flex;align-items:center;gap:12px;padding:22px 23px;background:linear-gradient(120deg,#faf9fd,#fff);border-bottom:1px solid var(--line)}
+.hardware-card-heading h3{font-size:1rem;margin:0}.hardware-card-heading p{font-size:.75rem;margin:5px 0 0;color:var(--muted)}
+.hardware-symbol{display:grid;place-items:center;width:36px;height:36px;flex-shrink:0;border-radius:10px;background:#eeeaf7;color:#6552a3;font-size:.875rem;font-weight:700}
+.hardware-gpu .hardware-symbol{background:#e4f3f5;color:#008da2}.hardware-memory .hardware-symbol{background:#e8f5ee;color:#219568}
+.hardware-products{list-style:none;margin:0;padding:0 23px}.hardware-products li+li{border-top:1px solid var(--line)}
+.hardware-product{display:block;text-decoration:none;color:inherit;padding:20px 0;transition:background .15s}
+.hardware-product:hover .hardware-product-title{color:var(--purple)}
+.hardware-product-title{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;font-size:.875rem;line-height:1.55;overflow-wrap:anywhere}
+.hardware-product-title>span{color:#929baa;flex-shrink:0}.hardware-product-title strong{font-weight:600}
+.hardware-spec{font-size:.75rem;color:#5d6980;margin:7px 0 0;line-height:1.65}
+.hardware-variant{font-size:.6875rem;color:#828b9b;margin:3px 0 0;line-height:1.6;overflow-wrap:anywhere}
+.hardware-price-line{display:flex;align-items:baseline;justify-content:space-between;gap:10px;margin-top:14px}
+.hardware-price-line small{color:#7b8596;font-size:.6875rem}.hardware-price-line b{font-size:1.15rem;letter-spacing:-.035em;font-weight:650;font-variant-numeric:tabular-nums;text-align:right}
+.hardware-price-line.price-stale b{color:#6f7888}.hardware-checked{font-size:.625rem;color:#8791a1;margin:5px 0 0;text-align:right;line-height:1.6}
+.hardware-foot{display:flex;justify-content:space-between;gap:10px 25px;flex-wrap:wrap;padding:14px 2px 0;color:var(--muted);font-size:.6875rem;line-height:1.8}
+.hardware-foot p{margin:0}.hardware-empty{font-size:.875rem;color:var(--muted)}
+@media(max-width:1050px){.hardware-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:640px){.hardware-grid{grid-template-columns:minmax(0,1fr)}.hardware-heading{align-items:flex-start}.hardware-source{font-size:.625rem;padding:7px 8px}.hardware-card-heading{padding:20px}.hardware-products{padding:0 20px}.hardware-foot{display:block}.hardware-foot p+p{margin-top:5px}}

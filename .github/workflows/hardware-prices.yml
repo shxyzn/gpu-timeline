@@ -1,0 +1,63 @@
+name: Refresh hardware prices
+on:
+  schedule:
+    - cron: '17 0 * * *'
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ['scripts/update_hardware_prices.py', 'dist/hardware-products.json', 'dist/hardware-prices.json', '.github/workflows/hardware-prices.yml']
+  pull_request:
+    paths: ['scripts/update_hardware_prices.py', 'dist/hardware-products.json', '.github/workflows/hardware-prices.yml']
+permissions:
+  contents: read
+concurrency:
+  group: hardware-prices-${{ github.event_name == 'pull_request' && github.ref || 'publish' }}
+  cancel-in-progress: false
+jobs:
+  probe:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Read-only source check
+        run: python3 scripts/update_hardware_prices.py --output "$RUNNER_TEMP/prices.json"
+  publish:
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: Load previous price observations
+        shell: bash
+        run: |
+          set -eu
+          cp dist/hardware-prices.json "$RUNNER_TEMP/previous-prices.json"
+          git ls-remote --heads origin refs/heads/hardware-prices > "$RUNNER_TEMP/price-ref"
+          if [ -s "$RUNNER_TEMP/price-ref" ]; then
+            git fetch --depth=1 origin hardware-prices
+            git show FETCH_HEAD:prices.json > "$RUNNER_TEMP/previous-prices.json"
+          fi
+      - name: Check Danawa prices
+        run: python3 scripts/update_hardware_prices.py --previous "$RUNNER_TEMP/previous-prices.json" --output "$RUNNER_TEMP/prices.json"
+      - name: Publish price data only
+        shell: bash
+        run: |
+          set -eu
+          if [ -s "$RUNNER_TEMP/price-ref" ]; then
+            git switch -c hardware-prices FETCH_HEAD
+          else
+            git switch --orphan hardware-prices
+          fi
+          cp "$RUNNER_TEMP/prices.json" prices.json
+          git add -- prices.json
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          if ! git diff --cached --quiet; then
+            git commit -m 'Refresh Danawa hardware price observations'
+            git push origin HEAD:hardware-prices
+          fi
