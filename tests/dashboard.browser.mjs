@@ -99,13 +99,35 @@ try {
   await page.goto(base);
   await page.locator('.hardware-product').first().waitFor();
   assert.equal(await page.locator('.hardware-card').count(), 3);
-  assert.equal(await page.locator('.hardware-product').count(), 10);
+  assert.equal(await page.locator('.hardware-product').count(), 44);
   assert.ok(await page.locator('#hardware').evaluate(e => Boolean(e.compareDocumentPosition(document.getElementById('usage')) & Node.DOCUMENT_POSITION_FOLLOWING)));
   assert.match(await page.locator('.hardware-gpu').innerText(), /판매 가격 없음/);
   assert.equal(await page.locator('.hardware-product').first().getAttribute('href'), 'https://prod.danawa.com/info/?pcode=63140417');
+  for (const [group, count] of [['cpu',16], ['gpu',16], ['memory',12]]) {
+    const list = page.locator(`[data-hardware-group=${group}]`);
+    assert.equal(await list.locator('li').count(), count);
+    assert.ok(await list.evaluate(e => e.scrollHeight > e.clientHeight && e.clientHeight === 520));
+    const bounds = await list.boundingBox();
+    const third = await list.locator('li').nth(2).boundingBox();
+    assert.ok(third.y < bounds.y + bounds.height);
+  }
+  const cpuList = page.locator('[data-hardware-group=cpu]');
+  await cpuList.focus();
+  await page.keyboard.press('End');
+  await page.waitForFunction(() => { const e = document.querySelector('[data-hardware-group=cpu]'); return Math.abs(e.scrollHeight - e.clientHeight - e.scrollTop) < 2; });
+  assert.equal(await page.locator('[data-hardware-group=gpu]').evaluate(e => e.scrollTop), 0);
+  const scrollBefore = await cpuList.evaluate(e => { e.scrollTop = 850; return e.scrollTop; });
+  await page.evaluate(async () => {
+    const {loadHardware} = await import('./hardware.js');
+    await loadHardware(async url => { const r = await fetch(url); if (!r.ok) throw new Error('fetch'); return r.json(); });
+  });
+  assert.equal(await cpuList.evaluate(e => e.scrollTop), scrollBefore);
+  assert.equal(await page.evaluate(() => document.activeElement.dataset.hardwareGroup), 'cpu');
+  await cpuList.evaluate(e => { e.scrollTop = 0; });
   await page.locator('#hardware').screenshot({path:path.join(output, 'hardware-desktop.png')});
   await page.setViewportSize({width:390, height:844});
   assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
+  assert.ok(await page.locator('[data-hardware-group=gpu]').evaluate(e => e.scrollHeight > e.clientHeight && e.clientHeight === 520));
   await page.locator('#hardware').screenshot({path:path.join(output, 'hardware-mobile.png')});
   await page.setViewportSize({width:1440, height:1000});
   await page.locator('[data-job="job-original"]').waitFor();

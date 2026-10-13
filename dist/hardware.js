@@ -16,30 +16,43 @@ export function priceState(product, quote, now = Date.now()) {
 export function renderHardware(catalog, snapshot, now = Date.now()) {
   const quotes = new Map((Array.isArray(snapshot?.products) ? snapshot.products : []).map(p => [p.id, p]));
   return catalog.groups.map(group => `<article class="hardware-card hardware-${escape(group.id)}" aria-labelledby="hardware-${escape(group.id)}-title">
-    <div class="hardware-card-heading"><span class="hardware-symbol" aria-hidden="true">${group.id === 'cpu' ? 'C' : group.id === 'gpu' ? 'G' : 'M'}</span><div><h3 id="hardware-${escape(group.id)}-title">${escape(group.name)}</h3><p>${escape(group.description)}</p></div></div>
-    <ul class="hardware-products">${catalog.products.filter(p => p.group === group.id).map(product => {
+    <div class="hardware-card-heading"><span class="hardware-symbol" aria-hidden="true">${group.id === 'cpu' ? 'C' : group.id === 'gpu' ? 'G' : 'M'}</span><div><h3 id="hardware-${escape(group.id)}-title">${escape(group.name)}</h3><p>${escape(group.description)}</p></div><span class="hardware-count">${catalog.products.filter(p => p.group === group.id).length}개</span></div>
+    <ul class="hardware-products" data-hardware-group="${escape(group.id)}" tabindex="0" aria-label="${escape(group.name)} 제품 목록 · 스크롤하여 더 보기">${catalog.products.filter(p => p.group === group.id).map(product => {
       const state = priceState(product, quotes.get(product.id), now);
       const url = /^\d+$/.test(product.pcode) ? 'https://prod.danawa.com/info/?pcode=' + product.pcode : 'https://www.danawa.com/';
-      return `<li><a class="hardware-product" href="${url}" target="_blank" rel="noopener noreferrer" aria-label="${escape(product.name)} · ${escape(product.variant)} 다나와 가격비교 새 창">
+      return `<li><a class="hardware-product" data-hardware-product="${escape(product.id)}" href="${url}" target="_blank" rel="noopener noreferrer" aria-label="${escape(product.name)} · ${escape(product.variant)} 다나와 가격비교 새 창">
         <div class="hardware-product-title"><strong>${escape(product.name)}</strong><span aria-hidden="true">↗</span></div>
         <p class="hardware-spec">${escape(product.spec)}</p><p class="hardware-variant">${escape(product.variant)}</p>
         <div class="hardware-price-line ${state.stale ? 'price-stale' : ''}"><small>${state.label}</small><b>${state.price}</b></div>
         <p class="hardware-checked">${state.checked}${state.stale ? ' · 갱신 확인 필요' : ''}</p>
       </a></li>`;
-    }).join('')}</ul>
+    }).join('')}</ul><p class="hardware-scroll-hint">박스 안에서 스크롤해 더 보기 <span aria-hidden="true">↓</span></p>
   </article>`).join('');
+}
+let lastSnapshot = null;
+function paintBoard(board, catalog, snapshot) {
+  const positions = new Map([...board.querySelectorAll('[data-hardware-group]')].map(list => [list.dataset.hardwareGroup, list.scrollTop]));
+  const active = board.contains(document.activeElement) ? document.activeElement : null;
+  const focusedProduct = active?.dataset.hardwareProduct, focusedGroup = active?.dataset.hardwareGroup;
+  board.innerHTML = renderHardware(catalog, snapshot);
+  for (const list of board.querySelectorAll('[data-hardware-group]')) list.scrollTop = positions.get(list.dataset.hardwareGroup) || 0;
+  const focus = focusedProduct ? [...board.querySelectorAll('[data-hardware-product]')].find(a => a.dataset.hardwareProduct === focusedProduct)
+    : focusedGroup ? [...board.querySelectorAll('[data-hardware-group]')].find(list => list.dataset.hardwareGroup === focusedGroup) : null;
+  focus?.focus({preventScroll:true});
 }
 export async function loadHardware(readJSON) {
   const board = document.getElementById('hardware-grid'), status = document.getElementById('hardware-status');
   try {
     const [catalog, seed] = await Promise.all([readJSON('./hardware-products.json'), readJSON('./hardware-prices.json').catch(() => null)]);
-    board.innerHTML = renderHardware(catalog, seed);
+    const fallback = Date.parse(lastSnapshot?.attempted_at) > (Date.parse(seed?.attempted_at) || 0) ? lastSnapshot : seed;
+    paintBoard(board, catalog, fallback);
     try {
       const live = await readJSON(priceFeed);
       if (live.schema_version !== 1 || !Array.isArray(live.products) || !Number.isFinite(Date.parse(live.attempted_at))) throw new Error('invalid feed');
       // A cached feed must not replace more recent, reviewed bundled prices.
-      const snapshot = Date.parse(live.attempted_at) >= (Date.parse(seed?.attempted_at) || 0) ? live : seed;
-      board.innerHTML = renderHardware(catalog, snapshot);
+      const snapshot = Date.parse(live.attempted_at) >= (Date.parse(fallback?.attempted_at) || 0) ? live : fallback;
+      lastSnapshot = snapshot;
+      paintBoard(board, catalog, snapshot);
       const errors = snapshot.products.filter(p => p.fetch_error).length;
       status.textContent = errors ? `${errors}개 제품 갱신 지연 · 마지막 확인 정보 표시` : '매일 오전 9시경 가격 확인 · 한국시간';
     } catch { status.textContent = '가격 갱신 연결 확인 필요 · 저장된 확인 정보 표시'; }

@@ -11,7 +11,7 @@ test('fresh, old, failed and wrong product prices remain distinguishable', () =>
   assert.equal(priceState(product, quote, now).label, '확인 최저가');
   for (const row of [{...quote, fetch_error:'HTTPError'}, {...quote, checked_at:new Date(now-3*86400000).toISOString()}]) {
     assert.equal(priceState(product, row, now).label, '마지막 확인 가격');
-    assert.equal(priceState(product, row, now).price, '828,390원');
+    assert.equal(priceState(product, row, now).price, priceState(product, quote, now).price);
   }
   for (const row of [null, {...quote, pcode:'wrong'}, {...quote, checked_at:'bad'}, {...quote, price_krw:0}, {...quote, checked_at:new Date(now+86400000).toISOString()}]) {
     assert.equal(priceState(product, row, now).price, '가격 확인 필요');

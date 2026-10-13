@@ -17,17 +17,23 @@ jobs:
   probe:
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
-    timeout-minutes: 8
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
         with:
           persist-credentials: false
       - name: Read-only source check
         run: python3 scripts/update_hardware_prices.py --output "$RUNNER_TEMP/prices.json"
+      - name: Verified price observations
+        uses: actions/upload-artifact@v4
+        with:
+          name: hardware-price-observations
+          path: ${{ runner.temp }}/prices.json
+          retention-days: 7
   publish:
     if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
     runs-on: ubuntu-latest
-    timeout-minutes: 8
+    timeout-minutes: 20
     permissions:
       contents: write
     steps:

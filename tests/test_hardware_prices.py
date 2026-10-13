@@ -27,6 +27,7 @@ class Prices(unittest.TestCase):
 
     def test_discontinued_is_not_zero_or_old_price(self):
         self.assertEqual(parse_product(page('단종 된 상품입니다.'), PRODUCT), (None, 'unavailable'))
+        self.assertEqual(parse_product(page('가격비교 중지 상품입니다.'), PRODUCT), (None, 'unavailable'))
         prior = dict(products=[dict(id='ssd', pcode='18297722', price_krw=500000, checked_at='old', availability='available')])
         result = update(dict(products=[PRODUCT]), prior, lambda _: page('단종 된 상품입니다.'), 'now')
         self.assertIsNone(result['products'][0]['price_krw'])
