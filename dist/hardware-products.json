@@ -209,11 +209,11 @@
     {
       "group": "gpu",
       "id": "rtx-5060-ti",
-      "pcode": "81351188",
+      "pcode": "81990338",
       "name": "GeForce RTX 5060 Ti 16GB",
       "spec": "VRAM 16GB · GDDR7",
-      "variant": "GIGABYTE GAMING OC · 제이씨현",
-      "expected_title": "GIGABYTE 지포스 RTX 5060 Ti GAMING OC D7 16GB 제이씨현"
+      "variant": "MSI 벤투스 2X OC 플러스",
+      "expected_title": "MSI 지포스 RTX 5060 Ti 벤투스 2X OC 플러스 D7 16GB"
     },
     {
       "group": "gpu",
@@ -253,12 +253,12 @@
     },
     {
       "group": "gpu",
-      "id": "rtx-4500-ada",
-      "pcode": "48395846",
-      "name": "RTX 4500 Ada Generation",
-      "spec": "VRAM 24GB · GDDR6",
-      "variant": "NVIDIA · Ada 세대",
-      "expected_title": "NVIDIA RTX 4500 Ada Generation D6 24GB"
+      "id": "rtx-pro-4000-sff",
+      "pcode": "103335935",
+      "name": "RTX PRO 4000 Blackwell SFF",
+      "spec": "VRAM 24GB · GDDR7",
+      "variant": "NVIDIA · SFF 에디션",
+      "expected_title": "NVIDIA RTX PRO 4000 Blackwell SFF 에디션 D7 24GB"
     },
     {
       "group": "gpu",
@@ -271,12 +271,12 @@
     },
     {
       "group": "gpu",
-      "id": "rtx-a5000",
-      "pcode": "14863025",
-      "name": "RTX A5000",
-      "spec": "VRAM 24GB · GDDR6",
-      "variant": "NVIDIA · Ampere 세대",
-      "expected_title": "NVIDIA RTX A5000 D6 24GB"
+      "id": "rtx-pro-2000",
+      "pcode": "99914171",
+      "name": "RTX PRO 2000 Blackwell",
+      "spec": "VRAM 16GB · GDDR7",
+      "variant": "NVIDIA · 16GB 모델",
+      "expected_title": "NVIDIA RTX PRO 2000 Blackwell D7 16GB"
     },
     {
       "group": "gpu",
@@ -289,21 +289,21 @@
     },
     {
       "group": "gpu",
-      "id": "rtx-4080-super",
-      "pcode": "33998114",
-      "name": "GeForce RTX 4080 SUPER",
-      "spec": "VRAM 16GB · GDDR6X",
-      "variant": "GIGABYTE GAMING OC · 제이씨현",
-      "expected_title": "GIGABYTE 지포스 RTX 4080 SUPER GAMING OC D6X 16GB 제이씨현"
+      "id": "rtx-pro-6000-maxq",
+      "pcode": "94640462",
+      "name": "RTX PRO 6000 Blackwell MAX-Q",
+      "spec": "VRAM 96GB · GDDR7",
+      "variant": "NVIDIA · MAX-Q 워크스테이션 에디션",
+      "expected_title": "NVIDIA RTX PRO 6000 Blackwell MAX-Q 워크스테이션 에디션 D7 96GB"
     },
     {
       "group": "gpu",
-      "id": "rtx-4070-ti-super",
-      "pcode": "33385667",
-      "name": "GeForce RTX 4070 Ti SUPER",
-      "spec": "VRAM 16GB · GDDR6X",
-      "variant": "GIGABYTE GAMING OC · 제이씨현",
-      "expected_title": "GIGABYTE 지포스 RTX 4070 Ti SUPER GAMING OC D6X 16GB 제이씨현"
+      "id": "rtx-4000-sff-ada",
+      "pcode": "20807324",
+      "name": "RTX 4000 SFF Ada Generation",
+      "spec": "VRAM 20GB · GDDR6",
+      "variant": "NVIDIA · SFF 에디션",
+      "expected_title": "NVIDIA RTX 4000 SFF Ada Generation D6 20GB"
     },
     {
       "group": "memory",
@@ -361,12 +361,12 @@
     },
     {
       "group": "memory",
-      "id": "ddr5-kit-96",
-      "pcode": "28640573",
-      "name": "Crucial DDR5-5600 PRO 96GB",
-      "spec": "RAM · 데스크탑용 · 48GB × 2개",
+      "id": "ddr5-kit-128",
+      "pcode": "100619435",
+      "name": "Crucial DDR5-5600 PRO 128GB",
+      "spec": "RAM · 데스크탑용 · 64GB × 2개",
       "variant": "마이크론 · 대원씨티에스 · CL46",
-      "expected_title": "마이크론 Crucial DDR5-5600 CL46 PRO 패키지 대원씨티에스 (96GB(48Gx2))"
+      "expected_title": "마이크론 Crucial DDR5-5600 CL46 PRO 패키지 대원씨티에스 (128GB(64Gx2))"
     },
     {
       "group": "memory",

@@ -114,7 +114,7 @@ try {
   const cpuList = page.locator('[data-hardware-group=cpu]');
   await cpuList.focus();
   await page.keyboard.press('End');
-  await page.waitForFunction(() => document.querySelector('[data-hardware-group=cpu]').scrollTop > 500);
+  await page.waitForFunction(() => { const e = document.querySelector('[data-hardware-group=cpu]'); return Math.abs(e.scrollHeight - e.clientHeight - e.scrollTop) < 2; });
   assert.equal(await page.locator('[data-hardware-group=gpu]').evaluate(e => e.scrollTop), 0);
   const scrollBefore = await cpuList.evaluate(e => { e.scrollTop = 850; return e.scrollTop; });
   await page.evaluate(async () => {

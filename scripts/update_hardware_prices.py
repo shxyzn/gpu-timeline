@@ -74,7 +74,7 @@ def parse_product(html, product):
         if not 1000 <= amount <= 200000000:
             raise ValueError('Invalid price')
         return amount, 'available'
-    if re.search(r'단종\s*된 상품입니다|판매\s*중단\s*된 상품입니다|가격비교 예정|판매준비', text):
+    if re.search(r'단종\s*된 상품입니다|판매\s*중단\s*된 상품입니다|가격비교\s*중지\s*상품입니다|가격비교 예정|판매준비', text):
         return None, 'unavailable'
     raise ValueError('Main price could not be verified')
 
