@@ -1,0 +1,97 @@
+{
+  "schema_version": 1,
+  "source": "danawa",
+  "attempted_at": "2026-10-13T06:27:56+00:00",
+  "products": [
+    {
+      "id": "ryzen-9950x",
+      "pcode": "63140417",
+      "price_krw": 828390,
+      "availability": "available",
+      "checked_at": "2026-10-13T06:27:56+00:00",
+      "attempted_at": "2026-10-13T06:27:56+00:00",
+      "fetch_error": null
+    },
+    {
+      "id": "core-ultra-285k",
+      "pcode": "69059459",
+      "price_krw": 922510,
+      "availability": "available",
+      "checked_at": "2026-10-13T06:27:56+00:00",
+      "attempted_at": "2026-10-13T06:27:56+00:00",
+      "fetch_error": null
+    },
+    {
+      "id": "threadripper-9970x",
+      "pcode": "94932554",
+      "price_krw": 3854840,
+      "availability": "available",
+      "checked_at": "2026-10-13T06:27:56+00:00",
+      "attempted_at": "2026-10-13T06:27:56+00:00",
+      "fetch_error": null
+    },
+    {
+      "id": "rtx-5090",
+      "pcode": "75184280",
+      "price_krw": 9289990,
+      "availability": "available",
+      "checked_at": "2026-10-13T06:27:56+00:00",
+      "attempted_at": "2026-10-13T06:27:56+00:00",
+      "fetch_error": null
+    },
+    {
+      "id": "rtx-pro-5000",
+      "pcode": "99914777",
+      "price_krw": 13648480,
+      "availability": "available",
+      "checked_at": "2026-10-13T06:27:56+00:00",
+      "attempted_at": "2026-10-13T06:27:56+00:00",
+      "fetch_error": null
+    },
+    {
+      "id": "rtx-4090",
+      "pcode": "17974766",
+      "price_krw": null,
+      "availability": "unavailable",
+      "checked_at": "2026-10-13T06:27:56+00:00",
+      "attempted_at": "2026-10-13T06:27:56+00:00",
+      "fetch_error": null
+    },
+    {
+      "id": "ddr5-32",
+      "pcode": "20644043",
+      "price_krw": 790970,
+      "availability": "available",
+      "checked_at": "2026-10-13T06:27:56+00:00",
+      "attempted_at": "2026-10-13T06:27:56+00:00",
+      "fetch_error": null
+    },
+    {
+      "id": "ddr5-ecc-64",
+      "pcode": "79408823",
+      "price_krw": 4395000,
+      "availability": "available",
+      "checked_at": "2026-10-13T06:27:56+00:00",
+      "attempted_at": "2026-10-13T06:27:56+00:00",
+      "fetch_error": null
+    },
+    {
+      "id": "990-pro-2",
+      "pcode": "18297722",
+      "price_krw": 671890,
+      "availability": "available",
+      "checked_at": "2026-10-13T06:27:56+00:00",
+      "attempted_at": "2026-10-13T06:27:56+00:00",
+      "fetch_error": null
+    },
+    {
+      "id": "990-pro-4",
+      "pcode": "28131875",
+      "price_krw": 1397990,
+      "availability": "available",
+      "checked_at": "2026-10-13T06:27:56+00:00",
+      "attempted_at": "2026-10-13T06:27:56+00:00",
+      "fetch_error": null
+    }
+  ]
+}

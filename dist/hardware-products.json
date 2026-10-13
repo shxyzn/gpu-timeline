@@ -1,0 +1,111 @@
+{
+  "groups": [
+    {
+      "id": "cpu",
+      "name": "CPU",
+      "description": "연산 · 데이터 전처리"
+    },
+    {
+      "id": "gpu",
+      "name": "GPU",
+      "description": "학습 · 추론 · VRAM"
+    },
+    {
+      "id": "memory",
+      "name": "RAM · SSD",
+      "description": "메모리 · 데이터 저장"
+    }
+  ],
+  "products": [
+    {
+      "group": "cpu",
+      "id": "ryzen-9950x",
+      "pcode": "63140417",
+      "name": "AMD Ryzen 9 9950X",
+      "spec": "16코어 · 32스레드 · AM5",
+      "variant": "멀티팩 정품",
+      "expected_title": "AMD 라이젠9-6세대 9950X (그래니트 릿지) (멀티팩 정품)"
+    },
+    {
+      "group": "cpu",
+      "id": "core-ultra-285k",
+      "pcode": "69059459",
+      "name": "Intel Core Ultra 9 285K",
+      "spec": "P8 + E16코어 · 24스레드 · LGA1851",
+      "variant": "정품",
+      "expected_title": "인텔 코어 울트라9 시리즈2 285K (애로우레이크) (정품)"
+    },
+    {
+      "group": "cpu",
+      "id": "threadripper-9970x",
+      "pcode": "94932554",
+      "name": "AMD Threadripper 9970X",
+      "spec": "32코어 · 64스레드 · sTR5",
+      "variant": "멀티팩 정품",
+      "expected_title": "AMD 라이젠 스레드리퍼 9970X (시마다 픽) (멀티팩 정품)"
+    },
+    {
+      "group": "gpu",
+      "id": "rtx-5090",
+      "pcode": "75184280",
+      "name": "GeForce RTX 5090",
+      "spec": "VRAM 32GB · GDDR7",
+      "variant": "GIGABYTE GAMING OC · 제이씨현",
+      "expected_title": "GIGABYTE 지포스 RTX 5090 GAMING OC D7 32GB 제이씨현"
+    },
+    {
+      "group": "gpu",
+      "id": "rtx-pro-5000",
+      "pcode": "99914777",
+      "name": "RTX PRO 5000 Blackwell",
+      "spec": "VRAM 48GB · GDDR7 ECC",
+      "variant": "NVIDIA · 48GB 모델",
+      "expected_title": "NVIDIA RTX PRO 5000 Blackwell D7 48GB"
+    },
+    {
+      "group": "gpu",
+      "id": "rtx-4090",
+      "pcode": "17974766",
+      "name": "GeForce RTX 4090",
+      "spec": "VRAM 24GB · GDDR6X",
+      "variant": "GIGABYTE GAMING OC · 제이씨현",
+      "expected_title": "GIGABYTE 지포스 RTX 4090 GAMING OC D6X 24GB 제이씨현"
+    },
+    {
+      "group": "memory",
+      "id": "ddr5-32",
+      "pcode": "20644043",
+      "name": "삼성 DDR5-5600 32GB",
+      "spec": "RAM · 데스크탑용 · 32GB × 1개",
+      "variant": "병행수입·벌크·A/S는 판매처 확인",
+      "expected_title": "삼성전자 DDR5-5600 (32GB)"
+    },
+    {
+      "group": "memory",
+      "id": "ddr5-ecc-64",
+      "pcode": "79408823",
+      "name": "삼성 DDR5-5600 ECC/REG 64GB",
+      "spec": "RAM · 서버용 RDIMM · 64GB × 1개",
+      "variant": "ECC/REG 지원 보드 전용",
+      "expected_title": "삼성전자 DDR5-5600 ECC/REG (64GB)"
+    },
+    {
+      "group": "memory",
+      "id": "990-pro-2",
+      "pcode": "18297722",
+      "name": "삼성 990 PRO 2TB",
+      "spec": "SSD · M.2 NVMe · PCIe 4.0",
+      "variant": "방열판 미포함 · 국내 유통 모델",
+      "expected_title": "삼성전자 990 PRO M.2 NVMe (2TB)"
+    },
+    {
+      "group": "memory",
+      "id": "990-pro-4",
+      "pcode": "28131875",
+      "name": "삼성 990 PRO 4TB",
+      "spec": "SSD · M.2 NVMe · PCIe 4.0",
+      "variant": "방열판 미포함 · 국내 유통 모델",
+      "expected_title": "삼성전자 990 PRO M.2 NVMe (4TB)"
+    }
+  ]
+}
