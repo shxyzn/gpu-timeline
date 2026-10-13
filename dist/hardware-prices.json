@@ -31,6 +31,123 @@
       "fetch_error": null
     },
     {
+      "id": "ryzen-9900x",
+      "pcode": "63140387",
+      "price_krw": null,
+      "availability": "unknown",
+      "checked_at": null,
+      "attempted_at": null,
+      "fetch_error": "PendingInitialCheck"
+    },
+    {
+      "id": "ryzen-9950x3d",
+      "pcode": "77790914",
+      "price_krw": null,
+      "availability": "unknown",
+      "checked_at": null,
+      "attempted_at": null,
+      "fetch_error": "PendingInitialCheck"
+    },
+    {
+      "id": "ryzen-7950x",
+      "pcode": "20613197",
+      "price_krw": null,
+      "availability": "unknown",
+      "checked_at": null,
+      "attempted_at": null,
+      "fetch_error": "PendingInitialCheck"
+    },
+    {
+      "id": "ryzen-7900x",
+      "pcode": "28402418",
+      "price_krw": null,
+      "availability": "unknown",
+      "checked_at": null,
+      "attempted_at": null,
+      "fetch_error": "PendingInitialCheck"
+    },
+    {
+      "id": "core-ultra-265k",
+      "pcode": "69059687",
+      "price_krw": null,
+      "availability": "unknown",
+      "checked_at": null,
+      "attempted_at": null,
+      "fetch_error": "PendingInitialCheck"
+    },
+    {
+      "id": "core-i9-14900k",
+      "pcode": "28798964",
+      "price_krw": null,
+      "availability": "unknown",
+      "checked_at": null,
+      "attempted_at": null,
+      "fetch_error": "PendingInitialCheck"
+    },
+    {
+      "id": "threadripper-9960x",
+      "pcode": "94932623",
+      "price_krw": null,
+      "availability": "unknown",
+      "checked_at": null,
+      "attempted_at": null,
+      "fetch_error": "PendingInitialCheck"
+    },
+    {
+      "id": "threadripper-9980x",
+      "pcode": "94932239",
+      "price_krw": null,
+      "availability": "unknown",
+      "checked_at": null,
+      "attempted_at": null,
+      "fetch_error": "PendingInitialCheck"
+    },
+    {
+      "id": "threadripper-7960x",
+      "pcode": "72593030",
+      "price_krw": null,
+      "availability": "unknown",
+      "checked_at": null,
+      "attempted_at": null,
+      "fetch_error": "PendingInitialCheck"
+    },
+    {
+      "id": "threadripper-7970x",
+      "pcode": "72593054",
+      "price_krw": null,
+      "availability": "unknown",
+      "checked_at": null,
+      "attempted_at": null,
+      "fetch_error": "PendingInitialCheck"
+    },
+    {
+      "id": "threadripper-7980x",
+      "pcode": "72593063",
+      "price_krw": null,
+      "availability": "unknown",
+      "checked_at": null,
+      "attempted_at": null,
+      "fetch_error": "PendingInitialCheck"
+    },
+    {
+      "id": "threadripper-pro-7975wx",
+      "pcode": "30143105",
+      "price_krw": null,
+      "availability": "unknown",
+      "checked_at": null,
+      "attempted_at": null,
+      "fetch_error": "PendingInitialCheck"
+    },
+    {
+      "id": "threadripper-pro-7995wx",
+      "pcode": "30142979",
+      "price_krw": null,
+      "availability": "unknown",
+      "checked_at": null,
+      "attempted_at": null,
+      "fetch_error": "PendingInitialCheck"
+    },
+    {
       "id": "rtx-5090",
       "pcode": "75184280",
       "price_krw": 9289990,
@@ -49,6 +166,105 @@
       "fetch_error": null
     },
     {
+      "id": "rtx-pro-6000",
+      "pcode": "94640297",
+      "price_krw": null,
+      "availability": "unknown",
+      "checked_at": null,
+      "attempted_at": null,
+      "fetch_error": "PendingInitialCheck"
+    },
+    {
+      "id": "rtx-5080",
+      "pcode": "75184268",
+      "price_krw": null,
+      "availability": "unknown",
+      "checked_at": null,
+      "attempted_at": null,
+      "fetch_error": "PendingInitialCheck"
+    },
+    {
+      "id": "rtx-5070-ti",
+      "pcode": "76551056",
+      "price_krw": null,
+      "availability": "unknown",
+      "checked_at": null,
+      "attempted_at": null,
+      "fetch_error": "PendingInitialCheck"
+    },
+    {
+      "id": "rtx-5060-ti",
+      "pcode": "81351188",
+      "price_krw": null,
+      "availability": "unknown",
+      "checked_at": null,
+      "attempted_at": null,
+      "fetch_error": "PendingInitialCheck"
+    },
+    {
+      "id": "rtx-pro-4000",
+      "pcode": "99914468",
+      "price_krw": null,
+      "availability": "unknown",
+      "checked_at": null,
+      "attempted_at": null,
+      "fetch_error": "PendingInitialCheck"
+    },
+    {
+      "id": "rtx-pro-4500",
+      "pcode": "99914681",
+      "price_krw": null,
+      "availability": "unknown",
+      "checked_at": null,
+      "attempted_at": null,
+      "fetch_error": "PendingInitialCheck"
+    },
+    {
+      "id": "rtx-6000-ada",
+      "pcode": "19393388",
+      "price_krw": null,
+      "availability": "unknown",
+      "checked_at": null,
+      "attempted_at": null,
+      "fetch_error": "PendingInitialCheck"
+    },
+    {
+      "id": "rtx-5000-ada",
+      "pcode": "34816172",
+      "price_krw": null,
+      "availability": "unknown",
+      "checked_at": null,
+      "attempted_at": null,
+      "fetch_error": "PendingInitialCheck"
+    },
+    {
+      "id": "rtx-4500-ada",
+      "pcode": "48395846",
+      "price_krw": null,
+      "availability": "unknown",
+      "checked_at": null,
+      "attempted_at": null,
+      "fetch_error": "PendingInitialCheck"
+    },
+    {
+      "id": "rtx-a6000",
+      "pcode": "13596899",
+      "price_krw": null,
+      "availability": "unknown",
+      "checked_at": null,
+      "attempted_at": null,
+      "fetch_error": "PendingInitialCheck"
+    },
+    {
+      "id": "rtx-a5000",
+      "pcode": "14863025",
+      "price_krw": null,
+      "availability": "unknown",
+      "checked_at": null,
+      "attempted_at": null,
+      "fetch_error": "PendingInitialCheck"
+    },
+    {
       "id": "rtx-4090",
       "pcode": "17974766",
       "price_krw": null,
@@ -56,6 +272,24 @@
       "checked_at": "2026-10-13T06:27:56+00:00",
       "attempted_at": "2026-10-13T06:27:56+00:00",
       "fetch_error": null
+    },
+    {
+      "id": "rtx-4080-super",
+      "pcode": "33998114",
+      "price_krw": null,
+      "availability": "unknown",
+      "checked_at": null,
+      "attempted_at": null,
+      "fetch_error": "PendingInitialCheck"
+    },
+    {
+      "id": "rtx-4070-ti-super",
+      "pcode": "33385667",
+      "price_krw": null,
+      "availability": "unknown",
+      "checked_at": null,
+      "attempted_at": null,
+      "fetch_error": "PendingInitialCheck"
     },
     {
       "id": "ddr5-32",
@@ -92,6 +326,78 @@
       "checked_at": "2026-10-13T06:27:56+00:00",
       "attempted_at": "2026-10-13T06:27:56+00:00",
       "fetch_error": null
+    },
+    {
+      "id": "ddr4-32",
+      "pcode": "11028636",
+      "price_krw": null,
+      "availability": "unknown",
+      "checked_at": null,
+      "attempted_at": null,
+      "fetch_error": "PendingInitialCheck"
+    },
+    {
+      "id": "ddr5-kit-64",
+      "pcode": "28640552",
+      "price_krw": null,
+      "availability": "unknown",
+      "checked_at": null,
+      "attempted_at": null,
+      "fetch_error": "PendingInitialCheck"
+    },
+    {
+      "id": "ddr5-kit-96",
+      "pcode": "28640573",
+      "price_krw": null,
+      "availability": "unknown",
+      "checked_at": null,
+      "attempted_at": null,
+      "fetch_error": "PendingInitialCheck"
+    },
+    {
+      "id": "ddr5-ecc-32",
+      "pcode": "79408826",
+      "price_krw": null,
+      "availability": "unknown",
+      "checked_at": null,
+      "attempted_at": null,
+      "fetch_error": "PendingInitialCheck"
+    },
+    {
+      "id": "ddr5-ecc-128",
+      "pcode": "76509239",
+      "price_krw": null,
+      "availability": "unknown",
+      "checked_at": null,
+      "attempted_at": null,
+      "fetch_error": "PendingInitialCheck"
+    },
+    {
+      "id": "sn850x-4",
+      "pcode": "17788379",
+      "price_krw": null,
+      "availability": "unknown",
+      "checked_at": null,
+      "attempted_at": null,
+      "fetch_error": "PendingInitialCheck"
+    },
+    {
+      "id": "990-evo-plus-2",
+      "pcode": "69869573",
+      "price_krw": null,
+      "availability": "unknown",
+      "checked_at": null,
+      "attempted_at": null,
+      "fetch_error": "PendingInitialCheck"
+    },
+    {
+      "id": "9100-pro-4",
+      "pcode": "78716759",
+      "price_krw": null,
+      "availability": "unknown",
+      "checked_at": null,
+      "attempted_at": null,
+      "fetch_error": "PendingInitialCheck"
     }
   ]
 }

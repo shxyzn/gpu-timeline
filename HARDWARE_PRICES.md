@@ -1,12 +1,12 @@
 # 연구실 부품 가격
 
-간단 사용법 위의 CPU / GPU / RAM·SSD 영역. v1.1.6 웹 기능이며 GPU 서버 설치는 바뀌지 않습니다.
+간단 사용법 위의 CPU 16개 / GPU 16개 / RAM·SSD 12개 영역. 각 박스는 약 3개 높이의 독립 스크롤 목록입니다. 마우스 휠·터치·키보드로 탐색하며 갱신 시 위치를 유지합니다. v1.1.6 웹 기능이며 GPU 서버 설치는 바뀌지 않습니다.
 
 ## 제품 변경
 
 `dist/hardware-products.json`에서 목록을 수정합니다. `pcode`는 다나와 상품 URL의 코드, `expected_title`은 해당 상품의 정확한 제목입니다. 같은 GPU라도 제조사·유통사, RAM 개수, SSD 용량을 구분하세요. `spec`과 `variant`는 화면 표시용입니다. 각 링크는 선택한 **한 모델의 가격비교**이며 해당 칩셋 전체의 최저가나 구매 추천 순위가 아닙니다.
 
-최초 `dist/hardware-prices.json`은 2026-10-13 다나와 상품 페이지를 열어 확인한 값입니다. 제품마다 URL `https://prod.danawa.com/info/?pcode=<pcode>`가 출처입니다. 검색 결과 요약의 과거 가격을 사용하지 않았습니다. GIGABYTE RTX 4090 GAMING OC 제이씨현 모델은 확인 당시 단종 표시가 있어 가격이 없습니다.
+`dist/hardware-prices.json`은 2026-10-13 다나와 상품 페이지와 GitHub 읽기 전용 가격 수집으로 확인한 값입니다. 제품마다 URL `https://prod.danawa.com/info/?pcode=<pcode>`가 출처입니다. 검색 결과 요약의 과거 가격을 사용하지 않았습니다. GIGABYTE RTX 4090 GAMING OC 제이씨현 모델은 확인 당시 단종 표시가 있어 가격이 없습니다.
 
 ## 갱신 경로
 
