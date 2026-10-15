@@ -18,7 +18,19 @@ const host = http.createServer(async (request, response) => {
     if (!filename.startsWith(path.join(root, 'dist') + path.sep)) throw new Error('path');
     const bytes = await fs.readFile(filename);
     const types = {'.html': 'text/html', '.js': 'text/javascript', '.json': 'application/json', '.css': 'text/css', '.mp4': 'video/mp4', '.gif': 'image/gif', '.jpg': 'image/jpeg'};
-    response.writeHead(200, {'Content-Type': types[path.extname(filename)] || 'text/plain'}).end(bytes);
+    const headers = {'Content-Type': types[path.extname(filename)] || 'text/plain', 'Accept-Ranges': 'bytes'};
+    // Match static hosting: media seeking requires byte ranges and known lengths.
+    const range = request.headers.range?.match(/^bytes=(\d+)-(\d*)$/);
+    if (range) {
+      const start=Number(range[1]), end=range[2] ? Math.min(Number(range[2]),bytes.length-1) : bytes.length-1;
+      if (start>end || start>=bytes.length) {
+        response.writeHead(416,{'Content-Range':`bytes */${bytes.length}`}).end();
+      } else {
+        response.writeHead(206,{...headers,'Content-Length':end-start+1,'Content-Range':`bytes ${start}-${end}/${bytes.length}`}).end(bytes.subarray(start,end+1));
+      }
+    } else {
+      response.writeHead(200,{...headers,'Content-Length':bytes.length}).end(bytes);
+    }
   } catch { response.writeHead(404).end('not found'); }
 });
 await new Promise(resolve => host.listen(0, '127.0.0.1', resolve));
