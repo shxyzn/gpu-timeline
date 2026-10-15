@@ -130,7 +130,8 @@ try {
     const {loadHardware} = await import('./hardware.js');
     await loadHardware(async url => { const r = await fetch(url); if (!r.ok) throw new Error('fetch'); return r.json(); });
   });
-  assert.equal(await cpuList.evaluate(e => e.scrollTop), scrollBefore);
+  // Chromium can round the tail of a native keyboard scroll by one CSS pixel.
+  assert.ok(Math.abs(await cpuList.evaluate(e => e.scrollTop) - scrollBefore) <= 1, 'price refresh preserves the scroll position within one CSS pixel');
   assert.equal(await page.evaluate(() => document.activeElement.dataset.hardwareGroup), 'cpu');
   await cpuList.evaluate(e => { e.scrollTop = 0; });
   await page.locator('#hardware').screenshot({path:path.join(output, 'hardware-desktop.png')});
