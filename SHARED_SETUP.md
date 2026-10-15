@@ -213,3 +213,9 @@ systemctl --user enable --now gpu-timeline.timer
 이 명령은 공용 전환 전의 개인 상태 파일을 사용합니다. 전환 후 새로 기록한 실험은 `/var/lib/gpu-timeline/jobs.json`에 남아 있으며 자동으로 역이관하지 않습니다.
 
 구현 참고: [Python Unix 소켓](https://docs.python.org/3/library/socket.html), [systemd 실행 환경](https://www.freedesktop.org/software/systemd/man/latest/systemd.exec.html).
+
+## 외부 API 실험 (v1.1.7 이상)
+
+`gputl run --name "API 평가" --owner "내 이름" --api -- python evaluate.py`
+
+서버 관리의 업데이트 명령을 서버당 한 번 적용한 뒤 사용하세요. API 0, 1, 2…를 자동 배정하고 종료한 번호를 다시 사용합니다. [API 기록과 OpenRouter 사용량 안내](OPENROUTER.md)를 참고하세요.

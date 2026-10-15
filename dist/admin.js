@@ -1,6 +1,6 @@
 import {emptyEdits, reference, makeManualJob, makeEditOperation, mergeEdits, GitHubEditsStore} from './edits.js';
 import {sealToken, openToken} from './vault.js';
-import {jobETA} from './model.js';
+import {jobETA,isAPI} from './model.js';
 
 const $ = id => document.getElementById(id);
 const escape = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[c]));
@@ -29,6 +29,7 @@ export class DashboardEditor {
     $('manual-form').onsubmit = event => this.add(event);
     $('manual-reset').onclick = () => this.resetCollector();
     $('manual-server').onchange = () => this.populateGPUs();
+    $('manual-resource').onchange = () => this.syncResource();
     $('manual-status').onchange = () => this.changeStatus();
     $('record-list').onclick = () => this.showRecords();
     $('record-items').onclick = event => this.recordAction(event);
@@ -77,6 +78,7 @@ export class DashboardEditor {
   lock() {
     this.token = null;
     this.account = null;
+    this.onSession?.(null);
     // A request already sent to GitHub may still finish; a logout never
     // claims to cancel a committed edit.
     for (const id of ['admin-dialog', 'manual-dialog', 'records-dialog', 'delete-dialog']) $(id)?.close();
@@ -111,6 +113,7 @@ export class DashboardEditor {
   }
   syncFormLocks() {
     $('manual-server').disabled = this.busy || !!this.editing;
+    $('manual-resource').disabled = this.busy || !!this.editing?.collector;
     $('manual-status').disabled = this.busy || !!this.editing?.collector;
     document.querySelectorAll('#manual-gpus input').forEach(input => { input.disabled = this.busy || !!this.editing?.collector; });
   }
@@ -142,6 +145,7 @@ export class DashboardEditor {
       }
       this.token = token;
       this.account = account;
+      await this.onSession?.(password);
       if (data.revision >= this.data.revision) this.data = data;
       this.loadError = '';
       $('admin-dialog').close();
@@ -187,6 +191,7 @@ export class DashboardEditor {
     document.querySelectorAll('[data-collector-status]').forEach(option => { option.hidden = option.value !== job.status; });
     $('manual-status').value = job.status;
     this.changeStatus();
+    $('manual-resource').value = isAPI(job) ? 'api' : 'gpu';
     this.populateGPUs();
     document.querySelectorAll('#manual-gpus input').forEach(input => { input.checked = job.gpu_uuids.includes(input.value); });
     const server = this.getServers().find(s => s.server_id === serverID);
@@ -197,7 +202,12 @@ export class DashboardEditor {
     this.editing.shownTimes = Object.fromEntries(['manual-start', 'manual-end', 'manual-ended'].map(id => [id, $(id).value]));
     this.syncFormLocks();
   }
+  syncResource() {
+    $('manual-gpu-fieldset').hidden = $('manual-resource').value === 'api';
+    $('manual-api-note').hidden = $('manual-resource').value !== 'api';
+  }
   populateGPUs() {
+    this.syncResource();
     const server = this.getServers().find(s => s.server_id === $('manual-server').value);
     $('manual-gpus').innerHTML = server?.gpus.length
       ? server.gpus.map(g => `<label class="gpu-choice"><input type="checkbox" name="gpu" value="${escape(g.uuid)}"><span>GPU ${g.index}<small>${escape(g.name)}</small></span></label>`).join('')
@@ -219,13 +229,13 @@ export class DashboardEditor {
       const readTime = (id, key) => this.editing && $(id).value === this.editing.shownTimes[id]
         ? (this.editing.job[key] || null) : fromKstInput($(id).value);
       const input = {server_id: $('manual-server').value, name: $('manual-name').value, owner: $('manual-owner').value,
-        description: $('manual-description').value, gpu_uuids: [...document.querySelectorAll('#manual-gpus input:checked')].map(x => x.value),
+        description: $('manual-description').value, resource_type: $('manual-resource').value, gpu_uuids: [...document.querySelectorAll('#manual-gpus input:checked')].map(x => x.value),
         status: $('manual-status').value, started_at: readTime('manual-start', 'started_at'),
         expected_end_at: readTime('manual-end', 'expected_end_at'), ended_at: readTime('manual-ended', 'ended_at'),
         force_expected_end: !!this.editing && $('manual-end').value !== this.editing.shownTimes['manual-end']};
       if (this.editing) {
         const {server, job, data} = this.editing;
-        const operation = makeEditOperation(input, server, job, this.getServers(), data);
+        const operation = makeEditOperation(input, server, job, mergeEdits(this.getServers(), this.data), data);
         if (!Object.keys(operation.changes).length) {
           $('manual-dialog').close();
           this.feedback('변경한 항목이 없습니다.');
@@ -241,7 +251,7 @@ export class DashboardEditor {
       // Reuse identity after an uncertain network result when the form is unchanged.
       if (!this.pendingAdd || this.pendingAdd.signature !== signature) {
         const at = new Date().toISOString();
-        this.pendingAdd = {signature, operation: {type: 'add', job: makeManualJob(input, this.getServers(), at), at}};
+        this.pendingAdd = {signature, operation: {type: 'add', job: makeManualJob(input, mergeEdits(this.getServers(), this.data), at), at}};
       }
       const operation = this.pendingAdd.operation;
       await this.save(operation, 'manual-error', () => {

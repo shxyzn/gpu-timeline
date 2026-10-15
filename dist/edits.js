@@ -1,3 +1,5 @@
+import {isAPI, nextAPISlot} from './model.js';
+import {validatePublicToken, applyTokenOperation} from './openrouter-model.js';
 // Dashboard records are deliberately separate from collector-owned snapshots.
 export const emptyEdits = () => ({schema_version: 1, revision: 0, updated_at: null, manual_jobs: [], hidden_jobs: []});
 export const reference = (server, job) => `${server}/${job}`;
@@ -7,7 +9,7 @@ const serverID = s => typeof s === 'string' && /^[A-Za-z0-9_-]{1,100}$/.test(s);
 const statuses = ['planned', 'running', 'completed', 'failed', 'cancelled'];
 const terminal = s => ['completed', 'failed', 'cancelled'].includes(s);
 export const collectorEditFields = ['name', 'owner', 'description', 'started_at', 'expected_end_at', 'ended_at'];
-const manualEditFields = [...collectorEditFields, 'status', 'gpu_uuids'];
+const manualEditFields = [...collectorEditFields, 'status', 'gpu_uuids', 'resource_type', 'api_slot'];
 const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
 const own = (object, key) => Object.prototype.hasOwnProperty.call(object, key);
 const slot = (fields, key) => own(fields, key) ? {value: fields[key]} : {};
@@ -33,7 +35,9 @@ export function validateEdits(data) {
     if (!serverID(j.server_id) || !/^web-[a-f0-9-]{36}$/.test(j.id || '') ||
         !validText(j.name, 160) || typeof j.owner !== 'string' || j.owner.length > 100 ||
         typeof j.description !== 'string' || j.description.length > 2000 ||
-        !statuses.includes(j.status) || !Array.isArray(j.gpu_uuids) || !j.gpu_uuids.length ||
+        !statuses.includes(j.status) || !Array.isArray(j.gpu_uuids) ||
+        (isAPI(j) ? j.gpu_uuids.length !== 0 || !Number.isSafeInteger(j.api_slot) || j.api_slot < 0 : !j.gpu_uuids.length) ||
+        (j.resource_type !== undefined && !['gpu','api'].includes(j.resource_type)) ||
         j.gpu_uuids.some(g => !validText(g, 200)) || new Set(j.gpu_uuids).size !== j.gpu_uuids.length ||
         !validTime(j.started_at) || !validTime(j.created_at) ||
         !(j.expected_end_at === null || (validTime(j.expected_end_at) && Date.parse(j.expected_end_at) > Date.parse(j.started_at))) ||
@@ -60,6 +64,15 @@ export function validateEdits(data) {
     if (f.started_at && ((f.expected_end_at && Date.parse(f.expected_end_at) <= Date.parse(f.started_at)) ||
         (f.ended_at && Date.parse(f.ended_at) < Date.parse(f.started_at)))) fail();
   }
+  if (data.openrouter_tokens !== undefined) {
+    if (!Array.isArray(data.openrouter_tokens) || data.openrouter_tokens.length > 50) fail();
+    const tokenIDs = new Set();
+    for (const token of data.openrouter_tokens) {
+      validatePublicToken(token);
+      if (tokenIDs.has(token.id)) fail();
+      tokenIDs.add(token.id);
+    }
+  }
   // GitHub's base64 Contents response is supported for files below 1 MB.
   if (new TextEncoder().encode(JSON.stringify(data)).length > 800000) {
     throw new Error('수동 기록 저장 용량에 도달했습니다. 기록 정리가 필요합니다.');
@@ -69,12 +82,13 @@ export function validateEdits(data) {
 
 export function makeManualJob(input, servers, now = new Date().toISOString(), id = `web-${crypto.randomUUID()}`) {
   const server = servers.find(s => s.server_id === input.server_id);
-  if (!server || !input.gpu_uuids?.length || input.gpu_uuids.some(g => !server.gpus.some(x => x.uuid === g))) {
+  if (!server || (!isAPI(input) && (!input.gpu_uuids?.length || input.gpu_uuids.some(g => !server.gpus.some(x => x.uuid === g))))) {
     throw new Error('서버와 GPU를 선택해 주세요.');
   }
   const job = {
     id, server_id: input.server_id, name: input.name?.trim(), owner: (input.owner || '').trim(),
-    description: (input.description || '').trim(), gpu_uuids: [...new Set(input.gpu_uuids)],
+    description: (input.description || '').trim(), gpu_uuids: isAPI(input) ? [] : [...new Set(input.gpu_uuids)],
+    ...(isAPI(input) ? {resource_type: 'api', api_slot: Number.isSafeInteger(input.api_slot) ? input.api_slot : nextAPISlot(server.jobs)} : {}),
     status: input.status, started_at: input.started_at, expected_end_at: input.expected_end_at || null,
     ended_at: input.ended_at || null, created_at: now,
   };
@@ -95,7 +109,8 @@ export function makeEditOperation(input, server, job, servers, openedData, at = 
   const manual = job.dashboard_manual === true;
   let candidate;
   if (manual) {
-    candidate = makeManualJob({...input, server_id: server}, servers, at, job.id);
+    candidate = makeManualJob({...input, server_id: server, ...(isAPI(input) && isAPI(job) ? {api_slot: job.api_slot} : {})}, servers, at, job.id);
+    if (!isAPI(candidate) && isAPI(job)) { candidate.resource_type = 'gpu'; candidate.api_slot = null; }
   } else {
     candidate = {...job};
     for (const key of collectorEditFields) candidate[key] = editableValue(input, key);
@@ -123,7 +138,11 @@ export function makeEditOperation(input, server, job, servers, openedData, at = 
 
 export function applyOperation(original, operation) {
   const data = structuredClone(validateEdits(original));
-  if (operation.type === 'add') {
+  if (operation.type.startsWith('token_')) {
+    const next = applyTokenOperation(data.openrouter_tokens || [], operation);
+    if (same(next, data.openrouter_tokens || [])) return data;
+    data.openrouter_tokens = next;
+  } else if (operation.type === 'add') {
     const job = operation.job, key = reference(job.server_id, job.id);
     const previous = data.manual_jobs.find(j => reference(j.server_id, j.id) === key);
     if (previous) {

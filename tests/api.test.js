@@ -1,0 +1,37 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {resourceLanes, nextAPISlot, HOUR, gpuState} from '../dist/model.js';
+import {emptyEdits, makeManualJob, mergeEdits, applyOperation, makeEditOperation} from '../dist/edits.js';
+const now = Date.parse('2026-10-15T02:00:00Z');
+const iso = delta => new Date(now+delta*HOUR).toISOString();
+const gpu = {uuid:'GPU-0',index:0,utilization:0,memory_used_mib:0,process_count:0};
+const api = (id,slot,status='running') => ({id,resource_type:'api',api_slot:slot,gpu_uuids:[],name:id,status,started_at:iso(-2),expected_end_at:null,ended_at:null});
+const server = jobs => ({server_id:'server-c',gpus:[gpu],jobs,collector_ok:true,updated_at:iso(0)});
+test('API lanes are per server, only visible in range, never GPU occupancy, and retain completed history',()=>{
+  const jobs=[api('a',0,'completed'),api('b',1),api('c',2),{...api('d',0),started_at:iso(-.2)}];
+  jobs[0].ended_at=iso(-1);
+  assert.deepEqual(resourceLanes(server(jobs),now-3*HOUR,now+HOUR,now).map(g=>[g.api,g.index]),[[false,0],[true,0],[true,1],[true,2]]);
+  assert.equal(resourceLanes(server(jobs),now+HOUR,now+3*HOUR,now).length,1);
+  assert.equal(resourceLanes(server([]),now-HOUR,now+HOUR,now).length,1);
+  assert.equal(gpuState(server(jobs),gpu,now,1200),'idle');
+  assert.equal(nextAPISlot([api('a',0,'completed'),api('b',1,'failed'),api('c',2)]),0);
+  assert.equal(nextAPISlot([api('a',0,'unknown'),api('b',1,'planned'),api('c',2)]),3);
+});
+test('manual API add/edit/finish reuses lowest available slot with same identity and GPU conversion works',()=>{
+  const base=server([api('busy',0)]), at=iso(0);
+  const input={server_id:'server-c',resource_type:'api',name:'API',status:'running',started_at:iso(-1)};
+  const first=makeManualJob(input,[base],at);
+  assert.equal(first.api_slot,1);assert.deepEqual(first.gpu_uuids,[]);
+  let data=applyOperation(emptyEdits(),{type:'add',job:first,at});
+  let view=mergeEdits([base],data);
+  assert.equal(makeManualJob(input,view,at).api_slot,2);
+  const job=view[0].jobs.find(j=>j.id===first.id);
+  const edit=makeEditOperation({...first,status:'completed',ended_at:at},'server-c',job,view,data,at);
+  data=applyOperation(data,edit);view=mergeEdits([base],data);
+  assert.equal(makeManualJob(input,view,at).api_slot,1);
+  const toGPU=makeEditOperation({...first,resource_type:'gpu',gpu_uuids:['GPU-0'],status:'completed',ended_at:at},'server-c',view[0].jobs.find(j=>j.id===first.id),view,data,at);
+  data=applyOperation(data,toGPU);
+  assert.equal(data.manual_jobs[0].id,first.id);
+  assert.equal(data.manual_jobs[0].resource_type,'gpu');
+  assert.deepEqual(data.manual_jobs[0].gpu_uuids,['GPU-0']);
+});

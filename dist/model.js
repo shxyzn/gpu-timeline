@@ -49,3 +49,29 @@ export function layoutJobs(jobs,start,end,now,snapshotAt=null){
   const lanes=[];
   return visible.map(item=>{let lane=lanes.findIndex(t=>t<=item.from);if(lane<0)lane=lanes.length;lanes[lane]=item.to;return {...item,lane,left:(item.from-start)/(end-start)*100,width:Math.max(.3,(item.to-item.from)/(end-start)*100)};});
 }
+
+// API lanes never contribute to physical GPU capacity or utilization.
+export const isAPI = job => job.resource_type === 'api';
+export const apiSlot = job => Number.isSafeInteger(job.api_slot) && job.api_slot >= 0 ? job.api_slot : 0;
+export function nextAPISlot(jobs) {
+  const used = new Set(jobs.filter(j => isAPI(j) && !['completed','failed','cancelled','stopped'].includes(j.status)).map(apiSlot));
+  let slot = 0;
+  while (used.has(slot)) slot++;
+  return slot;
+}
+export function resourceLanes(server, start, end, now) {
+  const physical = server.gpus.map(gpu => ({...gpu, api: false,
+    jobs: server.jobs.filter(job => !isAPI(job) && job.gpu_uuids.includes(gpu.uuid))}));
+  const groups = new Map();
+  for (const job of server.jobs.filter(isAPI)) {
+    const slot = apiSlot(job);
+    if (!groups.has(slot)) groups.set(slot, []);
+    groups.get(slot).push(job);
+  }
+  for (const [index, jobs] of [...groups].sort((a,b) => a[0]-b[0])) {
+    if (layoutJobs(jobs, start, end, now, server.updated_at).length) {
+      physical.push({api: true, index, name: '외부 API · 로컬 GPU 미사용', jobs});
+    }
+  }
+  return physical;
+}
