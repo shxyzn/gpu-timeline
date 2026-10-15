@@ -17,7 +17,7 @@ const host = http.createServer(async (request, response) => {
     const filename = path.resolve(root, 'dist', `.${pathname === '/' ? '/index.html' : pathname}`);
     if (!filename.startsWith(path.join(root, 'dist') + path.sep)) throw new Error('path');
     const bytes = await fs.readFile(filename);
-    const types = {'.html': 'text/html', '.js': 'text/javascript', '.json': 'application/json', '.css': 'text/css'};
+    const types = {'.html': 'text/html', '.js': 'text/javascript', '.json': 'application/json', '.css': 'text/css', '.mp4': 'video/mp4', '.gif': 'image/gif', '.jpg': 'image/jpeg'};
     response.writeHead(200, {'Content-Type': types[path.extname(filename)] || 'text/plain'}).end(bytes);
   } catch { response.writeHead(404).end('not found'); }
 });
@@ -439,6 +439,27 @@ try {
   await page.locator('[data-token-action=remove]').click();
   await page.locator('.openrouter-card').waitFor({state:'hidden'});
   assert.deepEqual(data.openrouter_tokens,[]);
+
+  // The retimed media must still decode and seek through the full 60 seconds.
+  await page.setViewportSize({width:1440,height:1000});
+  await page.locator('.promo-note-link').click();
+  await page.locator('#release-video').screenshot({path:path.join(output,'promo-desktop.png')});
+  await page.setViewportSize({width:390,height:844});
+  await page.locator('#release-video').scrollIntoViewIfNeeded();
+  assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
+  await page.locator('#release-video').screenshot({path:path.join(output,'promo-mobile.png')});
+  const media = await page.locator('#release-video video').evaluate(video=>new Promise((resolve,reject)=>{
+    const timer=setTimeout(()=>reject(new Error('Promo media load/seek timeout')),15000);
+    video.addEventListener('error',()=>{clearTimeout(timer);reject(new Error(`Promo decode error: ${video.error?.code}`));},{once:true});
+    video.addEventListener('loadedmetadata',()=>{video.currentTime=59.5;},{once:true});
+    video.addEventListener('seeked',()=>{clearTimeout(timer);resolve({duration:video.duration,time:video.currentTime,width:video.videoWidth,ready:video.readyState,paused:video.paused});},{once:true});
+    video.load();
+  }));
+  assert.equal(media.duration,60);
+  assert.equal(media.time,59.5);
+  assert.equal(media.width,1280);
+  assert.ok(media.ready>=2);
+  assert.equal(media.paused,true);
   assert.deepEqual(errors,[]);
 
   console.log('Browser checks passed: per-server management, baseline/report versions, copied pinned commands, no management writes, logout, mobile, login, add/hide/restore, manual editing, collector time overrides and reset, automatic completion/progress, no-op and precision, conflicts/errors, KST, mobile.');
