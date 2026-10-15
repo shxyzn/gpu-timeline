@@ -7,7 +7,29 @@
 .patch-notes p{margin:0;word-break:keep-all;overflow-wrap:anywhere}
 @media(max-width:640px){.patch-notes{gap:10px;padding:14px 16px;margin-bottom:20px}.patch-notes-copy{display:block}.patch-notes p{margin-top:4px}}
 </style></head>
-<body><main><header><div class="brand"><span class="brand-mark" aria-hidden="true"></span><div><p class="eyebrow">GPU UTILIZATION DASHBOARD</p><h1>CVML GPU <span>Timeline</span></h1></div></div><div class="header-right"><span id="mode" class="badge">불러오는 중</span><span id="clock"></span><button id="admin-login" class="edit-button" hidden>관리자 로그인</button></div></header>
+<body><main>
+<details id="release-video" class="release-video" open>
+  <summary id="release-video-toggle" class="release-video-toggle">
+    <span class="release-video-summary"><span class="release-video-badge">v1.1.7</span><span>업데이트 영상 <small>· 1분</small></span></span>
+    <span class="release-video-toggle-label"><span class="release-video-hide">접기</span><span class="release-video-show">펼치기</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"></path></svg></span>
+  </summary>
+  <div class="release-video-body">
+  <div class="release-video-copy">
+    <span class="release-video-badge">WHAT’S NEW · v1.1.7</span>
+    <h2 id="release-video-title">새로운 기능을 <br>1분 안에 만나보세요.</h2>
+    <p id="release-video-description">GPU와 API 실험을 한 타임라인에서. <br>API 행 추가, 빈 번호 재사용, OpenRouter 사용량을 소개해요.</p>
+    <span class="release-video-meta">60초 · 소리 없이 볼 수 있어요</span>
+    <div class="release-video-downloads"><a href="./media/CVML-GPU-Timeline-v1.1.7-60s.gif" download>GIF 다운로드 ↓</a><a href="./media/CVML-GPU-Timeline-v1.1.7-60s.mp4" download>MP4 다운로드 ↓</a></div>
+  </div>
+  <div class="release-video-player">
+    <video controls playsinline preload="none" width="1280" height="720" poster="./media/poster-v1.1.7.jpg" aria-label="CVML GPU Timeline v1.1.7 소개 영상, 1분" aria-describedby="release-video-description">
+      <source src="./media/CVML-GPU-Timeline-v1.1.7-60s.mp4" type="video/mp4">
+      영상을 재생할 수 없으면 <a href="./media/CVML-GPU-Timeline-v1.1.7-60s.gif">GIF로 보기</a>를 이용해 주세요.
+    </video>
+  </div>
+  </div>
+</details>
+<header><div class="brand"><span class="brand-mark" aria-hidden="true"></span><div><p class="eyebrow">GPU UTILIZATION DASHBOARD</p><h1>CVML GPU <span>Timeline</span></h1></div></div><div class="header-right"><span id="mode" class="badge">불러오는 중</span><span id="clock"></span><button id="admin-login" class="edit-button" hidden>관리자 로그인</button></div></header>
 <aside id="patch-notes" class="patch-notes" role="note" aria-label="최신 패치노트">
   <svg class="patch-notes-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="m8 12 2.5 2.5L16 9"></path></svg>
   <div class="patch-notes-copy"><strong>패치노트 · v1.1.7</strong><p>외부 API 실험을 API 0, 1, 2… 행에서 확인하고, 빈 번호를 다시 사용해요.<br>OpenRouter 키별 사용액 공유를 추가했어요. API 자동 기록은 서버 업데이트 후 사용할 수 있어요. <a class="promo-note-link" href="#release-video">1분 소개 영상 보기 ↗</a></p></div>
@@ -33,21 +55,7 @@
   <div class="hardware-foot"><p id="hardware-status" role="status">가격 확인 중</p><p>선택한 모델의 확인 시점 가격 · 카드·멤버십 혜택 제외 · 배송비·재고·호환성은 상품 페이지에서 확인</p></div>
 </section>
 
-<section id="release-video" class="release-video" aria-labelledby="release-video-title">
-  <div class="release-video-copy">
-    <span class="release-video-badge">WHAT’S NEW · v1.1.7</span>
-    <h2 id="release-video-title">새로운 기능을 <br>1분 안에 만나보세요.</h2>
-    <p id="release-video-description">GPU와 API 실험을 한 타임라인에서. <br>API 행 추가, 빈 번호 재사용, OpenRouter 사용량을 소개해요.</p>
-    <span class="release-video-meta">60초 · 소리 없이 볼 수 있어요</span>
-    <div class="release-video-downloads"><a href="./media/CVML-GPU-Timeline-v1.1.7-60s.gif" download>GIF 다운로드 ↓</a><a href="./media/CVML-GPU-Timeline-v1.1.7-60s.mp4" download>MP4 다운로드 ↓</a></div>
-  </div>
-  <div class="release-video-player">
-    <video controls playsinline preload="none" width="1280" height="720" poster="./media/poster-v1.1.7.jpg" aria-label="CVML GPU Timeline v1.1.7 소개 영상, 1분" aria-describedby="release-video-description">
-      <source src="./media/CVML-GPU-Timeline-v1.1.7-60s.mp4" type="video/mp4">
-      영상을 재생할 수 없으면 <a href="./media/CVML-GPU-Timeline-v1.1.7-60s.gif">GIF로 보기</a>를 이용해 주세요.
-    </video>
-  </div>
-</section>
+
 
 <!-- 간단 사용법: 이 section의 문구와 명령어를 수정하세요. -->
 <section id="usage" class="usage" aria-labelledby="usage-title">
@@ -174,4 +182,4 @@ v1.1.0 이상 서버에서는 list의 reference가 사이트의 실험 ID와 같
   <h2 id="delete-title">대시보드에서 삭제할까요?</h2><p id="delete-name"></p><code id="delete-reference"></code><p class="admin-help">모든 사용자의 대시보드에서 이 기록을 숨깁니다. 실제 실험·서버 로그는 그대로 유지되며, 기록 관리에서 복구할 수 있어요.</p>
   <form id="delete-form"><p id="delete-error" class="admin-error" role="alert"></p><div class="dialog-actions"><button type="button" class="edit-button" data-close-dialog="delete-dialog">취소</button><button type="submit" class="edit-button danger">삭제</button></div></form>
 </dialog>
-<script type="module" src="./app.js"></script><script type="module" src="./usage.js"></script></body></html>
+<script type="module" src="./promo.js"></script><script type="module" src="./app.js"></script><script type="module" src="./usage.js"></script></body></html>
