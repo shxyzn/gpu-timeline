@@ -266,6 +266,8 @@ def metadata_command(c, args, owner_uid=None):
                 parse_time(args.start)
                 if item.get("expected_end_at") and parse_time(item["expected_end_at"]) <= parse_time(args.start):
                     raise ValueError("새 시작시간은 예상 종료시간 이전이어야 합니다.")
+                if item.get("resource_type") == "api" and item["status"] in ("completed", "failed", "cancelled", "stopped"):
+                    item["api_slot"] = next_api_slot(jobs)
                 item.update(status="running", started_at=args.start, ended_at=None)
                 for key in ("exit_code", "stop_signal", "end_source", "tracking_lost_at", "progress"):
                     item.pop(key, None)

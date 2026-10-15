@@ -34,4 +34,7 @@ test('manual API add/edit/finish reuses lowest available slot with same identity
   assert.equal(data.manual_jobs[0].id,first.id);
   assert.equal(data.manual_jobs[0].resource_type,'gpu');
   assert.deepEqual(data.manual_jobs[0].gpu_uuids,['GPU-0']);
+  const converted=mergeEdits([base],data)[0].jobs.find(j=>j.id===first.id);
+  data=applyOperation(data,makeEditOperation({...converted,name:'Renamed GPU'},'server-c',converted,view,data,at));
+  assert.equal(data.manual_jobs[0].name,'Renamed GPU');
 });

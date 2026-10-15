@@ -58,6 +58,13 @@ class APIExperimentsTests(unittest.TestCase):
         self.add('fourth');self.assertEqual(agent.read_jobs(self.temp.name)[-1]['api_slot'],0)
         self.assertEqual(self.broker.dispatch(['list'],1001)['jobs'][0]['reference'],ref)
 
+    def test_reopening_a_finished_api_record_allocates_an_available_slot(self):
+        ref=self.add('first')['reference']
+        self.broker.dispatch(['finish','--id',ref],1001)
+        self.add('new')
+        self.broker.dispatch(['update','--id',ref,'--start',agent.now_iso()],1001)
+        self.assertEqual([j['api_slot'] for j in agent.read_jobs(self.temp.name)],[1,0])
+
     def test_parser_and_run_token_guards_apply_to_api(self):
         for argv in (['add','--id','a','--name','a','--owner','a'], ['add','--id','a','--name','a','--owner','a','--api','--gpus','0']):
             with self.assertRaises(ValueError): self.broker.dispatch(argv,1001)

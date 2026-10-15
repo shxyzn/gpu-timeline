@@ -109,8 +109,9 @@ export function makeEditOperation(input, server, job, servers, openedData, at = 
   const manual = job.dashboard_manual === true;
   let candidate;
   if (manual) {
-    candidate = makeManualJob({...input, server_id: server, ...(isAPI(input) && isAPI(job) ? {api_slot: job.api_slot} : {})}, servers, at, job.id);
-    if (!isAPI(candidate) && isAPI(job)) { candidate.resource_type = 'gpu'; candidate.api_slot = null; }
+    const reopening = terminal(job.status) && !terminal(input.status);
+    candidate = makeManualJob({...input, server_id: server, ...(isAPI(input) && isAPI(job) && !reopening ? {api_slot: job.api_slot} : {})}, servers, at, job.id);
+    if (!isAPI(candidate) && job.resource_type) { candidate.resource_type = 'gpu'; candidate.api_slot = null; }
   } else {
     candidate = {...job};
     for (const key of collectorEditFields) candidate[key] = editableValue(input, key);
