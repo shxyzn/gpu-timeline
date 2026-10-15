@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "revision": 5,
-  "updated_at": "2026-10-15T05:49:01.692Z",
+  "revision": 6,
+  "updated_at": "2026-10-15T06:49:05.820Z",
   "manual_jobs": [],
   "hidden_jobs": [
     {
@@ -46,8 +46,8 @@
         "byok_usage": 0,
         "limit_reset": null
       },
-      "checked_at": "2026-10-15T05:49:01.692Z",
-      "attempted_at": "2026-10-15T05:49:01.692Z",
+      "checked_at": "2026-10-15T06:49:05.820Z",
+      "attempted_at": "2026-10-15T06:49:05.562Z",
       "error": null
     }
   ]
