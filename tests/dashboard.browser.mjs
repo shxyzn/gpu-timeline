@@ -194,12 +194,6 @@ try {
   await page.locator('#server-manage-close').click();
   await page.locator('[data-manage-server=server-b]').click();
   assert.match(await page.locator('.server-action-overview').innerText(), /gputl update --gpus/);
-  const correction = await page.locator('#server-custom-0').innerText();
-  assert.match(correction, /gpu-reassignment-v1/);
-  assert.ok(correction.includes("update --id 'server-b/job-bd521fcb87594cb1896382c0455d97ef' --gpus 0"));
-  assert.ok(correction.includes("update --id 'server-b/job-068ba11f80a64057b70241a68b85db52' --gpus 0"));
-  await page.locator('[data-copy-server-command=server-custom-0]').click();
-  assert.equal(await page.evaluate(() => navigator.clipboard.readText()), correction);
   await page.locator('#server-manage-close').click();
   serverCStale = true;
   await page.locator('#refresh').click();
@@ -210,6 +204,9 @@ try {
   assert.match(await page.locator('#server-update-command').innerText(), /'server-c'/);
   assert.match(await page.locator('#server-manage-body').innerText(), /서버 C 점검 <script>/);
   assert.equal(await page.locator('#server-manage-body script').count(), 0);
+  const customCommand = await page.locator('#server-custom-0').innerText();
+  await page.locator('[data-copy-server-command=server-custom-0]').click();
+  assert.equal(await page.evaluate(() => navigator.clipboard.readText()), customCommand);
   await page.setViewportSize({width: 390, height: 844});
   assert.ok(await page.locator('#server-manage-dialog').evaluate(e => e.scrollWidth <= e.clientWidth));
   await page.screenshot({path: path.join(output, 'server-management-mobile.png')});

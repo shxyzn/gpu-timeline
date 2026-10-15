@@ -17,13 +17,7 @@
       "name": "Server B",
       "file": "servers/server-b.json",
       "installed_version_baseline": "1.0.0",
-      "actions": [
-        {
-          "title": "exp19 본 실험·최종 8B 평가의 GPU 기록 정정",
-          "description": "먼저 cvml 계정에서 아래 공용 수집기 업데이트를 적용하세요. 실제 물리 GPU 0 사용을 확인한 뒤, 두 실험을 등록한 psh 계정의 터미널에서 이 명령을 실행하세요. 같은 ID의 GPU 기록만 바꾸며 실제 프로세스는 이동·중단하지 않습니다. list의 gpu_uuids와 status의 업로드 결과를 확인하세요. 처리 후에도 이 안내는 자동으로 사라지지 않습니다.",
-          "command": "(\n  set -eu\n  /usr/local/bin/gputl status | /usr/bin/python3 -c 'import json, sys; s=json.load(sys.stdin); sys.exit(0 if s.get(\"server_id\")==\"server-b\" and \"gpu-reassignment-v1\" in s.get(\"capabilities\", []) else \"server-b 공용 수집기를 v1.1.5 이상으로 먼저 업데이트하세요.\")'\n  /usr/local/bin/gputl update --id 'server-b/job-bd521fcb87594cb1896382c0455d97ef' --gpus 0\n  /usr/local/bin/gputl update --id 'server-b/job-068ba11f80a64057b70241a68b85db52' --gpus 0\n  /usr/local/bin/gputl list\n  /usr/local/bin/gputl status\n)"
-        }
-      ]
+      "actions": []
     },
     {
       "id": "server-c",
