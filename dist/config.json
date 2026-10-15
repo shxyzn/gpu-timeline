@@ -55,6 +55,14 @@
           "gputl list에서 기록된 GPU UUID 확인",
           "임시 설치 폴더에 root 소유 Python 캐시가 남는 문제 수정"
         ]
+      },
+      {
+        "version": "1.1.7",
+        "features": [
+          "gputl run / add / update --api로 외부 API 실험 기록",
+          "서버별 API 0, 1, 2… 자동 배정 · 실제 종료 후 가장 낮은 빈 번호 재사용",
+          "API 작업도 같은 실험 ID·PID·자동 종료 기록 사용 · GPU 통계에서 제외"
+        ]
       }
     ]
   }

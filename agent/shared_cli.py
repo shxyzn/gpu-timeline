@@ -130,7 +130,8 @@ def replay():
 def run_experiment(args):
     if not args.command or args.command[0] != "--" or len(args.command) < 2:
         raise ValueError("-- 뒤에 실행할 명령을 넣으세요. 예: gputl run --name 실험 --owner 별명 --gpus 0 -- python train.py")
-    if "run-recording-v1" not in request(["status"]).get("capabilities", []):
+    capabilities = request(["status"]).get("capabilities", [])
+    if "run-recording-v1" not in capabilities or (args.api and "api-experiments-v1" not in capabilities):
         raise ValueError("관리자가 git pull 후 bash agent/install-shared.sh로 공용 수집기를 업데이트해야 합니다.")
     token = uuid.uuid4().hex
     job_id = args.id or "run-" + gpu_agent.datetime.now().strftime("%Y%m%d-%H%M%S-") + token[:8]
@@ -161,8 +162,9 @@ def run_experiment(args):
         try:
             started = gpu_agent.now_iso()
             add = ["add", "--id", job_id, "--name", args.name, "--owner", args.owner,
-                   "--gpus", args.gpus, "--description", args.description,
+                   "--description", args.description,
                    "--start", started, "--run-token", token, "--runner-pid", str(os.getpid())]
+            add.extend(["--api"] if args.api else ["--gpus", args.gpus])
             if args.end:
                 add.extend(["--end", args.end])
             try:

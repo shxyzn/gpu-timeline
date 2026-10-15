@@ -143,6 +143,17 @@ def normalize_gpu_selection(values, gpus):
     return selected
 
 
+def next_api_slot(jobs):
+    # Called under jobs.lock. Running/unknown/planned records keep their lane
+    # until an actual terminal status, never just an estimated end time.
+    used = {j.get("api_slot", 0) for j in jobs if j.get("resource_type") == "api"
+            and j.get("status") not in ("completed", "failed", "cancelled", "stopped")}
+    slot = 0
+    while slot in used:
+        slot += 1
+    return slot
+
+
 def metadata_command(c, args, owner_uid=None):
     state = Path(c["state_dir"])
     with locked(state / "jobs.lock"):
@@ -175,9 +186,11 @@ def metadata_command(c, args, owner_uid=None):
             if args.planned and args.pid:
                 raise ValueError("예정 실험에는 --pid를 연결할 수 없습니다.")
             item = {"id": args.id, "name": args.name, "description": args.description,
-                    "gpu_uuids": normalize_gpu_selection(args.gpus, collect_gpus()),
+                    "gpu_uuids": [] if args.api else normalize_gpu_selection(args.gpus, collect_gpus()),
                     "status": "planned" if args.planned else "running", "started_at": started,
                     "expected_end_at": args.end, "ended_at": None, "eta_source": "manual"}
+            if args.api:
+                item.update(resource_type="api", api_slot=next_api_slot(jobs))
             if owner_uid is not None:
                 item.update(id="job-" + uuid.uuid4().hex, _owner_uid=owner_uid, _local_id=args.id)
             if args.owner:
@@ -229,8 +242,14 @@ def metadata_command(c, args, owner_uid=None):
         elif args.action == "update":
             if run_token and item["status"] in ("completed", "failed", "cancelled"):
                 return item  # A delayed start update cannot reopen a finished run.
-            if args.gpus is not None:
+            if args.api:
+                if item.get("resource_type") != "api":
+                    item["api_slot"] = next_api_slot(jobs)
+                item.update(resource_type="api", gpu_uuids=[])
+            elif args.gpus is not None:
                 item["gpu_uuids"] = normalize_gpu_selection(args.gpus, collect_gpus())
+                item.pop("resource_type", None)
+                item.pop("api_slot", None)
             if args.owner:
                 item["owner"] = args.owner
             if args.name:
@@ -247,6 +266,8 @@ def metadata_command(c, args, owner_uid=None):
                 parse_time(args.start)
                 if item.get("expected_end_at") and parse_time(item["expected_end_at"]) <= parse_time(args.start):
                     raise ValueError("새 시작시간은 예상 종료시간 이전이어야 합니다.")
+                if item.get("resource_type") == "api" and item["status"] in ("completed", "failed", "cancelled", "stopped"):
+                    item["api_slot"] = next_api_slot(jobs)
                 item.update(status="running", started_at=args.start, ended_at=None)
                 for key in ("exit_code", "stop_signal", "end_source", "tracking_lost_at", "progress"):
                     item.pop(key, None)
@@ -315,7 +336,7 @@ def make_snapshot(c):
     public_jobs = []
     # owner is an explicitly supplied public label, never an OS username lookup.
     # UID, local IDs, PIDs, commands, local paths and credentials stay private.
-    fields = ("id", "name", "description", "gpu_uuids", "status", "started_at",
+    fields = ("id", "name", "description", "resource_type", "api_slot", "gpu_uuids", "status", "started_at",
               "expected_end_at", "ended_at", "eta_source", "progress", "end_source", "owner",
               "execution_source", "exit_code", "stop_signal", "tracking_lost_at")
     for item in jobs:
@@ -389,7 +410,9 @@ def parser(shared=False, parser_class=argparse.ArgumentParser, local_commands=Fa
     add.add_argument("--id", required=True)
     add.add_argument("--name", required=True)
     add.add_argument("--owner", required=shared, help="대시보드에 공개할 사용자 표시 이름")
-    add.add_argument("--gpus", required=True, help="물리 GPU index 또는 UUID. 예: 0,1")
+    add_resource = add.add_mutually_exclusive_group(required=True)
+    add_resource.add_argument("--api", action="store_true", help="외부 API 실험 기록. 로컬 GPU를 점유하지 않습니다.")
+    add_resource.add_argument("--gpus", help="물리 GPU index 또는 UUID. 예: 0,1")
     add.add_argument("--start")
     add.add_argument("--end")
     add.add_argument("--description", default="")
@@ -399,7 +422,9 @@ def parser(shared=False, parser_class=argparse.ArgumentParser, local_commands=Fa
     add.add_argument("--runner-pid", type=int, help=argparse.SUPPRESS)
     update = sub.add_parser("update", help="실험 정보·진행률·예상 종료시간 변경")
     update.add_argument("--id", required=True, help="내 실험 ID 또는 사이트에서 복사한 서버/실험 공유 ID")
-    update.add_argument("--gpus", help="기록할 물리 GPU index 또는 UUID 변경. 예: 0,1. 실제 프로세스는 이동하지 않습니다.")
+    update_resource = update.add_mutually_exclusive_group()
+    update_resource.add_argument("--api", action="store_true", help="같은 실험 ID를 외부 API 기록으로 변경")
+    update_resource.add_argument("--gpus", help="기록할 물리 GPU index 또는 UUID 변경. 예: 0,1. 실제 프로세스는 이동하지 않습니다.")
     update.add_argument("--name")
     update.add_argument("--owner", help="공개 표시 이름 수정. 실험 소유 계정은 변경되지 않습니다.")
     update.add_argument("--description")
@@ -428,7 +453,9 @@ def parser(shared=False, parser_class=argparse.ArgumentParser, local_commands=Fa
             run.add_argument("--id", help="생략하면 고유 ID 자동 생성")
             run.add_argument("--name", required=True)
             run.add_argument("--owner", required=True, help="공개할 사용자 표시 이름")
-            run.add_argument("--gpus", required=True, help="기록할 물리 GPU 번호. GPU를 강제 할당하지 않습니다.")
+            run_resource = run.add_mutually_exclusive_group(required=True)
+            run_resource.add_argument("--api", action="store_true", help="외부 API 실험. API 키나 CUDA 환경을 변경하지 않습니다.")
+            run_resource.add_argument("--gpus", help="기록할 물리 GPU 번호. GPU를 강제 할당하지 않습니다.")
             run.add_argument("--end", help="예상 종료시간. 모르면 생략")
             run.add_argument("--description", default="")
             run.add_argument("command", nargs=argparse.REMAINDER, help="-- 뒤에 원래 실행 명령")

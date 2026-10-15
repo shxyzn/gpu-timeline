@@ -1,10 +1,11 @@
+import {OpenRouterBoard} from './openrouter.js';
 import {loadHardware} from './hardware.js';
 import {DashboardEditor} from './admin.js';
 import {ServerManager,installedVersion} from './server-management.js';
 import {mergeEdits} from './edits.js';
 import {demoSnapshot} from './demo.js';
 import {calendarDay} from './calendar.js';
-import {HOUR,timestamp,health,gpuState,layoutJobs,jobETA,versionLabel} from './model.js';
+import {HOUR,timestamp,health,gpuState,layoutJobs,jobETA,versionLabel,isAPI,apiSlot,resourceLanes} from './model.js';
 const $=id=>document.getElementById(id);
 const escape=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const fmt=(value,options={})=>{const t=typeof value==='number'?value:timestamp(value);return t===null?'미등록':new Intl.DateTimeFormat('ko-KR',{timeZone:'Asia/Seoul',...options}).format(t);};
@@ -33,11 +34,11 @@ function serverVersion(server){
   return '<p class="server-version" title="'+escape(title)+'"><span>설치 버전 '+value+'</span>'+(installed.source==='baseline'?'<small>관리자 지정 기준</small>':'')+'</p>';
 }
 const statusLabels={running:'실행 중',planned:'예정',completed:'완료',failed:'실패',cancelled:'취소',stopped:'프로세스 종료 · 결과 미확인',unknown:'확인 필요'};
-let editor,serverManager,dashboardBuild=null,telemetryServers=[],config,servers=[],hours=72,offset=0,lastFetch=null,fetchErrors=0,selected=null;
+let editor,serverManager,openRouter,dashboardBuild=null,telemetryServers=[],config,servers=[],hours=72,offset=0,lastFetch=null,fetchErrors=0,selected=null;
 const demo=demoSnapshot();
 const telemetry = server => telemetryServers.find(s=>s.server_id===server.server_id)||server;
 function applyDashboardEdits(){servers=editor?.enabled?mergeEdits(telemetryServers,editor.data):telemetryServers;}
-function editorChanged(){applyDashboardEdits();if(config)render();}
+function editorChanged(){applyDashboardEdits();if(config)render();openRouter?.render();}
 function viewWindow(){const now=Date.now();const anchor=Math.floor((now+9*HOUR)/(24*HOUR))*24*HOUR-9*HOUR;return {now,start:anchor+(offset*hours)*HOUR,end:anchor+(offset*hours+hours)*HOUR};}
 async function readJSON(url){const u=new URL(url,location.href);u.searchParams.set('_',String(Math.floor(Date.now()/60000)));const r=await fetch(u,{cache:'no-store',signal:AbortSignal.timeout(15000)});if(!r.ok)throw new Error(`HTTP ${r.status}`);return r.json();}
 function checkServer(s,id){
@@ -82,20 +83,22 @@ function render(){
   $('calendar-note').textContent=[...holidayNotes,...missingYears.map(year=>`${year}년 공휴일 정보 미등록`)].join(' / ');
   const nowX=(now-start)/(end-start)*100;
   const line=nowX>=0&&nowX<=100?`<div class="now-line" style="left:${nowX}%"></div>`:'';
-  let html=`<div class="axis"><div class="axis-label">서버 / GPU</div><div class="axis-scale">${ticks.join('')}${nowX>=0&&nowX<=100?`<span class="now-tag" style="left:${nowX}%">현재</span>`:''}</div></div>`;
+  let html=`<div class="axis"><div class="axis-label">서버 / 자원</div><div class="axis-scale">${ticks.join('')}${nowX>=0&&nowX<=100?`<span class="now-tag" style="left:${nowX}%">현재</span>`:''}</div></div>`;
   servers.forEach((s,si)=>{
-    if(!s.gpus.length){html+=`<div class="lane group-start"><div class="gpu-label"><strong>${escape(s.name)}</strong></div><div class="track"><span class="empty-track">서버 데이터 수신 대기</span></div></div>`;return;}
-    s.gpus.forEach((g,gi)=>{
-      const jobs=s.jobs.filter(j=>j.gpu_uuids.includes(g.uuid));const bars=layoutJobs(jobs,start,end,now,s.updated_at);const height=Math.max(84,(Math.max(0,...bars.map(b=>b.lane))+1)*54+30);
+    const lanes=resourceLanes(s,start,end,now);
+    if(!lanes.length){html+=`<div class="lane group-start"><div class="gpu-label"><strong>${escape(s.name)}</strong></div><div class="track"><span class="empty-track">서버 데이터 수신 대기</span></div></div>`;return;}
+    lanes.forEach((g,gi)=>{
+      const jobs=g.jobs;const bars=layoutJobs(jobs,start,end,now,s.updated_at);const height=Math.max(84,(Math.max(0,...bars.map(b=>b.lane))+1)*54+30);
       const ok=health(s,now,stale).ok;
       const empty=bars.length?'':!ok?'마지막 상태 · 수신 확인 필요':gpuState(telemetry(s),g,now,stale)==='busy'?'점유 중 · 표시할 실험 일정 없음':'표시할 실험 없음';
-      html+=`<div class="lane ${gi===0?'group-start':''} ${ok?'':'stale'}" style="min-height:${height}px"><div class="gpu-label"><div><strong>${escape(s.name)}</strong><small>${escape(g.name)}</small></div><span class="gpu-num">GPU ${g.index}</span></div><div class="track" style="--grid:${step/hours*100}%">${line}${empty?`<span class="empty-track">${empty}</span>`:''}${bars.map(b=>`<button class="job-bar ${b.job.status==='running'?['','violet','green'][si%3]:escape(b.job.status)} ${b.uncertain?'uncertain':''} ${b.job.dashboard_manual?'manual':''}" style="left:${b.left}%;width:${Math.min(b.width,100-b.left)}%;top:${20+b.lane*54}px" data-server="${escape(s.server_id)}" data-job="${escape(b.job.id)}" aria-label="${escape(jobLabel(b.job))} · ${escape(statusLabels[b.job.status]||b.job.status)} · ${b.uncertain?'종료 미정 또는 예정 초과':etaText(b.job,s.updated_at)}">${b.job.dashboard_manual?'[수동] ':''}${escape(jobLabel(b.job))}${b.uncertain?' · 종료 확인':''}</button>`).join('')}</div></div>`;
+      html+=`<div class="lane ${gi===0?'group-start':''} ${g.api?'api-lane':''} ${ok?'':'stale'}" style="min-height:${height}px"><div class="gpu-label"><div><strong>${escape(s.name)}</strong><small>${escape(g.name)}</small></div><span class="gpu-num ${g.api?'api-num':''}">${g.api?'API':'GPU'} ${g.index}</span></div><div class="track" style="--grid:${step/hours*100}%">${line}${empty?`<span class="empty-track">${empty}</span>`:''}${bars.map(b=>`<button class="job-bar ${b.job.status==='running'?['','violet','green'][si%3]:escape(b.job.status)} ${b.uncertain?'uncertain':''} ${b.job.dashboard_manual?'manual':''}" style="left:${b.left}%;width:${Math.min(b.width,100-b.left)}%;top:${20+b.lane*54}px" data-server="${escape(s.server_id)}" data-job="${escape(b.job.id)}" aria-label="${escape(jobLabel(b.job))} · ${escape(statusLabels[b.job.status]||b.job.status)} · ${b.uncertain?'종료 미정 또는 예정 초과':etaText(b.job,s.updated_at)}">${b.job.dashboard_manual?'[수동] ':''}${escape(jobLabel(b.job))}${b.uncertain?' · 종료 확인':''}</button>`).join('')}</div></div>`;
     });
   });
   $('timeline').innerHTML=servers.length?html:'<div class="blank">연결된 서버가 없습니다.</div>';
   $('sync-label').textContent=`화면 조회 ${lastFetch?time(lastFetch):'—'} · ${config.refresh_seconds||60}초마다 확인`;
   $('servers').innerHTML=servers.map(s=>serverCard(s,now,stale)).join('');
   serverManager?.render();
+  openRouter?.render();
   if(selected&&$('detail-dialog').open)fillDetail(selected.server,selected.id);
 }
 function serverCard(s,now,stale){
@@ -107,14 +110,16 @@ function serverCard(s,now,stale){
     const giB=v=>Number.isFinite(v)?(v/1024).toFixed(1):'—';
     return `<div class="gpu-detail"><div class="gpu-detail-title"><strong>GPU ${g.index}</strong><small>${state==='unknown'?'확인 필요':state==='busy'?'점유 중':'현재 여유'}</small></div><div class="meter-line"><span>GPU 사용률${h.ok?'':' · 마지막 수신'}</span><span>${util===null?'—':util+'%'}</span></div><div class="meter"><div class="meter-fill" style="width:${Math.max(0,Math.min(100,util||0))}%"></div></div><div class="meter-line"><span>VRAM</span><span>${giB(used)} / ${giB(total)} GiB</span></div><div class="meter"><div class="meter-fill vram" style="width:${pct}%"></div></div>${running.map(j=>`<div class="gpu-experiment"><span>${j.dashboard_manual?'[수동] ':''}${escape(jobLabel(j))}</span><span>${j.status==='unknown'?'실행 상태 확인 필요':etaText(j,s.updated_at)}</span></div>`).join('')}${!running.length&&state==='busy'?'<div class="gpu-experiment"><span>GPU 점유 감지 · 표시할 실험 기록 없음</span></div>':''}</div>`;
   }).join('');
-  return `<article class="server-card"><div class="server-heading"><h3>${escape(s.name)}</h3><span class="state ${h.ok?'':'warning'}">${h.label}</span></div><p class="server-meta">${escape([...new Set(s.gpus.map(g=>g.name))].join(' / ')||'GPU 정보 대기')} · ${s.gpus.length} GPU<br>마지막 수신 ${s.updated_at?ago(s.updated_at):'없음'}</p>${serverVersion(s)}${rows||'<p class="server-meta">서버 수집 프로그램의 연결을 확인해 주세요.</p>'}${serverManager?.button(s)||''}</article>`;
+  const apiJobs=s.jobs.filter(j=>isAPI(j)&&['running','unknown','planned'].includes(j.status));
+  const apiRows=apiJobs.length?`<div class="api-detail"><strong>외부 API · ${apiJobs.length}개 기록</strong>${apiJobs.map(j=>`<div class="gpu-experiment"><span>API ${apiSlot(j)} · ${escape(jobLabel(j))}</span><span>${escape(statusLabels[j.status])} · ${etaText(j,s.updated_at)}</span></div>`).join('')}</div>`:'';
+  return `<article class="server-card"><div class="server-heading"><h3>${escape(s.name)}</h3><span class="state ${h.ok?'':'warning'}">${h.label}</span></div><p class="server-meta">${escape([...new Set(s.gpus.map(g=>g.name))].join(' / ')||'GPU 정보 대기')} · ${s.gpus.length} GPU<br>마지막 수신 ${s.updated_at?ago(s.updated_at):'없음'}</p>${serverVersion(s)}${rows||'<p class="server-meta">서버 수집 프로그램의 연결을 확인해 주세요.</p>'}${apiRows}${serverManager?.button(s)||''}</article>`;
 }
 function fillDetail(server,id){
   const s=servers.find(x=>x.server_id===server),j=s?.jobs.find(x=>x.id===id);if(!j){$('detail-dialog').close();return;}
   const now=Date.now(),started=timestamp(j.started_at),actualEnd=timestamp(j.ended_at);
   const elapsed=j.status==='unknown'?'실행 상태 확인 필요':started===null||j.status==='planned'?'—':`${Math.max(0,((actualEnd??now)-started)/HOUR).toFixed(1)}시간`;
   const estimate=jobETA(j,s.updated_at),eta=estimate.at,isOver=j.status==='running'&&eta!==null&&eta<now;
-  const fields=[['서버',s.name],['GPU',s.gpus.filter(g=>j.gpu_uuids.includes(g.uuid)).map(g=>`GPU ${g.index}`).join(', ')],['상태',statusLabels[j.status]||j.status],['시작',time(j.started_at)],['사용 시간',elapsed],['완료 예정',eta===null?'미등록':time(eta)+(estimate.source==='progress'?' · 추정':'')+(isOver?' · 예정 초과':'')],['예정 산정',estimate.source==='progress'?'진행률 기반 선형 추정':estimate.source==='manual'?'직접 입력':'—'],['실제 종료',time(j.ended_at)]];
+  const fields=[['서버',s.name],['자원',isAPI(j)?`API ${apiSlot(j)} · 외부 API`:s.gpus.filter(g=>j.gpu_uuids.includes(g.uuid)).map(g=>`GPU ${g.index}`).join(', ')],['상태',statusLabels[j.status]||j.status],['시작',time(j.started_at)],['사용 시간',elapsed],['완료 예정',eta===null?'미등록':time(eta)+(estimate.source==='progress'?' · 추정':'')+(isOver?' · 예정 초과':'')],['예정 산정',estimate.source==='progress'?'진행률 기반 선형 추정':estimate.source==='manual'?'직접 입력':'—'],['실제 종료',time(j.ended_at)]];
   if(j.dashboard_manual)fields.push(['기록 방식','대시보드 수동 등록 · 자동 종료 추적 없음']);
   if(j.dashboard_override_fields?.length)fields.push(['웹 수정','이름·시간 등 수정한 항목 우선 표시 · 실행 상태는 서버 수집값']);
   if(j.owner)fields.splice(1,0,['등록자',j.owner]);
@@ -170,4 +175,4 @@ $('previous').onclick=()=>{offset--;render();};$('next').onclick=()=>{offset++;r
 showVersion();
 loadHardware(readJSON);
 setInterval(() => loadHardware(readJSON), 15 * 60 * 1000);
-try{config=await readJSON('./config.json');if(!['demo','live'].includes(config.mode))throw new Error('mode');if(config.mode==='live'&&!Array.isArray(config.servers))throw new Error('servers');editor=new DashboardEditor(config,()=>telemetryServers,editorChanged);serverManager=new ServerManager(config,editor,()=>telemetryServers,()=>dashboardBuild,refresh);await refresh();setInterval(refresh,Math.max(30,config.refresh_seconds||60)*1000);setInterval(()=>render(),30000);}catch(error){$('mode').textContent='설정 확인 필요';$('notice').textContent='설정을 불러오지 못했습니다. config.json과 웹 서버 연결을 확인해 주세요.';$('notice').className='notice error';$('timeline').innerHTML='<div class="blank">표시할 데이터가 없습니다.</div>';}
+try{config=await readJSON('./config.json');if(!['demo','live'].includes(config.mode))throw new Error('mode');if(config.mode==='live'&&!Array.isArray(config.servers))throw new Error('servers');editor=new DashboardEditor(config,()=>telemetryServers,editorChanged);openRouter=new OpenRouterBoard(editor);serverManager=new ServerManager(config,editor,()=>telemetryServers,()=>dashboardBuild,refresh);await refresh();setInterval(refresh,Math.max(30,config.refresh_seconds||60)*1000);setInterval(()=>render(),30000);}catch(error){$('mode').textContent='설정 확인 필요';$('notice').textContent='설정을 불러오지 못했습니다. config.json과 웹 서버 연결을 확인해 주세요.';$('notice').className='notice error';$('timeline').innerHTML='<div class="blank">표시할 데이터가 없습니다.</div>';}

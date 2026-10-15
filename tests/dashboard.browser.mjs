@@ -81,6 +81,15 @@ try {
     }
     return fulfill(route, {type: 'file', encoding: 'base64', sha: `sha-${data.revision}`, content: encodeJSON(data)});
   });
+  let openRouterCalls = 0, openRouterFail = false;
+  const fakeKey = 'test-openrouter-never-real';
+  await context.route('https://openrouter.ai/**', route => {
+    assert.equal(route.request().url(), 'https://openrouter.ai/api/v1/key');
+    assert.equal(route.request().method(), 'GET');
+    assert.equal(route.request().headers().authorization, `Bearer ${fakeKey}`);
+    openRouterCalls++;
+    return fulfill(route, openRouterFail ? {error:{message:fakeKey}} : {data:{usage:12.34,usage_daily:1.23,usage_weekly:4.56,usage_monthly:12.34,limit:50,limit_remaining:37.66,limit_reset:'monthly',label:fakeKey}}, openRouterFail ? 401 : 200);
+  });
   const base = `http://127.0.0.1:${host.address().port}`;
   // The browser is in Los Angeles; the calendar must still follow Korean days.
   // Freeze only this page so the existing live-time editor fixtures stay intact.
@@ -121,7 +130,8 @@ try {
     const {loadHardware} = await import('./hardware.js');
     await loadHardware(async url => { const r = await fetch(url); if (!r.ok) throw new Error('fetch'); return r.json(); });
   });
-  assert.equal(await cpuList.evaluate(e => e.scrollTop), scrollBefore);
+  // Chromium can round the tail of a native keyboard scroll by one CSS pixel.
+  assert.ok(Math.abs(await cpuList.evaluate(e => e.scrollTop) - scrollBefore) <= 1, 'price refresh preserves the scroll position within one CSS pixel');
   assert.equal(await page.evaluate(() => document.activeElement.dataset.hardwareGroup), 'cpu');
   await cpuList.evaluate(e => { e.scrollTop = 0; });
   await page.locator('#hardware').screenshot({path:path.join(output, 'hardware-desktop.png')});
@@ -369,6 +379,68 @@ try {
   await page.screenshot({path: path.join(output, 'dashboard-mobile.png'), fullPage: true});
   assert.deepEqual(errors, []);
   assert.equal(writes, 8);
+  // API resource form uses no physical GPU and retains the same experiment ID.
+  await page.setViewportSize({width:1440,height:1000});
+  await page.locator('#manual-add').click();
+  await page.locator('#manual-name').fill('API evaluation');
+  await page.locator('#manual-resource').selectOption('api');
+  await page.locator('#manual-server').selectOption('server-c');
+  assert.equal(await page.locator('#manual-gpu-fieldset').isVisible(),false);
+  await page.locator('#manual-start').fill(new Date(now.getTime()+8*3600000).toISOString().slice(0,16));
+  await page.locator('#manual-submit').click();
+  await page.locator('#manual-dialog').waitFor({state:'hidden'});
+  const apiJob = data.manual_jobs.find(j=>j.name==='API evaluation');
+  assert.equal(apiJob.api_slot,0);assert.deepEqual(apiJob.gpu_uuids,[]);
+  await page.locator('.api-lane .job-bar').waitFor();
+  assert.match(await page.locator('.api-lane .gpu-num').innerText(),/API 0/);
+  assert.match(await page.locator('#overview .stat').first().innerText(),/3/);
+  await page.locator('.api-lane .job-bar').click();
+  assert.match(await page.locator('#job-detail').innerText(),/API 0 · 외부 API/);
+  await page.locator('#close-detail').click();
+  // API keys go only to OpenRouter; GitHub receives strictly numeric summaries.
+  await page.locator('#openrouter-add').click();
+  await page.locator('#openrouter-name').fill('연구실 공용');
+  await page.locator('#openrouter-key').fill(fakeKey);
+  await page.locator('#openrouter-submit').click();
+  await page.locator('#openrouter-dialog').waitFor({state:'hidden'});
+  assert.equal(data.openrouter_tokens.length,1);
+  assert.equal(JSON.stringify(data).includes(fakeKey),false);
+  assert.equal(await page.evaluate(k=>JSON.stringify(localStorage).includes(k),fakeKey),false);
+  assert.equal(await page.locator('#openrouter-key').inputValue(),'');
+  assert.match(await page.locator('.openrouter-card').innerText(),/\$12.34/);
+  const checked = data.openrouter_tokens[0].checked_at;
+  openRouterFail=true;
+  await page.locator('[data-token-action=refresh]').click();
+  await page.waitForFunction(()=>document.getElementById('openrouter-feedback').textContent.includes('실패'));
+  assert.equal(data.openrouter_tokens[0].checked_at,checked);
+  assert.equal(data.openrouter_tokens[0].error,'unauthorized');
+  assert.equal(JSON.stringify(data).includes(fakeKey),false);
+  assert.match(await page.locator('.openrouter-card').innerText(),/마지막 조회값/);
+  openRouterFail=false;
+  await page.locator('[data-token-action=refresh]').click();
+  await page.waitForFunction(()=>document.getElementById('openrouter-feedback').textContent.includes('갱신했어요'));
+  await page.locator('#openrouter').scrollIntoViewIfNeeded();
+  await page.screenshot({path:path.join(output,'openrouter-desktop.png')});
+  await page.setViewportSize({width:390,height:844});
+  await page.locator('#openrouter').scrollIntoViewIfNeeded();
+  assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
+  await page.screenshot({path:path.join(output,'openrouter-mobile.png')});
+  await page.locator('#admin-logout').click();
+  assert.equal(await page.locator('[data-token-action]').count(),0);
+  assert.equal(await page.locator('.openrouter-card').count(),1);
+  const beforeLoginCalls = openRouterCalls;
+  await page.locator('#admin-login').click();
+  await page.locator('#admin-password').fill('cvml-test');
+  await page.locator('#admin-submit').click();
+  await page.locator('#admin-dialog').waitFor({state:'hidden'});
+  await page.locator('[data-token-action=refresh]').waitFor();
+  assert.equal(openRouterCalls,beforeLoginCalls); // Not due: no query on every login.
+  page.once('dialog',dialog=>dialog.accept());
+  await page.locator('[data-token-action=remove]').click();
+  await page.locator('.openrouter-card').waitFor({state:'hidden'});
+  assert.deepEqual(data.openrouter_tokens,[]);
+  assert.deepEqual(errors,[]);
+
   console.log('Browser checks passed: per-server management, baseline/report versions, copied pinned commands, no management writes, logout, mobile, login, add/hide/restore, manual editing, collector time overrides and reset, automatic completion/progress, no-op and precision, conflicts/errors, KST, mobile.');
   console.log(`Screenshots: ${output}`);
 } catch (error) {

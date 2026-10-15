@@ -72,6 +72,18 @@ class RunTests(unittest.TestCase):
             self.assertNotIn(secret, public)
         self.assertEqual(self.receipts(), [])
 
+    def test_api_run_records_exit_and_reuses_slot_without_querying_gpus(self):
+        with patch.object(agent, "collect_gpus", side_effect=AssertionError("API must not query GPUs")):
+            for job_id, exit_code in (("api-first", 0), ("api-second", 7)):
+                result = cli.main(["run", "--id", job_id, "--name", "API test", "--owner", "Test",
+                                   "--api", "--", sys.executable, "-c", "raise SystemExit(%d)" % exit_code])
+                self.assertEqual(result, exit_code)
+                self.assertEqual(self.job()["resource_type"], "api")
+                self.assertEqual(self.job()["api_slot"], 0)
+                self.assertEqual(self.job()["gpu_uuids"], [])
+                self.assertEqual(self.job()["exit_code"], exit_code)
+                self.assertEqual(self.job()["status"], "completed" if exit_code == 0 else "failed")
+
     def test_nonzero_missing_executable_and_self_signal_are_failures(self):
         for job_id, command, expected, exit_code in (
             ("nonzero", [sys.executable, "-c", "raise SystemExit(7)"], 7, 7),
