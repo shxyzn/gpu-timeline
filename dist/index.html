@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="description" content="서버별 GPU 실험과 예상 종료시간을 한눈에 확인하는 타임라인"><title>CVML GPU Timeline</title><link rel="stylesheet" href="./styles.css"><link rel="stylesheet" href="./usage.css"><link rel="stylesheet" href="./admin.css"><link rel="stylesheet" href="./hardware.css"><link rel="stylesheet" href="./openrouter.css"><style id="patch-notes-styles">
+<html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="description" content="서버별 GPU 실험과 예상 종료시간을 한눈에 확인하는 타임라인"><title>CVML GPU Timeline</title><link rel="stylesheet" href="./styles.css"><link rel="stylesheet" href="./usage.css"><link rel="stylesheet" href="./admin.css"><link rel="stylesheet" href="./hardware.css"><link rel="stylesheet" href="./openrouter.css"><link rel="stylesheet" href="./promo.css"><style id="patch-notes-styles">
 .patch-notes{display:flex;align-items:flex-start;gap:12px;margin:0 0 24px;padding:16px 20px;background:#effaf3;border:1px solid #ccebd7;border-radius:12px;color:#2f6143;font-size:.875rem;line-height:1.75}
 .patch-notes-icon{flex:0 0 20px;width:20px;height:20px;margin-top:2px;color:#3b8a59}
 .patch-notes-copy{display:flex;align-items:baseline;flex-wrap:wrap;gap:3px 16px;min-width:0}
@@ -10,7 +10,7 @@
 <body><main><header><div class="brand"><span class="brand-mark" aria-hidden="true"></span><div><p class="eyebrow">GPU UTILIZATION DASHBOARD</p><h1>CVML GPU <span>Timeline</span></h1></div></div><div class="header-right"><span id="mode" class="badge">불러오는 중</span><span id="clock"></span><button id="admin-login" class="edit-button" hidden>관리자 로그인</button></div></header>
 <aside id="patch-notes" class="patch-notes" role="note" aria-label="최신 패치노트">
   <svg class="patch-notes-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="m8 12 2.5 2.5L16 9"></path></svg>
-  <div class="patch-notes-copy"><strong>패치노트 · v1.1.7</strong><p>외부 API 실험을 API 0, 1, 2… 행에서 확인하고, 빈 번호를 다시 사용해요.<br>OpenRouter 키별 사용액 공유를 추가했어요. API 자동 기록은 서버 업데이트 후 사용할 수 있어요.</p></div>
+  <div class="patch-notes-copy"><strong>패치노트 · v1.1.7</strong><p>외부 API 실험을 API 0, 1, 2… 행에서 확인하고, 빈 번호를 다시 사용해요.<br>OpenRouter 키별 사용액 공유를 추가했어요. API 자동 기록은 서버 업데이트 후 사용할 수 있어요. <a class="promo-note-link" href="#release-video">1분 소개 영상 보기 ↗</a></p></div>
 </aside>
 <section class="overview" aria-label="사용 현황 요약" id="overview"></section>
 <section class="workspace" aria-labelledby="timeline-title"><div class="toolbar"><div><h2 id="timeline-title">실험 타임라인</h2><p id="window-label"></p></div><div class="controls"><div class="segmented" aria-label="표시 기간"><button data-hours="24">24시간</button><button data-hours="72" class="active" aria-pressed="true">3일</button><button data-hours="168">7일</button></div><div class="stepper"><button id="previous" aria-label="이전 기간">‹</button><button id="today">현재</button><button id="next" aria-label="다음 기간">›</button></div><button id="refresh">새로고침</button></div></div>
@@ -31,6 +31,22 @@
   <div class="hardware-heading"><div><h2 id="hardware-title">연구실 부품 가격</h2><p>자원 확장을 위한 관심 부품 · 제품을 누르면 가격비교로 이동해요.</p></div><span class="hardware-source">다나와 가격비교 ↗</span></div>
   <div id="hardware-grid" class="hardware-grid"><p class="hardware-empty">부품 가격을 불러오는 중이에요.</p></div>
   <div class="hardware-foot"><p id="hardware-status" role="status">가격 확인 중</p><p>선택한 모델의 확인 시점 가격 · 카드·멤버십 혜택 제외 · 배송비·재고·호환성은 상품 페이지에서 확인</p></div>
+</section>
+
+<section id="release-video" class="release-video" aria-labelledby="release-video-title">
+  <div class="release-video-copy">
+    <span class="release-video-badge">WHAT’S NEW · v1.1.7</span>
+    <h2 id="release-video-title">새로운 기능을 <br>1분 안에 만나보세요.</h2>
+    <p id="release-video-description">GPU와 API 실험을 한 타임라인에서. <br>API 행 추가, 빈 번호 재사용, OpenRouter 사용량을 소개해요.</p>
+    <span class="release-video-meta">60초 · 소리 없이 볼 수 있어요</span>
+    <div class="release-video-downloads"><a href="./media/CVML-GPU-Timeline-v1.1.7-60s.gif" download>GIF 다운로드 ↓</a><a href="./media/CVML-GPU-Timeline-v1.1.7-60s.mp4" download>MP4 다운로드 ↓</a></div>
+  </div>
+  <div class="release-video-player">
+    <video controls playsinline preload="none" width="1280" height="720" poster="./media/poster-v1.1.7.jpg" aria-label="CVML GPU Timeline v1.1.7 소개 영상, 1분" aria-describedby="release-video-description">
+      <source src="./media/CVML-GPU-Timeline-v1.1.7-60s.mp4" type="video/mp4">
+      영상을 재생할 수 없으면 <a href="./media/CVML-GPU-Timeline-v1.1.7-60s.gif">GIF로 보기</a>를 이용해 주세요.
+    </video>
+  </div>
 </section>
 
 <!-- 간단 사용법: 이 section의 문구와 명령어를 수정하세요. -->
