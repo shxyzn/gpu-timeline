@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "revision": 49,
-  "updated_at": "2026-10-16T23:27:43.367Z",
+  "revision": 50,
+  "updated_at": "2026-10-17T00:27:43.379Z",
   "manual_jobs": [],
   "hidden_jobs": [
     {
@@ -21,7 +21,7 @@
       "name": "psh-0",
       "usage": {
         "usage": 42.1829604,
-        "usage_daily": 25.0586344,
+        "usage_daily": 0,
         "usage_weekly": 42.1829604,
         "usage_monthly": 42.1829604,
         "limit": 1000,
@@ -29,8 +29,8 @@
         "byok_usage": 0,
         "limit_reset": null
       },
-      "checked_at": "2026-10-16T23:27:43.367Z",
-      "attempted_at": "2026-10-16T23:27:43.125Z",
+      "checked_at": "2026-10-17T00:27:43.379Z",
+      "attempted_at": "2026-10-17T00:27:43.131Z",
       "error": null
     },
     {
