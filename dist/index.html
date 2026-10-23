@@ -72,7 +72,7 @@
   -- python train.py</code></pre>
       </div>
       <p class="usage-card-note"><code>python train.py</code>를 원래 실행할 명령으로 바꾸세요. 사용할 Conda 환경과 작업 폴더에서 실행하면 돼요. 실험 ID는 자동 생성되며, 별도로 시작·완료를 기록할 필요가 없어요.</p>
-      <details class="usage-more"><summary>OpenRouter 등 API 실험 · 서버 v1.1.8 이상</summary><p class="usage-card-note">API 행은 해당 기간에 실험이 있을 때만 생겨요. 실행 중인 API가 여러 개면 번호를 나누고, 종료하면 빈 번호부터 재사용합니다. API 키는 원래 실험 환경에서 설정하세요.</p><div class="usage-command"><div class="usage-command-heading"><span><small>원래 실행 명령으로 변경 · API 키를 명령에 넣지 마세요</small></span><button type="button" class="usage-copy" data-copy-target="usage-api">복사</button></div><pre><code id="usage-api">/usr/local/bin/gputl run --name "API 평가" --owner "내 이름" --api \
+      <details class="usage-more"><summary>OpenRouter 등 API 실험 · 서버 v1.1.7 이상</summary><p class="usage-card-note">API 행은 해당 기간에 실험이 있을 때만 생겨요. 실행 중인 API가 여러 개면 번호를 나누고, 종료하면 빈 번호부터 재사용합니다. API 키는 원래 실험 환경에서 설정하세요.</p><div class="usage-command"><div class="usage-command-heading"><span><small>원래 실행 명령으로 변경 · API 키를 명령에 넣지 마세요</small></span><button type="button" class="usage-copy" data-copy-target="usage-api">복사</button></div><pre><code id="usage-api">/usr/local/bin/gputl run --name "API 평가" --owner "내 이름" --api \
   -- python evaluate.py</code></pre></div><p class="usage-card-note">이미 실행 중이면 <code>gputl add --id api-exp01 --name "API 평가" --owner "내 이름" --api --pid 실제PID</code>로 등록하세요. API 호출 여부는 자동 추측하지 않습니다.</p></details>
       <details class="usage-more"><summary>이미 실행 중인 실험을 기록하려면</summary><div class="usage-command"><div class="usage-command-heading"><span><small>기존 실험을 재실행하지 않고 등록 · 끝나면 완료 기록</small></span><button type="button" class="usage-copy" data-copy-target="usage-add" aria-label="실행 중 실험 등록 명령 복사">복사</button></div><pre><code id="usage-add">/usr/local/bin/gputl add --id exp01 --name "GEPA" --owner "내 이름" --gpus 0</code></pre></div><div class="usage-command"><div class="usage-command-heading"><span><small>실제 결과를 확인한 뒤 실행</small></span><button type="button" class="usage-copy" data-copy-target="usage-finish" aria-label="실험 완료 명령 복사">복사</button></div><pre><code id="usage-finish">/usr/local/bin/gputl finish --id exp01 --status completed</code></pre></div></details>
       <details class="usage-more"><summary>예상 종료시간 · 기록 재전송</summary><div class="usage-command"><div class="usage-command-heading"><span><small>list에서 ID 확인 · exp01을 내 실험 ID로 변경</small></span><button type="button" class="usage-copy" data-copy-target="usage-update" aria-label="예상 종료시간 수정 명령 복사">복사</button></div><pre><code id="usage-update">/usr/local/bin/gputl list
@@ -92,7 +92,7 @@
 공용 명령: /usr/local/bin/gputl
 먼저 status와 run --help로 연결과 옵션을 확인해. 현재 로그인 계정의 작업 폴더·Conda 환경에서 실행해.
 
-• 외부 API 실험: 서버 v1.1.8 이상에서 --gpus 대신 --api로 기록해. API 번호는 자동 배정되고 종료 후 재사용돼. API 키는 원래 실험 환경에만 두고 공개 기록에 넣지 마.
+• 외부 API 실험: 서버 v1.1.7 이상에서 --gpus 대신 --api로 기록해. API 번호는 자동 배정되고 종료 후 재사용돼. API 키는 원래 실험 환경에만 두고 공개 기록에 넣지 마.
 • 새 실험: gputl run --name "실험명" --owner "공개 표시 이름" --gpus 물리번호 -- 원래명령 형태로 실행해. 시작·종료는 자동 기록되니 add/finish를 중복 호출하지 마.
 • 이미 실행 중인 실험: 재실행하지 말고 add로 실제 시작시간과 정보를 기록해. 결과 확인 후 finish로 완료·실패·취소를 구분해.
 • 예상 종료를 알면 --end로 입력해. 진행량을 알면 update --completed 완료수 --total 전체수로 기록해. 사이트가 진행률로 완료 예정을 추정해.
