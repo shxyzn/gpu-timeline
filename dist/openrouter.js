@@ -1,5 +1,5 @@
 import {sealToken, openToken} from './vault.js';
-import {queryUsage, dollars, usageStatus, dueForRefresh, REFRESH_MS, budgetUsage} from './openrouter-model.js';
+import {queryUsage, dollars, usageStatus, dueForRefresh, REFRESH_MS, budgetUsage} from './openrouter-model.js?v=1.1.8';
 const $ = id => document.getElementById(id);
 const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const date = value => new Intl.DateTimeFormat('ko-KR', {timeZone:'Asia/Seoul', month:'numeric', day:'numeric', hour:'2-digit', minute:'2-digit', hourCycle:'h23'}).format(new Date(value));

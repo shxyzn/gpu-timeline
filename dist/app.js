@@ -1,4 +1,4 @@
-import {OpenRouterBoard} from './openrouter.js';
+import {OpenRouterBoard} from './openrouter.js?v=1.1.8';
 import {ResourceBoard} from './resources.js';
 import {loadHardware} from './hardware.js';
 import {DashboardEditor} from './admin.js';
