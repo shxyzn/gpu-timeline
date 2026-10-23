@@ -55,6 +55,25 @@ assert installed["revision"] == subprocess.check_output(["git", "-c", "safe.dire
 assert installed["dirty"] is False
 assert installed["installed_at"]
 assert "gpu-reassignment-v1" in status["capabilities"]
+assert "resource-telemetry-v1" in status["capabilities"]
+assert Path("/opt/gpu-timeline/resource_metrics.py").is_file()
+PY
+# The installed service must actually start its sampling thread as its owner.
+"$test_python" - <<'PY'
+import json
+import time
+from pathlib import Path
+checkpoint = Path("/var/lib/gpu-timeline/resource-history.json")
+for attempt in range(15):
+    if checkpoint.exists():
+        saved = json.loads(checkpoint.read_text())
+        assert saved["schema_version"] == 1
+        assert saved["started_at"] > 0
+        assert "cpu_pct" in saved["columns"]
+        break
+    time.sleep(1)
+else:
+    raise AssertionError("Installed resource sampler never wrote its checkpoint")
 PY
 runuser -u gputl_admin -- /usr/local/bin/gputl list > /tmp/gputl-ci-legacy.json
 "$test_python" -c 'import json; assert json.load(open("/tmp/gputl-ci-legacy.json"))["jobs"][0]["id"] == "legacy"'
@@ -77,6 +96,7 @@ runuser -u gputl_admin -- /usr/local/bin/gputl list > /tmp/gputl-ci-legacy.json
 "$test_python" -c 'import json; assert json.load(open("/tmp/gputl-ci-legacy.json"))["jobs"][0]["status"] == "running"'
 if runuser -u gputl_member -- test -r /etc/gpu-timeline/agent.env; then exit 1; fi
 if runuser -u gputl_member -- test -r /var/lib/gpu-timeline/jobs.json; then exit 1; fi
+if runuser -u gputl_member -- test -r /var/lib/gpu-timeline/resource-history.json; then exit 1; fi
 # The checkout belongs to the runner account and may have private parent dirs.
 install -o gputl_member -g gputl_member -m 600 tests/ci_run_client.py /home/gputl_member/ci_run_client.py
 runuser -u gputl_member -- /usr/bin/python3 /home/gputl_member/ci_run_client.py

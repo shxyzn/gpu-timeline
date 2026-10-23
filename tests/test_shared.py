@@ -102,6 +102,18 @@ class SharedTests(unittest.TestCase):
             self.assertTrue(restarted.publish_once())
         self.assertIsNotNone(restarted.dispatch(["status"], 1001)["last_upload_at"])
 
+    def test_publish_includes_sampler_state_without_private_job_fields(self):
+        self.add(1001)
+        from resource_metrics import collect_raw
+        self.broker.resources.observe(collect_raw(), self.gpus, agent.read_jobs(self.temp.name))
+        with patch.object(agent, "publish") as publish:
+            self.assertTrue(self.broker.publish_once())
+        snapshot = publish.call_args[0][1]
+        self.assertEqual(snapshot["resources"]["schema_version"], 1)
+        self.assertGreater(snapshot["resources"]["current"]["at"], 0)
+        self.assertEqual(snapshot["resources"]["current"]["values"]["allocated_gpus"], 1)
+        self.assertNotIn("_owner_uid", json.dumps(snapshot))
+
     def test_legacy_migration_preserves_job_and_is_idempotent(self):
         old = [{"id": "legacy", "status": "running", "_pid": 123,
                 "_pid_identity": "identity", "started_at": "2026-09-01T01:00:00+00:00"}]

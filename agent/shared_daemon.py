@@ -15,6 +15,7 @@ import threading
 import time
 
 import gpu_agent as agent
+from resource_metrics import ResourceSampler
 
 SOCKET_PATH = "/run/gpu-timeline/control.sock"
 MAX_REQUEST = 16384
@@ -76,6 +77,7 @@ class Broker:
         self.stopping = threading.Event()
         self.status_lock = threading.Lock()
         self.upload = {"last_upload_at": None, "last_attempt_at": None, "error": None}
+        self.resources = ResourceSampler(config)
 
     def dispatch(self, argv, uid):
         args = validate_request(argv, uid)
@@ -85,7 +87,7 @@ class Broker:
                         "name": self.config["name"], **self.upload,
                         "agent_version": agent.version_info.runtime_version(),
                         "capabilities": ["run-recording-v1", "experiment-reference-v1", "progress-time-v1",
-                                         "gpu-reassignment-v1", "api-experiments-v1"],
+                                         "gpu-reassignment-v1", "api-experiments-v1", "resource-telemetry-v1"],
                         "upload_requested": self.pending.is_set()}
         if args.action == "list":
             with agent.locked(Path(self.config["state_dir"]) / "jobs.lock"):
@@ -114,6 +116,7 @@ class Broker:
         try:
             with agent.locked(Path(self.config["state_dir"]) / "collect.lock", blocking=False):
                 snapshot = agent.make_snapshot(self.config)
+                snapshot["resources"] = self.resources.public()
                 agent.publish(self.config, snapshot)
             with self.status_lock:
                 self.upload.update(last_upload_at=agent.now_iso(), error=None,
@@ -142,6 +145,12 @@ class Broker:
                 earliest = now + 30  # Coalesce edits and bound GitHub writes.
                 next_attempt = now + (interval if success else 60)
             self.stopping.wait(1)
+
+    def sample_resources(self):
+        def jobs():
+            with agent.locked(Path(self.config["state_dir"]) / "jobs.lock"):
+                return agent.read_jobs(self.config["state_dir"])
+        self.resources.run(self.stopping, agent.collect_gpus, jobs)
 
 
 class Handler(socketserver.StreamRequestHandler):
@@ -195,6 +204,8 @@ def main():
                     raise RuntimeError("공용 수집기가 이미 실행 중입니다.")
         broker = Broker(config)
         with Server(str(path), broker) as server:
+            sampler = threading.Thread(target=broker.sample_resources, daemon=True)
+            sampler.start()
             worker = threading.Thread(target=broker.publisher, daemon=True)
             worker.start()
             try:

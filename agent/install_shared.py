@@ -165,7 +165,7 @@ def install(args):
     STATE.mkdir(parents=True, exist_ok=True)
     os.chmod(STATE, 0o700)
     os.chown(STATE, account.pw_uid, account.pw_gid)
-    for filename in ("gpu_agent.py", "shared_daemon.py", "shared_cli.py", "version_info.py"):
+    for filename in ("gpu_agent.py", "shared_daemon.py", "shared_cli.py", "version_info.py", "resource_metrics.py"):
         write_owned(ROOT / filename, (source_dir / filename).read_text())
     build_version["installed_at"] = agent.now_iso()
     write_owned(ROOT / "version.json", json.dumps(build_version, indent=2) + "\n")

@@ -5,6 +5,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import {fileURLToPath, pathToFileURL} from 'node:url';
 import {emptyEdits, encodeJSON, decodeJSON} from '../dist/edits.js';
+import {resourceFixture} from './resources-fixture.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const runtime = process.env.CODEX_PRIMARY_RUNTIME_NODE_MODULES;
@@ -45,7 +46,9 @@ try {
   const now = new Date(), iso = hours => new Date(now.getTime() + hours * 3600000).toISOString();
   let data = emptyEdits(), staleRaw = false, failRaw = false, forbidden = false, writes = 0;
   let collectorFinished = false, progressCompleted = 25, serverUpgraded = false, serverCStale = false;
+  let resourceEnabled = false, resourceFailed = false;
   const telemetry = id => ({server_id: id, name: `Server ${id.slice(-1).toUpperCase()}`, updated_at: iso(id === 'server-c' && serverCStale ? -2 : 0), collector_ok: true,
+    resources: resourceEnabled && id !== 'server-c' ? resourceFixture(Date.now(),resourceFailed) : undefined,
     agent_version: id === 'server-b' ? {version: '1.1.2', revision: 'b'.repeat(40)} : id === 'server-a' && serverUpgraded ? {version: '1.1.5', revision: 'a'.repeat(40)} : null,
     gpus: [{uuid: `${id}-gpu`, index: 0, name: 'NVIDIA GeForce RTX 4090', process_count: 0, utilization: 0,
       memory_used_mib: 0, memory_total_mib: 24564}],
@@ -429,6 +432,9 @@ try {
   await page.locator('[data-token-action=refresh]').click();
   await page.waitForFunction(()=>document.getElementById('openrouter-feedback').textContent.includes('갱신했어요'));
   await page.locator('#openrouter').scrollIntoViewIfNeeded();
+  const usagePercent=Number(await page.locator('.openrouter-budget-track').getAttribute('aria-valuenow'));
+  assert.ok(Math.abs(usagePercent-24.68)<0.001);
+  assert.match(await page.locator('.openrouter-budget-label').innerText(),/잔여 75.3%/);
   await page.screenshot({path:path.join(output,'openrouter-desktop.png')});
   await page.setViewportSize({width:390,height:844});
   await page.locator('#openrouter').scrollIntoViewIfNeeded();
@@ -449,26 +455,43 @@ try {
   await page.locator('.openrouter-card').waitFor({state:'hidden'});
   assert.deepEqual(data.openrouter_tokens,[]);
 
-  // The retimed media must still decode and seek through the full 60 seconds.
+  // v1.1.8: production layout, missing-history states, measured stats and evidence.
+  const order=await page.locator('main>section[id]').evaluateAll(elements=>elements.map(e=>e.id).filter(id=>['openrouter','resources','bottlenecks','hardware','usage'].includes(id)));
+  assert.deepEqual(order,['openrouter','resources','bottlenecks','hardware','usage']);
+  assert.match(await page.locator('#resource-grid').innerText(),/수집기 업데이트 필요/);
+  resourceEnabled=true;
+  await page.locator('#refresh').click();
+  await page.locator('.resource-card').first().waitFor();
+  assert.equal(await page.locator('.resource-card').count(),4);
+  assert.match(await page.locator('#resource-meta').innerText(),/GPU·h/);
+  assert.equal(await page.locator('#resource-storage script').count(),0);
+  assert.match(await page.locator('#resource-storage').innerText(),/data<script>/);
+  assert.match(await page.locator('#bottleneck-detail').innerText(),/RAM 여유 부족 의심/);
+  assert.equal(await page.locator('.resource-chart path[d*="NaN"]').count(),0);
   await page.setViewportSize({width:1440,height:1000});
-  await page.locator('.promo-note-link').click();
-  await page.locator('#release-video').screenshot({path:path.join(output,'promo-desktop.png')});
-  await page.setViewportSize({width:390,height:844});
-  await page.locator('#release-video').scrollIntoViewIfNeeded();
-  assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
-  await page.locator('#release-video').screenshot({path:path.join(output,'promo-mobile.png')});
-  const media = await page.locator('#release-video video').evaluate(video=>new Promise((resolve,reject)=>{
-    const timer=setTimeout(()=>reject(new Error('Promo media load/seek timeout')),15000);
-    video.addEventListener('error',()=>{clearTimeout(timer);reject(new Error(`Promo decode error: ${video.error?.code}`));},{once:true});
-    video.addEventListener('loadedmetadata',()=>{video.currentTime=59.5;},{once:true});
-    video.addEventListener('seeked',()=>{clearTimeout(timer);resolve({duration:video.duration,time:video.currentTime,width:video.videoWidth,ready:video.readyState,paused:video.paused});},{once:true});
-    video.load();
-  }));
-  assert.equal(media.duration,60);
-  assert.equal(media.time,59.5);
-  assert.equal(media.width,1280);
-  assert.ok(media.ready>=2);
-  assert.equal(media.paused,true);
+  await page.locator('#resources').screenshot({path:path.join(output,'resources-desktop.png')});
+  await page.locator('#bottlenecks').screenshot({path:path.join(output,'bottlenecks-desktop.png')});
+  await page.locator('#resource-period').selectOption('168');
+  assert.match(await page.locator('.resource-card').first().innerText(),/1시간 집계/);
+  await page.locator('#resource-server').selectOption('server-c');
+  assert.match(await page.locator('#resource-grid').innerText(),/수집기 업데이트 필요/);
+  await page.locator('#resource-server').selectOption('server-b');
+  await page.locator('#resource-period').selectOption('24');
+  resourceFailed=true;
+  await page.locator('#refresh').click();
+  await page.waitForFunction(()=>document.getElementById('resource-state').textContent==='마지막 수신 통계');
+  assert.equal(await page.locator('.resource-card').count(),4);
+  for(const width of [390,320]) {
+    await page.setViewportSize({width,height:844});
+    await page.locator('#resources').scrollIntoViewIfNeeded();
+    assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
+    await page.locator('#resources').screenshot({path:path.join(output,`resources-mobile-${width}.png`)});
+    await page.locator('#bottlenecks').screenshot({path:path.join(output,`bottlenecks-mobile-${width}.png`)});
+  }
+
+  // This release temporarily omits promotional media.
+  assert.equal(await page.locator('#release-video, video, .promo-note-link').count(),0);
+  assert.equal(await page.locator('script[src="./promo.js"], link[href="./promo.css"]').count(),0);
   assert.deepEqual(errors,[]);
 
   console.log('Browser checks passed: per-server management, baseline/report versions, copied pinned commands, no management writes, logout, mobile, login, add/hide/restore, manual editing, collector time overrides and reset, automatic completion/progress, no-op and precision, conflicts/errors, KST, mobile.');
