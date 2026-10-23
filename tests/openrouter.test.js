@@ -45,3 +45,12 @@ test('key goes only to OpenRouter GET authorization; redirects and provider erro
   assert.equal(JSON.stringify(output).includes(key),false);
   await assert.rejects(()=>queryUsage(key,async()=>({ok:false,status:401,json:async()=>{throw new Error(key);}})),e=>e.code==='unauthorized'&&!e.message.includes(key));
 });
+import {budgetUsage} from '../dist/openrouter-model.js';
+test('key budget uses remaining allowance, not lifetime spend, and handles missing/zero limits',()=>{
+  assert.deepEqual(budgetUsage({usage:1800,limit:1000,limit_remaining:100,limit_reset:'monthly'}),
+    {state:'limited',limit:1000,remaining:100,used:900,usedPercent:90,remainingPercent:10});
+  assert.equal(budgetUsage({limit:null,limit_remaining:null}).state,'unlimited');
+  assert.equal(budgetUsage({limit:0,limit_remaining:0}).state,'zero');
+  assert.equal(budgetUsage({limit:1000,limit_remaining:null}).state,'unknown');
+  assert.equal(budgetUsage({limit:1000,limit_remaining:1100}).state,'unknown');
+});

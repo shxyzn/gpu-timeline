@@ -4,5 +4,9 @@
   "github_repository": "shxyzn/gpu-timeline",
   "github_branch": "status",
   "state_dir": "~/.local/state/gpu-timeline",
-  "history_days": 30
+  "history_days": 30,
+  "resources": {
+    "enabled": true,
+    "sample_seconds": 15
+  }
 }

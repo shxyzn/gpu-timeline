@@ -55,6 +55,17 @@ export function usageStatus(token, now = Date.now()) {
 export function dollars(value) {
   return typeof value === 'number' && Number.isFinite(value) ? '$' + value.toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:4}) : '—';
 }
+export function budgetUsage(usage) {
+  const limit = usage?.limit, remaining = usage?.limit_remaining;
+  if (limit === null) return {state:'unlimited'};
+  if (!Number.isFinite(limit) || limit < 0 || !Number.isFinite(remaining) || remaining < 0 || remaining > limit) return {state:'unknown'};
+  // limit_remaining already reflects the active reset period and BYOK policy.
+  // Lifetime usage is not a valid numerator for a daily/monthly budget.
+  const used = limit - remaining;
+  return {state:limit === 0?'zero':'limited', limit, remaining, used,
+    usedPercent:limit > 0?100 * used / limit:100,
+    remainingPercent:limit > 0?100 * remaining / limit:0};
+}
 export async function queryUsage(key, fetcher = globalThis.fetch) {
   let response;
   try {

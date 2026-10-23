@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="description" content="서버별 GPU 실험과 예상 종료시간을 한눈에 확인하는 타임라인"><title>CVML GPU Timeline</title><link rel="stylesheet" href="./styles.css"><link rel="stylesheet" href="./usage.css"><link rel="stylesheet" href="./admin.css"><link rel="stylesheet" href="./hardware.css"><link rel="stylesheet" href="./openrouter.css"><link rel="stylesheet" href="./promo.css"><style id="patch-notes-styles">
+<html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="description" content="서버별 GPU 실험과 예상 종료시간을 한눈에 확인하는 타임라인"><title>CVML GPU Timeline</title><link rel="stylesheet" href="./styles.css"><link rel="stylesheet" href="./usage.css"><link rel="stylesheet" href="./admin.css"><link rel="stylesheet" href="./hardware.css"><link rel="stylesheet" href="./openrouter.css"><link rel="stylesheet" href="./resources.css"><style id="patch-notes-styles">
 .patch-notes{display:flex;align-items:flex-start;gap:12px;margin:0 0 24px;padding:16px 20px;background:#effaf3;border:1px solid #ccebd7;border-radius:12px;color:#2f6143;font-size:.875rem;line-height:1.75}
 .patch-notes-icon{flex:0 0 20px;width:20px;height:20px;margin-top:2px;color:#3b8a59}
 .patch-notes-copy{display:flex;align-items:baseline;flex-wrap:wrap;gap:3px 16px;min-width:0}
@@ -8,31 +8,11 @@
 @media(max-width:640px){.patch-notes{gap:10px;padding:14px 16px;margin-bottom:20px}.patch-notes-copy{display:block}.patch-notes p{margin-top:4px}}
 </style></head>
 <body><main>
-<details id="release-video" class="release-video" open>
-  <summary id="release-video-toggle" class="release-video-toggle">
-    <span class="release-video-summary"><span class="release-video-badge">v1.1.7</span><span>업데이트 영상 <small>· 1분</small></span></span>
-    <span class="release-video-toggle-label"><span class="release-video-hide">접기</span><span class="release-video-show">펼치기</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"></path></svg></span>
-  </summary>
-  <div class="release-video-body">
-  <div class="release-video-copy">
-    <span class="release-video-badge">WHAT’S NEW · v1.1.7</span>
-    <h2 id="release-video-title">새로운 기능을 <br>1분 안에 만나보세요.</h2>
-    <p id="release-video-description">GPU와 API 실험을 한 타임라인에서. <br>API 행 추가, 빈 번호 재사용, OpenRouter 사용량을 소개해요.</p>
-    <span class="release-video-meta">60초 · 소리 없이 볼 수 있어요</span>
-    <div class="release-video-downloads"><a href="./media/CVML-GPU-Timeline-v1.1.7-60s.gif" download>GIF 다운로드 ↓</a><a href="./media/CVML-GPU-Timeline-v1.1.7-60s.mp4" download>MP4 다운로드 ↓</a></div>
-  </div>
-  <div class="release-video-player">
-    <video controls playsinline preload="none" width="1280" height="720" poster="./media/poster-v1.1.7.jpg" aria-label="CVML GPU Timeline v1.1.7 소개 영상, 1분" aria-describedby="release-video-description">
-      <source src="./media/CVML-GPU-Timeline-v1.1.7-60s.mp4" type="video/mp4">
-      영상을 재생할 수 없으면 <a href="./media/CVML-GPU-Timeline-v1.1.7-60s.gif">GIF로 보기</a>를 이용해 주세요.
-    </video>
-  </div>
-  </div>
-</details>
+
 <header><div class="brand"><span class="brand-mark" aria-hidden="true"></span><div><p class="eyebrow">GPU UTILIZATION DASHBOARD</p><h1>CVML GPU <span>Timeline</span></h1></div></div><div class="header-right"><span id="mode" class="badge">불러오는 중</span><span id="clock"></span><button id="admin-login" class="edit-button" hidden>관리자 로그인</button></div></header>
 <aside id="patch-notes" class="patch-notes" role="note" aria-label="최신 패치노트">
   <svg class="patch-notes-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="m8 12 2.5 2.5L16 9"></path></svg>
-  <div class="patch-notes-copy"><strong>패치노트 · v1.1.7</strong><p>외부 API 실험을 API 0, 1, 2… 행에서 확인하고, 빈 번호를 다시 사용해요.<br>OpenRouter 키별 사용액 공유를 추가했어요. API 자동 기록은 서버 업데이트 후 사용할 수 있어요. <a class="promo-note-link" href="#release-video">1분 소개 영상 보기 ↗</a></p></div>
+  <div class="patch-notes-copy"><strong>패치노트 · v1.1.8</strong><p>OpenRouter 키 한도 사용률과 CPU·GPU·RAM·저장장치 통계를 추가했어요.<br>병목 후보와 판단 근거를 함께 확인하세요. 자원 통계는 서버 공용 수집기를 v1.1.8로 업데이트한 뒤부터 쌓여요.</p></div>
 </aside>
 <section class="overview" aria-label="사용 현황 요약" id="overview"></section>
 <section class="workspace" aria-labelledby="timeline-title"><div class="toolbar"><div><h2 id="timeline-title">실험 타임라인</h2><p id="window-label"></p></div><div class="controls"><div class="segmented" aria-label="표시 기간"><button data-hours="24">24시간</button><button data-hours="72" class="active" aria-pressed="true">3일</button><button data-hours="168">7일</button></div><div class="stepper"><button id="previous" aria-label="이전 기간">‹</button><button id="today">현재</button><button id="next" aria-label="다음 기간">›</button></div><button id="refresh">새로고침</button></div></div>
@@ -47,6 +27,22 @@
   <div id="openrouter-grid" class="openrouter-grid"></div>
   <p class="openrouter-help">키를 등록한 브라우저에서 관리자 로그인 중일 때 1시간마다 갱신합니다. 닫혀 있으면 마지막 조회값을 표시해요. 이름·사용량은 모두에게 공유됩니다.</p>
   <p id="openrouter-feedback" class="openrouter-feedback" role="status" aria-live="polite"></p>
+</section>
+
+<section id="resources" class="resources" aria-labelledby="resources-title">
+  <div class="resource-heading"><div><div class="resource-heading-title"><h2 id="resources-title">자원 통계</h2><span id="resource-state" class="resource-badge muted">수신 대기</span></div><p>서버별 CPU·GPU·RAM·저장장치 사용 추이</p></div><div class="resource-controls"><label>서버<select id="resource-server" aria-label="자원 통계 서버"></select></label><label>조회 기간<select id="resource-period" aria-label="자원 통계 기간"><option value="24">최근 24시간</option><option value="168">최근 7일</option><option value="720">최근 30일</option></select></label></div></div>
+  <div id="resource-meta" class="resource-meta" aria-live="polite"></div>
+  <div id="resource-grid" class="resource-grid"></div>
+  <div id="resource-cores" class="resource-cores"></div>
+  <div id="resource-storage"></div>
+  <p class="resource-help">GPU 배정 시간은 서버에 등록된 실행 중 실험의 샘플링 추정값이며 API 작업은 제외됩니다. 활동률과 별도 집계해요. 누락·미지원 값은 0으로 채우지 않으며, 통계는 수집기 업데이트 이후부터 쌓입니다.</p>
+</section>
+
+<section id="bottlenecks" class="bottlenecks" aria-labelledby="bottlenecks-title">
+  <div class="resource-heading"><div><h2 id="bottlenecks-title">병목 분석</h2><p>자원 대기가 지속된 구간 · 판단 근거와 먼저 확인할 조치</p></div><span class="resource-badge amber">병목 후보 · 추가 확인 필요</span></div>
+  <div id="bottleneck-servers" class="resource-server-choices"></div>
+  <div id="bottleneck-detail" aria-live="polite"></div>
+  <details class="resource-thresholds"><summary>분석 기준과 범위</summary><p>다음 조건이 2분 이상 연속 관측된 구간을 표시합니다. RAM: 가용 메모리 5% 이하이면서 (메모리 PSI some 5% 이상 또는 스왑 입출력 1 MiB/s 이상). CPU: (전체 85% 이상 또는 한 코어 95% 이상)이면서 CPU PSI some 10% 이상. 저장장치: 장치 요청 지연 20 ms 이상과 I/O PSI some 10% 이상.</p><p>PSI는 해당 자원을 기다린 작업이 있었던 시간의 비율입니다. 임계값은 선별용 기준이며 장치별 성능 평가나 확정 진단이 아닙니다. 서버 전체를 관측하므로 동시 실험에 원인을 자동 귀속하지 않아요. API 작업의 낮은 GPU 활동률은 병목으로 판단하지 않습니다. <a href="https://github.com/shxyzn/gpu-timeline/blob/main/RESOURCE_STATS.md" target="_blank" rel="noopener noreferrer">수집·해석 안내 ↗</a></p></details>
 </section>
 
 <section id="hardware" class="hardware" aria-labelledby="hardware-title">
@@ -76,7 +72,7 @@
   -- python train.py</code></pre>
       </div>
       <p class="usage-card-note"><code>python train.py</code>를 원래 실행할 명령으로 바꾸세요. 사용할 Conda 환경과 작업 폴더에서 실행하면 돼요. 실험 ID는 자동 생성되며, 별도로 시작·완료를 기록할 필요가 없어요.</p>
-      <details class="usage-more"><summary>OpenRouter 등 API 실험 · 서버 v1.1.7 이상</summary><p class="usage-card-note">API 행은 해당 기간에 실험이 있을 때만 생겨요. 실행 중인 API가 여러 개면 번호를 나누고, 종료하면 빈 번호부터 재사용합니다. API 키는 원래 실험 환경에서 설정하세요.</p><div class="usage-command"><div class="usage-command-heading"><span><small>원래 실행 명령으로 변경 · API 키를 명령에 넣지 마세요</small></span><button type="button" class="usage-copy" data-copy-target="usage-api">복사</button></div><pre><code id="usage-api">/usr/local/bin/gputl run --name "API 평가" --owner "내 이름" --api \
+      <details class="usage-more"><summary>OpenRouter 등 API 실험 · 서버 v1.1.8 이상</summary><p class="usage-card-note">API 행은 해당 기간에 실험이 있을 때만 생겨요. 실행 중인 API가 여러 개면 번호를 나누고, 종료하면 빈 번호부터 재사용합니다. API 키는 원래 실험 환경에서 설정하세요.</p><div class="usage-command"><div class="usage-command-heading"><span><small>원래 실행 명령으로 변경 · API 키를 명령에 넣지 마세요</small></span><button type="button" class="usage-copy" data-copy-target="usage-api">복사</button></div><pre><code id="usage-api">/usr/local/bin/gputl run --name "API 평가" --owner "내 이름" --api \
   -- python evaluate.py</code></pre></div><p class="usage-card-note">이미 실행 중이면 <code>gputl add --id api-exp01 --name "API 평가" --owner "내 이름" --api --pid 실제PID</code>로 등록하세요. API 호출 여부는 자동 추측하지 않습니다.</p></details>
       <details class="usage-more"><summary>이미 실행 중인 실험을 기록하려면</summary><div class="usage-command"><div class="usage-command-heading"><span><small>기존 실험을 재실행하지 않고 등록 · 끝나면 완료 기록</small></span><button type="button" class="usage-copy" data-copy-target="usage-add" aria-label="실행 중 실험 등록 명령 복사">복사</button></div><pre><code id="usage-add">/usr/local/bin/gputl add --id exp01 --name "GEPA" --owner "내 이름" --gpus 0</code></pre></div><div class="usage-command"><div class="usage-command-heading"><span><small>실제 결과를 확인한 뒤 실행</small></span><button type="button" class="usage-copy" data-copy-target="usage-finish" aria-label="실험 완료 명령 복사">복사</button></div><pre><code id="usage-finish">/usr/local/bin/gputl finish --id exp01 --status completed</code></pre></div></details>
       <details class="usage-more"><summary>예상 종료시간 · 기록 재전송</summary><div class="usage-command"><div class="usage-command-heading"><span><small>list에서 ID 확인 · exp01을 내 실험 ID로 변경</small></span><button type="button" class="usage-copy" data-copy-target="usage-update" aria-label="예상 종료시간 수정 명령 복사">복사</button></div><pre><code id="usage-update">/usr/local/bin/gputl list
@@ -96,7 +92,7 @@
 공용 명령: /usr/local/bin/gputl
 먼저 status와 run --help로 연결과 옵션을 확인해. 현재 로그인 계정의 작업 폴더·Conda 환경에서 실행해.
 
-• 외부 API 실험: 서버 v1.1.7 이상에서 --gpus 대신 --api로 기록해. API 번호는 자동 배정되고 종료 후 재사용돼. API 키는 원래 실험 환경에만 두고 공개 기록에 넣지 마.
+• 외부 API 실험: 서버 v1.1.8 이상에서 --gpus 대신 --api로 기록해. API 번호는 자동 배정되고 종료 후 재사용돼. API 키는 원래 실험 환경에만 두고 공개 기록에 넣지 마.
 • 새 실험: gputl run --name "실험명" --owner "공개 표시 이름" --gpus 물리번호 -- 원래명령 형태로 실행해. 시작·종료는 자동 기록되니 add/finish를 중복 호출하지 마.
 • 이미 실행 중인 실험: 재실행하지 말고 add로 실제 시작시간과 정보를 기록해. 결과 확인 후 finish로 완료·실패·취소를 구분해.
 • 예상 종료를 알면 --end로 입력해. 진행량을 알면 update --completed 완료수 --total 전체수로 기록해. 사이트가 진행률로 완료 예정을 추정해.
@@ -182,4 +178,4 @@ v1.1.0 이상 서버에서는 list의 reference가 사이트의 실험 ID와 같
   <h2 id="delete-title">대시보드에서 삭제할까요?</h2><p id="delete-name"></p><code id="delete-reference"></code><p class="admin-help">모든 사용자의 대시보드에서 이 기록을 숨깁니다. 실제 실험·서버 로그는 그대로 유지되며, 기록 관리에서 복구할 수 있어요.</p>
   <form id="delete-form"><p id="delete-error" class="admin-error" role="alert"></p><div class="dialog-actions"><button type="button" class="edit-button" data-close-dialog="delete-dialog">취소</button><button type="submit" class="edit-button danger">삭제</button></div></form>
 </dialog>
-<script type="module" src="./promo.js"></script><script type="module" src="./app.js"></script><script type="module" src="./usage.js"></script></body></html>
+<script type="module" src="./app.js"></script><script type="module" src="./usage.js"></script></body></html>

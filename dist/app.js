@@ -1,4 +1,5 @@
 import {OpenRouterBoard} from './openrouter.js';
+import {ResourceBoard} from './resources.js';
 import {loadHardware} from './hardware.js';
 import {DashboardEditor} from './admin.js';
 import {ServerManager,installedVersion} from './server-management.js';
@@ -34,7 +35,7 @@ function serverVersion(server){
   return '<p class="server-version" title="'+escape(title)+'"><span>설치 버전 '+value+'</span>'+(installed.source==='baseline'?'<small>관리자 지정 기준</small>':'')+'</p>';
 }
 const statusLabels={running:'실행 중',planned:'예정',completed:'완료',failed:'실패',cancelled:'취소',stopped:'프로세스 종료 · 결과 미확인',unknown:'확인 필요'};
-let editor,serverManager,openRouter,dashboardBuild=null,telemetryServers=[],config,servers=[],hours=72,offset=0,lastFetch=null,fetchErrors=0,selected=null;
+let editor,serverManager,openRouter,resourceBoard,dashboardBuild=null,telemetryServers=[],config,servers=[],hours=72,offset=0,lastFetch=null,fetchErrors=0,selected=null;
 const demo=demoSnapshot();
 const telemetry = server => telemetryServers.find(s=>s.server_id===server.server_id)||server;
 function applyDashboardEdits(){servers=editor?.enabled?mergeEdits(telemetryServers,editor.data):telemetryServers;}
@@ -99,6 +100,7 @@ function render(){
   $('servers').innerHTML=servers.map(s=>serverCard(s,now,stale)).join('');
   serverManager?.render();
   openRouter?.render();
+  resourceBoard?.render();
   if(selected&&$('detail-dialog').open)fillDetail(selected.server,selected.id);
 }
 function serverCard(s,now,stale){
@@ -175,4 +177,4 @@ $('previous').onclick=()=>{offset--;render();};$('next').onclick=()=>{offset++;r
 showVersion();
 loadHardware(readJSON);
 setInterval(() => loadHardware(readJSON), 15 * 60 * 1000);
-try{config=await readJSON('./config.json');if(!['demo','live'].includes(config.mode))throw new Error('mode');if(config.mode==='live'&&!Array.isArray(config.servers))throw new Error('servers');editor=new DashboardEditor(config,()=>telemetryServers,editorChanged);openRouter=new OpenRouterBoard(editor);serverManager=new ServerManager(config,editor,()=>telemetryServers,()=>dashboardBuild,refresh);await refresh();setInterval(refresh,Math.max(30,config.refresh_seconds||60)*1000);setInterval(()=>render(),30000);}catch(error){$('mode').textContent='설정 확인 필요';$('notice').textContent='설정을 불러오지 못했습니다. config.json과 웹 서버 연결을 확인해 주세요.';$('notice').className='notice error';$('timeline').innerHTML='<div class="blank">표시할 데이터가 없습니다.</div>';}
+try{config=await readJSON('./config.json');if(!['demo','live'].includes(config.mode))throw new Error('mode');if(config.mode==='live'&&!Array.isArray(config.servers))throw new Error('servers');editor=new DashboardEditor(config,()=>telemetryServers,editorChanged);openRouter=new OpenRouterBoard(editor);serverManager=new ServerManager(config,editor,()=>telemetryServers,()=>dashboardBuild,refresh);resourceBoard=new ResourceBoard(config,()=>telemetryServers,id=>editor.unlocked?serverManager.open(id):editor.showLogin());await refresh();setInterval(refresh,Math.max(30,config.refresh_seconds||60)*1000);setInterval(()=>render(),30000);}catch(error){$('mode').textContent='설정 확인 필요';$('notice').textContent='설정을 불러오지 못했습니다. config.json과 웹 서버 연결을 확인해 주세요.';$('notice').className='notice error';$('timeline').innerHTML='<div class="blank">표시할 데이터가 없습니다.</div>';}
