@@ -509,7 +509,7 @@ try {
   await page.locator('#release-video-toggle').click();
   await page.waitForFunction(()=>document.querySelector('#release-video video').paused);
   assert.equal(await page.locator('#release-video').evaluate(panel=>panel.open),false);
-  await page.reload();
+  await page.goto(base);
   assert.equal(await page.locator('#release-video').evaluate(panel=>panel.open),false);
   await page.locator('.promo-note-link').click();
   assert.equal(await page.locator('#release-video').evaluate(panel=>panel.open),true);
