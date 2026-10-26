@@ -41,7 +41,13 @@ const telemetry = server => telemetryServers.find(s=>s.server_id===server.server
 function applyDashboardEdits(){servers=editor?.enabled?mergeEdits(telemetryServers,editor.data):telemetryServers;}
 function editorChanged(){applyDashboardEdits();if(config)render();openRouter?.render();}
 function viewWindow(){const now=Date.now();const anchor=Math.floor((now+9*HOUR)/(24*HOUR))*24*HOUR-9*HOUR;return {now,start:anchor+(offset*hours)*HOUR,end:anchor+(offset*hours+hours)*HOUR};}
-async function readJSON(url){const u=new URL(url,location.href);u.searchParams.set('_',String(Math.floor(Date.now()/60000)));const r=await fetch(u,{cache:'no-store',signal:AbortSignal.timeout(15000)});if(!r.ok)throw new Error(`HTTP ${r.status}`);return r.json();}
+async function readJSON(url){const u=new URL(url,import.meta.url);u.searchParams.set('_',String(Math.floor(Date.now()/60000)));const r=await fetch(u,{cache:'no-store',signal:AbortSignal.timeout(15000)});if(!r.ok)throw new Error(`HTTP ${r.status}`);return r.json();}
+export function dashboardView(){return {config,servers,telemetryServers,lastFetch,fetchErrors,tokens:editor?.data.openrouter_tokens||[],build:dashboardBuild};}
+export function refreshDashboard(){return refresh();}
+export function openExperiment(server,id){
+  if(!servers.some(s=>s.server_id===server&&s.jobs.some(j=>j.id===id)))return;
+  selected={server,id};fillDetail(server,id);if(!$('detail-dialog').open)$('detail-dialog').showModal();
+}
 function checkServer(s,id){
   if(s.server_id!==id||!Array.isArray(s.gpus)||!Array.isArray(s.jobs))throw new Error('잘못된 서버 데이터');
   const ids=new Set();for(const g of s.gpus){if(typeof g.uuid!=='string'||ids.has(g.uuid)||!Number.isInteger(g.index))throw new Error('잘못된 GPU 데이터');ids.add(g.uuid);}
@@ -102,6 +108,7 @@ function render(){
   openRouter?.render();
   resourceBoard?.render();
   if(selected&&$('detail-dialog').open)fillDetail(selected.server,selected.id);
+  document.dispatchEvent(new CustomEvent('dashboard:render'));
 }
 function serverCard(s,now,stale){
   const h=health(s,now,stale);
@@ -169,7 +176,7 @@ $('job-detail').addEventListener('click',async e=>{
     setTimeout(()=>{if(button.isConnected)button.textContent='복사';},2200);
   }
 });
-$('timeline').addEventListener('click',e=>{const b=e.target.closest('[data-job]');if(!b)return;selected={server:b.dataset.server,id:b.dataset.job};fillDetail(selected.server,selected.id);$('detail-dialog').showModal();});
+$('timeline').addEventListener('click',e=>{const b=e.target.closest('[data-job]');if(b)openExperiment(b.dataset.server,b.dataset.job);});
 $('close-detail').onclick=()=>$('detail-dialog').close();
 $('detail-dialog').addEventListener('click',e=>{if(e.target===$('detail-dialog')){const r=e.target.getBoundingClientRect();if(e.clientX<r.left||e.clientX>r.right||e.clientY<r.top||e.clientY>r.bottom)e.target.close();}});
 document.querySelectorAll('[data-hours]').forEach(b=>b.onclick=()=>{hours=Number(b.dataset.hours);offset=0;document.querySelectorAll('[data-hours]').forEach(x=>{x.classList.toggle('active',x===b);x.setAttribute('aria-pressed',String(x===b));});render();});

@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="description" content="서버별 GPU 실험과 예상 종료시간을 한눈에 확인하는 타임라인"><title>CVML GPU Timeline</title><link rel="stylesheet" href="./styles.css"><link rel="stylesheet" href="./usage.css"><link rel="stylesheet" href="./admin.css"><link rel="stylesheet" href="./hardware.css"><link rel="stylesheet" href="./openrouter.css?v=1.1.8"><link rel="stylesheet" href="./resources.css?v=1.1.8"><link rel="stylesheet" href="./promo.css?v=1.1.8-promo1"><style id="patch-notes-styles">
+<html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="description" content="서버별 GPU 실험과 예상 종료시간을 한눈에 확인하는 타임라인"><title>CVML GPU Timeline</title><link rel="stylesheet" href="./styles.css?v=test-server-1"><link rel="stylesheet" href="./usage.css"><link rel="stylesheet" href="./admin.css"><link rel="stylesheet" href="./hardware.css"><link rel="stylesheet" href="./openrouter.css?v=1.1.8"><link rel="stylesheet" href="./resources.css?v=1.1.8"><link rel="stylesheet" href="./promo.css?v=1.1.8-promo1"><style id="patch-notes-styles">
 .patch-notes{display:flex;align-items:flex-start;gap:12px;margin:0 0 24px;padding:16px 20px;background:#effaf3;border:1px solid #ccebd7;border-radius:12px;color:#2f6143;font-size:.875rem;line-height:1.75}
 .patch-notes-icon{flex:0 0 20px;width:20px;height:20px;margin-top:2px;color:#3b8a59}
 .patch-notes-copy{display:flex;align-items:baseline;flex-wrap:wrap;gap:3px 16px;min-width:0}
@@ -136,7 +136,7 @@ v1.1.0 이상 서버에서는 list의 reference가 사이트의 실험 ID와 같
   <p id="usage-feedback" class="usage-feedback" role="status" aria-live="polite"></p>
 </section>
 
-<footer><div class="footer-version"><span>CVML GPU TIMELINE</span><a id="dashboard-version" class="version-tag" target="_blank" rel="noopener noreferrer">대시보드 버전 확인 중</a></div><span>서버 수집 상태 · 관리자 수동 기록</span></footer></main>
+<footer><div class="footer-version"><span>CVML GPU TIMELINE</span><a id="dashboard-version" class="version-tag" target="_blank" rel="noopener noreferrer">대시보드 버전 확인 중</a></div><span>서버 수집 상태 · 관리자 수동 기록</span></footer><div class="test-server-entry"><a class="test-server-button" href="./test-server/">test-server</a></div></main>
 <dialog id="detail-dialog"><div class="dialog-heading"><span class="eyebrow">EXPERIMENT</span><button id="close-detail" aria-label="상세 닫기">×</button></div><div id="job-detail"></div></dialog>
 <dialog id="server-manage-dialog" class="admin-dialog server-manage-dialog" aria-labelledby="server-manage-title">
   <div class="dialog-heading"><span class="eyebrow">SERVER MANAGEMENT</span><button id="server-manage-close" type="button" aria-label="서버 관리 닫기">×</button></div>

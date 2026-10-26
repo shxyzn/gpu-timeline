@@ -15,7 +15,7 @@ await fs.mkdir(output, {recursive: true});
 const host = http.createServer(async (request, response) => {
   try {
     const pathname = new URL(request.url, 'http://localhost').pathname;
-    const filename = path.resolve(root, 'dist', `.${pathname === '/' ? '/index.html' : pathname}`);
+    const filename = path.resolve(root, 'dist', `.${pathname.endsWith('/') ? pathname+'index.html' : pathname}`);
     if (!filename.startsWith(path.join(root, 'dist') + path.sep)) throw new Error('path');
     const bytes = await fs.readFile(filename);
     const types = {'.html': 'text/html', '.js': 'text/javascript', '.json': 'application/json', '.css': 'text/css', '.mp4': 'video/mp4', '.gif': 'image/gif', '.jpg': 'image/jpeg'};
@@ -46,7 +46,7 @@ try {
   const now = new Date(), iso = hours => new Date(now.getTime() + hours * 3600000).toISOString();
   let data = emptyEdits(), staleRaw = false, failRaw = false, forbidden = false, writes = 0;
   let collectorFinished = false, progressCompleted = 25, serverUpgraded = false, serverCStale = false;
-  let resourceEnabled = false, resourceFailed = false;
+  let resourceEnabled = false, resourceFailed = false, testAPI = false;
   const telemetry = id => ({server_id: id, name: `Server ${id.slice(-1).toUpperCase()}`, updated_at: iso(id === 'server-c' && serverCStale ? -2 : 0), collector_ok: true,
     resources: resourceEnabled && id !== 'server-c' ? resourceFixture(Date.now(),resourceFailed) : undefined,
     agent_version: id === 'server-b' ? {version: '1.1.2', revision: 'b'.repeat(40)} : id === 'server-a' && serverUpgraded ? {version: '1.1.5', revision: 'a'.repeat(40)} : null,
@@ -55,7 +55,7 @@ try {
     jobs: id === 'server-a' ? [{id: 'job-original', name: 'GEPA collector', owner: '상현', gpu_uuids: [`${id}-gpu`],
       started_at: iso(-2), expected_end_at: iso(2), eta_source: 'progress',
       progress: {completed: progressCompleted, total: 100, updated_at: iso(0)},
-      ended_at: collectorFinished ? iso(0) : null, status: collectorFinished ? 'completed' : 'running'}] : []});
+      ended_at: collectorFinished ? iso(0) : null, status: collectorFinished ? 'completed' : 'running'}] : id === 'server-b' && testAPI ? [{id:'api-live',name:'API current <script> test',owner:'상현',resource_type:'api',api_slot:0,gpu_uuids:[],started_at:iso(-1),expected_end_at:iso(2),status:'running',progress:{completed:25,total:100,updated_at:iso(0)}}] : []});
   const fulfill = (route, body, status = 200) => route.fulfill({status, contentType: 'application/json', body: JSON.stringify(body)});
   await context.route('https://fonts.googleapis.com/**', route => route.fulfill({body: '', contentType: 'text/css'}));
   await context.route('https://fonts.gstatic.com/**', route => route.abort());
@@ -450,6 +450,7 @@ try {
   await page.locator('#admin-dialog').waitFor({state:'hidden'});
   await page.locator('[data-token-action=refresh]').waitFor();
   assert.equal(openRouterCalls,beforeLoginCalls); // Not due: no query on every login.
+  const previewPublicToken=structuredClone(data.openrouter_tokens[0]);
   page.once('dialog',dialog=>dialog.accept());
   await page.locator('[data-token-action=remove]').click();
   await page.locator('.openrouter-card').waitFor({state:'hidden'});
@@ -521,7 +522,67 @@ try {
   }
   assert.deepEqual(errors,[]);
 
-  console.log('Browser checks passed: per-server management, baseline/report versions, copied pinned commands, no management writes, logout, mobile, login, add/hide/restore, manual editing, collector time overrides and reset, automatic completion/progress, no-op and precision, conflicts/errors, KST, mobile.');
+  // The experimental page shares live data and editor behavior, with its entry at the bottom.
+  collectorFinished=false;progressCompleted=25;serverCStale=true;testAPI=true;
+  resourceEnabled=true;resourceFailed=false;failRaw=false;staleRaw=false;
+  data={...emptyEdits(),openrouter_tokens:[previewPublicToken]};
+  const writesBeforePreview=writes;
+  const preview=await context.newPage();
+  preview.on('pageerror',error=>errors.push(error.message));
+  await preview.goto(base);
+  assert.equal(await preview.locator('.test-server-entry').evaluate(e=>e===e.parentElement.lastElementChild),true);
+  await preview.getByRole('link',{name:'test-server',exact:true}).click();
+  await preview.locator('.current-gpu-table tbody tr').first().waitFor();
+  assert.equal(new URL(preview.url()).pathname,'/test-server/');
+  assert.equal(await preview.locator('#panel-now').isVisible(),true);
+  assert.equal(await preview.locator('#panel-timeline').isVisible(),false);
+  assert.equal(await preview.locator('.current-gpu-table tbody tr').count(),3);
+  assert.equal(await preview.locator('[data-gpu-state=idle]').count(),1);
+  assert.equal(await preview.locator('[data-gpu-state=busy]').count(),1);
+  assert.equal(await preview.locator('[data-gpu-state=unknown]').count(),1);
+  assert.match(await preview.locator('#priority-alerts').innerText(),/Server C/);
+  assert.equal(await preview.locator('.current-api-row').count(),1);
+  assert.match(await preview.locator('#current-api').innerText(),/API current <script> test/);
+  assert.equal(await preview.locator('#current-api script').count(),0);
+  await preview.locator('#current-gpus [data-job="job-original"]').click();
+  assert.match(await preview.locator('#job-detail').innerText(),/server-a\/job-original/);
+  await preview.locator('#close-detail').click();
+  await preview.screenshot({path:path.join(output,'test-server-desktop.png'),fullPage:true});
+  await preview.locator('#tab-resources').click();
+  await preview.locator('.resource-card').first().waitFor({state:'visible'});
+  assert.equal(await preview.locator('.resource-card').count(),4);
+  assert.match(await preview.locator('#openrouter-grid').innerText(),/연구실 공용/);
+  await preview.locator('#tab-timeline').click();
+  assert.equal(await preview.locator('#timeline').isVisible(),true);
+  await preview.locator('#tab-servers').click();
+  assert.equal(await preview.locator('.server-card').count(),3);
+  await preview.locator('#tab-more').click();
+  assert.equal(await preview.locator('#usage').isVisible(),true);
+  await preview.locator('#admin-login').click();
+  assert.equal(await preview.locator('#admin-dialog').isVisible(),true);
+  await preview.locator('[data-close-dialog=admin-dialog]').first().click();
+  await preview.locator('#tab-now').click();
+  for(const width of [390,320]) {
+    await preview.setViewportSize({width,height:844});
+    for(const name of ['now','timeline','resources','servers','more']) {
+      await preview.locator('#tab-'+name).click();
+      assert.ok(await preview.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),`test-server ${name} overflows at ${width}px`);
+    }
+    await preview.locator('#tab-now').click();
+    await preview.screenshot({path:path.join(output,`test-server-mobile-${width}.png`),fullPage:true});
+    await preview.locator('#current-gpus [data-job="job-original"]').click();
+    assert.ok(await preview.locator('#detail-dialog').evaluate(e=>e.scrollWidth<=e.clientWidth+1));
+    await preview.locator('#close-detail').click();
+  }
+  serverCStale=false;testAPI=false;
+  await preview.locator('#current-refresh').click();
+  await preview.waitForFunction(()=>document.querySelectorAll('[data-gpu-state=unknown]').length===0);
+  assert.equal(await preview.locator('.current-api-row').count(),0);
+  assert.equal(writes,writesBeforePreview);
+  assert.deepEqual(errors,[]);
+  await preview.close();
+
+  console.log('Browser checks passed: existing dashboard workflows plus test-server live data, shared editor, stale GPU/API handling, tabs, details, refresh and 320/390px layouts.');
   console.log(`Screenshots: ${output}`);
 } catch (error) {
   if (page) await page.screenshot({path: path.join(output, 'failure.png'), fullPage: true}).catch(() => {});
