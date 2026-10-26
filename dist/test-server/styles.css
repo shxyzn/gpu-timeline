@@ -126,12 +126,27 @@ body.test-server{--purple:#2255a0;--teal:#2255a0;--green:#197447;--line:#e0e5eb;
 @media(max-width:400px){.test-server .priority-overview{grid-template-columns:repeat(2,minmax(0,1fr));row-gap:12px;padding-top:15px;padding-bottom:15px}.test-server .priority-overview>button{display:flex;gap:10px;align-items:baseline}.test-server .priority-tabs{column-gap:19px;row-gap:0}.test-server .priority-tabs button{font-size:12px}.test-server .current-heading>span{margin-left:0;font-size:11px}.test-server .current-heading>button{margin-left:auto}.test-server .priority-alert{padding:10px}.test-server .current-state{font-size:11px;padding:3px 5px}.test-server .current-progress strong,.test-server .current-memory strong{font-size:13px}.test-server .current-eta strong{font-size:14px}.test-server .current-gpu-table tr{column-gap:8px}.test-server #detail-dialog{border-radius:0;padding:18px}.test-server #job-detail dl{grid-template-columns:76px minmax(0,1fr);gap:11px}}
 @media(pointer:coarse){.test-server button,.test-server select,.test-server .priority-home{min-height:44px}.test-server .current-job{padding-top:7px;padding-bottom:7px}.test-server .priority-home{display:inline-flex;align-items:center}.test-server .priority-tabs button{padding:11px 0}}
 .test-server .current-budget strong{font-size:13px}
+.test-server #current-gpu-panel,.test-server #current-api-panel{padding-top:0}
 @media(max-width:900px){
+  .test-server .priority-overview>button{display:block}
+  .test-server .priority-overview>button>span,.test-server .priority-overview>button>strong{display:block}
   .test-server .current-gpu-table .current-server-label{display:none}
   .test-server .current-gpu-table tbody::before{content:attr(data-server-label);display:block;font-size:14px;font-weight:600;color:#25374f;line-height:1.6;overflow-wrap:anywhere;padding:12px 0 4px}
   .test-server .current-gpu-table tbody+tbody{margin-top:7px}
-  .test-server .current-gpu-table tr{border-top:0;border-bottom:1px solid var(--line)}
+  .test-server .current-gpu-table tr{border-top:0;border-bottom:1px solid var(--line);grid-template-areas:"gpu gpu state" "experiment experiment experiment" "progress eta eta" "usage usage usage"}
   .test-server .current-gpu-table tr:last-child{border-bottom:0}
+  .test-server .current-gpu-table .current-resource{grid-area:gpu}
+  .test-server .current-gpu-table .current-status{grid-area:state}
+  .test-server .current-gpu-table .current-experiments{grid-area:experiment}
+  .test-server .current-gpu-table .current-progress-cell{grid-area:progress}
+  .test-server .current-gpu-table .current-eta{grid-area:eta}
+  .test-server .current-gpu-table .current-memory{grid-area:usage;display:flex;align-items:baseline;gap:7px 14px;flex-wrap:wrap}
+  .test-server .current-gpu-table .current-memory::before{display:none}
+  .test-server .current-memory .current-utilization{display:none}
+  .test-server .current-memory .current-usage-line{flex-wrap:nowrap}
+  .test-server .current-memory .current-usage-line strong{white-space:nowrap}
+  .test-server .current-memory .current-last-reading{flex-basis:100%}
+  .test-server .current-memory .current-vram{margin-top:0}
   .test-server .current-gpu-table .current-resource>strong{font-size:14px}
   .test-server .current-gpu-table [data-label]::before{font-size:12px}
   .test-server .current-job-meta{font-size:12px}
@@ -141,4 +156,9 @@ body.test-server{--purple:#2255a0;--teal:#2255a0;--green:#197447;--line:#e0e5eb;
   .test-server .current-api-row>div:nth-child(4){grid-column:1/-1;display:flex;align-items:baseline;gap:6px 10px;flex-wrap:wrap;text-align:left}
   .test-server .current-api-eta-label{display:inline;font-size:12px;color:var(--muted)}
   .test-server .current-api-row .current-eta small{margin:0}
+}
+@media(max-width:400px){
+  .test-server .priority-header-actions #clock{display:none}
+  .test-server .priority-tabs{column-gap:8px;justify-content:space-between}
+  .test-server .priority-tabs button{min-width:44px}
 }
