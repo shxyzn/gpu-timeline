@@ -46,6 +46,14 @@ jobs:
           node --check dist/admin.js
           node --check dist/edits.js
           npm test
+      - name: Render and verify release media
+        if: matrix.python == '3.11'
+        timeout-minutes: 10
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends ffmpeg fonts-noto-cjk
+          python3 -m pip install -r scripts/promo-requirements.txt
+          bash scripts/build_promo.sh
       - name: Browser editor workflow (mock GitHub; no real writes)
         if: matrix.python == '3.11'
         run: |
@@ -58,4 +66,13 @@ jobs:
         with:
           name: dashboard-screenshots
           path: /tmp/gpu-timeline-browser/*.png
+          retention-days: 7
+      - name: Release film and storyboard
+        if: always() && matrix.python == '3.11'
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-promo-60s
+          path: |
+            dist/media/*v1.1.8*
+            /tmp/gpu-timeline-promo/*.png
           retention-days: 7

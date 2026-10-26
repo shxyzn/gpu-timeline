@@ -2,7 +2,7 @@ name: Publish GPU Timeline
 on:
   push:
     branches: [main]
-    paths: ['dist/**', 'VERSION', 'agent/version_info.py', '.github/workflows/pages.yml']
+    paths: ['dist/**', 'scripts/*promo*', 'VERSION', 'agent/version_info.py', '.github/workflows/pages.yml']
   workflow_dispatch:
 permissions:
   contents: read
@@ -19,8 +19,18 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
       - name: Stamp dashboard version
         run: python3 agent/version_info.py --output dist/version.json
+      - name: Render and verify release media
+        timeout-minutes: 10
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends ffmpeg fonts-noto-cjk
+          python3 -m pip install -r scripts/promo-requirements.txt
+          bash scripts/build_promo.sh
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:

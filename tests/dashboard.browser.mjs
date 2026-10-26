@@ -489,9 +489,36 @@ try {
     await page.locator('#bottlenecks').screenshot({path:path.join(output,`bottlenecks-mobile-${width}.png`)});
   }
 
-  // This release temporarily omits promotional media.
-  assert.equal(await page.locator('#release-video, video, .promo-note-link').count(),0);
-  assert.equal(await page.locator('script[src="./promo.js"], link[href="./promo.css"]').count(),0);
+  // The release film must decode and seek through all 60 seconds.
+  await page.setViewportSize({width:1440,height:1000});
+  await page.locator('.promo-note-link').click();
+  await page.locator('#release-video').screenshot({path:path.join(output,'promo-desktop.png')});
+  const media = await page.locator('#release-video video').evaluate(video=>new Promise((resolve,reject)=>{
+    const timer=setTimeout(()=>reject(new Error('Promo media load/seek timeout')),15000);
+    video.addEventListener('error',()=>{clearTimeout(timer);reject(new Error(`Promo decode error: ${video.error?.code}`));},{once:true});
+    video.addEventListener('loadedmetadata',()=>{video.currentTime=59.5;},{once:true});
+    video.addEventListener('seeked',()=>{clearTimeout(timer);resolve({duration:video.duration,time:video.currentTime,width:video.videoWidth,ready:video.readyState,paused:video.paused});},{once:true});
+    video.load();
+  }));
+  assert.equal(media.duration,60);
+  assert.equal(media.time,59.5);
+  assert.equal(media.width,1280);
+  assert.ok(media.ready>=2);
+  assert.equal(media.paused,true);
+  await page.locator('#release-video video').evaluate(async video=>{video.currentTime=5;await video.play()});
+  await page.locator('#release-video-toggle').click();
+  await page.waitForFunction(()=>document.querySelector('#release-video video').paused);
+  assert.equal(await page.locator('#release-video').evaluate(panel=>panel.open),false);
+  await page.reload();
+  assert.equal(await page.locator('#release-video').evaluate(panel=>panel.open),false);
+  await page.locator('.promo-note-link').click();
+  assert.equal(await page.locator('#release-video').evaluate(panel=>panel.open),true);
+  for(const width of [390,320]) {
+    await page.setViewportSize({width,height:844});
+    await page.locator('#release-video').scrollIntoViewIfNeeded();
+    assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
+    await page.locator('#release-video').screenshot({path:path.join(output,`promo-mobile-${width}.png`)});
+  }
   assert.deepEqual(errors,[]);
 
   console.log('Browser checks passed: per-server management, baseline/report versions, copied pinned commands, no management writes, logout, mobile, login, add/hide/restore, manual editing, collector time overrides and reset, automatic completion/progress, no-op and precision, conflicts/errors, KST, mobile.');
