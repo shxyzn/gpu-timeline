@@ -46,13 +46,14 @@ try {
   const now = new Date(), iso = hours => new Date(now.getTime() + hours * 3600000).toISOString();
   let data = emptyEdits(), staleRaw = false, failRaw = false, forbidden = false, writes = 0;
   let collectorFinished = false, progressCompleted = 25, serverUpgraded = false, serverCStale = false;
-  let resourceEnabled = false, resourceFailed = false, testAPI = false;
+  let resourceEnabled = false, resourceFailed = false, testAPI = false, previewMode = false;
   const telemetry = id => ({server_id: id, name: `Server ${id.slice(-1).toUpperCase()}`, updated_at: iso(id === 'server-c' && serverCStale ? -2 : 0), collector_ok: true,
     resources: resourceEnabled && id !== 'server-c' ? resourceFixture(Date.now(),resourceFailed) : undefined,
     agent_version: id === 'server-b' ? {version: '1.1.2', revision: 'b'.repeat(40)} : id === 'server-a' && serverUpgraded ? {version: '1.1.5', revision: 'a'.repeat(40)} : null,
-    gpus: [{uuid: `${id}-gpu`, index: 0, name: 'NVIDIA GeForce RTX 4090', process_count: 0, utilization: 0,
-      memory_used_mib: 0, memory_total_mib: 24564}],
-    jobs: id === 'server-a' ? [{id: 'job-original', name: 'GEPA collector', owner: '상현', gpu_uuids: [`${id}-gpu`],
+    gpus: [{uuid: `${id}-gpu`, index: 0, name: 'NVIDIA GeForce RTX 4090', process_count: 0, utilization: previewMode && id === 'server-a' ? 86 : 0,
+      memory_used_mib: previewMode && id === 'server-a' ? 21000 : 0, memory_total_mib: 24564},
+      ...(previewMode && id === 'server-b' ? [{uuid:`${id}-gpu-1`,index:1,name:'NVIDIA GeForce RTX 4090',process_count:0,utilization:0,memory_used_mib:0,memory_total_mib:24564}] : [])],
+    jobs: id === 'server-a' ? [{id: 'job-original', name: previewMode ? 'exp46 · AIME · 8B GEPA · 정답 2회 연속 시 진짜 AIME 문제로 교체 · 8B 검증 · seed0' : 'GEPA collector', owner: '상현', gpu_uuids: [`${id}-gpu`],
       started_at: iso(-2), expected_end_at: iso(2), eta_source: 'progress',
       progress: {completed: progressCompleted, total: 100, updated_at: iso(0)},
       ended_at: collectorFinished ? iso(0) : null, status: collectorFinished ? 'completed' : 'running'}] : id === 'server-b' && testAPI ? [{id:'api-live',name:'API current <script> test',owner:'상현',resource_type:'api',api_slot:0,gpu_uuids:[],started_at:iso(-1),expected_end_at:iso(2),status:'running',progress:{completed:25,total:100,updated_at:iso(0)}}] : []});
@@ -523,7 +524,7 @@ try {
   assert.deepEqual(errors,[]);
 
   // The experimental page shares live data and editor behavior, with its entry at the bottom.
-  collectorFinished=false;progressCompleted=25;serverCStale=true;testAPI=true;
+  collectorFinished=false;progressCompleted=25;serverCStale=true;testAPI=true;previewMode=true;
   resourceEnabled=true;resourceFailed=false;failRaw=false;staleRaw=false;
   data={...emptyEdits(),openrouter_tokens:[previewPublicToken]};
   const writesBeforePreview=writes;
@@ -536,16 +537,32 @@ try {
   assert.equal(new URL(preview.url()).pathname,'/test-server/');
   assert.equal(await preview.locator('#panel-now').isVisible(),true);
   assert.equal(await preview.locator('#panel-timeline').isVisible(),false);
-  assert.equal(await preview.locator('.current-gpu-table tbody tr').count(),3);
-  assert.equal(await preview.locator('[data-gpu-state=idle]').count(),1);
+  assert.equal(await preview.locator('.current-gpu-table tbody tr').count(),4);
+  assert.equal(await preview.locator('[data-gpu-state=idle]').count(),2);
   assert.equal(await preview.locator('[data-gpu-state=busy]').count(),1);
   assert.equal(await preview.locator('[data-gpu-state=unknown]').count(),1);
   assert.match(await preview.locator('#priority-alerts').innerText(),/Server C/);
+  assert.equal(await preview.locator('.current-server-label').count(),3);
+  assert.equal(await preview.locator('.current-server-label').nth(1).getAttribute('rowspan'),'2');
+  assert.match(await preview.locator('[data-current-server=server-a] .current-gpu-percent').innerText(),/86%/);
+  assert.equal(await preview.locator('#current-api-panel').isVisible(),false);
+  await preview.locator('#priority-overview [data-resource-view=api]').click();
+  assert.equal(await preview.locator('#current-api-panel').isVisible(),true);
+  assert.equal(await preview.locator('#current-gpu-panel').isVisible(),false);
+  assert.equal(await preview.locator('#current-api-tab').getAttribute('aria-selected'),'true');
   assert.equal(await preview.locator('.current-api-row').count(),1);
   assert.match(await preview.locator('#current-api').innerText(),/API current <script> test/);
   assert.equal(await preview.locator('#current-api script').count(),0);
+  await preview.locator('#current-api [data-job="api-live"]').click();
+  assert.match(await preview.locator('#job-detail').innerText(),/API current <script> test/);
+  await preview.locator('#close-detail').click();
+  await preview.screenshot({path:path.join(output,'test-server-api-desktop.png'),fullPage:true});
+  await preview.locator('#current-gpu-tab').click();
+  assert.equal(await preview.locator('#current-gpus [data-job="job-original"]').innerText(),'exp46 · AIME / 8B');
+  assert.match(await preview.locator('#current-gpus .current-job-meta').first().innerText(),/GEPA · seed 0 · 상현/);
   await preview.locator('#current-gpus [data-job="job-original"]').click();
   assert.match(await preview.locator('#job-detail').innerText(),/server-a\/job-original/);
+  assert.match(await preview.locator('#job-detail').innerText(),/정답 2회 연속 시 진짜 AIME 문제로 교체/);
   await preview.locator('#close-detail').click();
   await preview.screenshot({path:path.join(output,'test-server-desktop.png'),fullPage:true});
   await preview.locator('#tab-resources').click();
@@ -569,15 +586,21 @@ try {
       assert.ok(await preview.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),`test-server ${name} overflows at ${width}px`);
     }
     await preview.locator('#tab-now').click();
+    await preview.locator('#current-gpu-tab').click();
     await preview.screenshot({path:path.join(output,`test-server-mobile-${width}.png`),fullPage:true});
     await preview.locator('#current-gpus [data-job="job-original"]').click();
     assert.ok(await preview.locator('#detail-dialog').evaluate(e=>e.scrollWidth<=e.clientWidth+1));
     await preview.locator('#close-detail').click();
+    await preview.locator('#current-api-tab').click();
+    assert.ok(await preview.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),`test-server API overflows at ${width}px`);
+    await preview.screenshot({path:path.join(output,`test-server-api-mobile-${width}.png`),fullPage:true});
   }
   serverCStale=false;testAPI=false;
   await preview.locator('#current-refresh').click();
   await preview.waitForFunction(()=>document.querySelectorAll('[data-gpu-state=unknown]').length===0);
   assert.equal(await preview.locator('.current-api-row').count(),0);
+  assert.equal(await preview.locator('#current-api-tab').getAttribute('aria-selected'),'true');
+  assert.equal(await preview.locator('#current-api-panel').isVisible(),true);
   assert.equal(writes,writesBeforePreview);
   assert.deepEqual(errors,[]);
   await preview.close();

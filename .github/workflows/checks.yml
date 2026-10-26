@@ -50,6 +50,7 @@ jobs:
         if: matrix.python == '3.11'
         timeout-minutes: 10
         run: |
+          sudo sed -i 's|http://azure.archive.ubuntu.com/ubuntu|https://archive.ubuntu.com/ubuntu|g' /etc/apt/apt-mirrors.txt
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends ffmpeg fonts-noto-cjk
           python3 -m pip install -r scripts/promo-requirements.txt
