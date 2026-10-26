@@ -450,6 +450,7 @@ try {
   await page.locator('#admin-dialog').waitFor({state:'hidden'});
   await page.locator('[data-token-action=refresh]').waitFor();
   assert.equal(openRouterCalls,beforeLoginCalls); // Not due: no query on every login.
+  const previewPublicToken=structuredClone(data.openrouter_tokens[0]);
   page.once('dialog',dialog=>dialog.accept());
   await page.locator('[data-token-action=remove]').click();
   await page.locator('.openrouter-card').waitFor({state:'hidden'});
@@ -524,7 +525,7 @@ try {
   // The experimental page shares live data and editor behavior, with its entry at the bottom.
   collectorFinished=false;progressCompleted=25;serverCStale=true;testAPI=true;
   resourceEnabled=true;resourceFailed=false;failRaw=false;staleRaw=false;
-  data={...emptyEdits(),openrouter_tokens:data.openrouter_tokens};
+  data={...emptyEdits(),openrouter_tokens:[previewPublicToken]};
   const writesBeforePreview=writes;
   const preview=await context.newPage();
   preview.on('pageerror',error=>errors.push(error.message));
