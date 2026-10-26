@@ -1,0 +1,187 @@
+<!doctype html>
+<html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="description" content="CVML GPU Timeline 새 UI 테스트 페이지"><title>test-server · CVML GPU Timeline</title><link rel="stylesheet" href="../styles.css"><link rel="stylesheet" href="../usage.css"><link rel="stylesheet" href="../admin.css"><link rel="stylesheet" href="../hardware.css"><link rel="stylesheet" href="../openrouter.css?v=1.1.8"><link rel="stylesheet" href="../resources.css?v=1.1.8"><link rel="stylesheet" href="../promo.css?v=1.1.8-promo1"><style id="patch-notes-styles">
+.patch-notes{display:flex;align-items:flex-start;gap:12px;margin:0 0 24px;padding:16px 20px;background:#effaf3;border:1px solid #ccebd7;border-radius:12px;color:#2f6143;font-size:.875rem;line-height:1.75}
+.patch-notes-icon{flex:0 0 20px;width:20px;height:20px;margin-top:2px;color:#3b8a59}
+.patch-notes-copy{display:flex;align-items:baseline;flex-wrap:wrap;gap:3px 16px;min-width:0}
+.patch-notes strong{color:#21613b;font-weight:600;white-space:nowrap}
+.patch-notes p{margin:0;word-break:keep-all;overflow-wrap:anywhere}
+@media(max-width:640px){.patch-notes{gap:10px;padding:14px 16px;margin-bottom:20px}.patch-notes-copy{display:block}.patch-notes p{margin-top:4px}}
+</style><link rel="stylesheet" href="../test-server/styles.css?v=test-server-1"></head><body class="test-server"><main>
+<header class="priority-header"><div><h1>CVML GPU Timeline</h1><p>test-server · v1.2.0 UI 미리보기</p></div><div class="priority-header-actions"><a class="priority-home" href="../">기존 화면</a><span id="mode" class="badge">불러오는 중</span><span id="clock"></span><button id="admin-login" class="edit-button" hidden>관리자 로그인</button></div></header>
+<nav class="priority-tabs" aria-label="대시보드 화면" role="tablist"><button type="button" id="tab-now" role="tab" aria-selected="true" aria-controls="panel-now" data-panel="now">현재 현황</button><button type="button" id="tab-timeline" role="tab" aria-selected="false" aria-controls="panel-timeline" data-panel="timeline">타임라인</button><button type="button" id="tab-resources" role="tab" aria-selected="false" aria-controls="panel-resources" data-panel="resources">자원·비용</button><button type="button" id="tab-servers" role="tab" aria-selected="false" aria-controls="panel-servers" data-panel="servers">서버</button><button type="button" id="tab-more" role="tab" aria-selected="false" aria-controls="panel-more" data-panel="more">더보기</button></nav><div id="admin-tools" class="admin-tools" hidden><div class="admin-tools-copy"><strong id="admin-account">관리자</strong><span>실험 기록과 서버 조치 안내를 관리할 수 있어요.</span></div><div class="admin-tools-actions"><button id="manual-add" class="edit-button primary">＋ 실험 추가</button><button id="record-list" class="edit-button">기록 관리</button><button id="admin-logout" class="edit-button">로그아웃</button></div></div><p id="edit-feedback" class="edit-feedback" role="status" aria-live="polite"></p><div id="edit-notice" class="notice" role="status"></div><section id="panel-now" role="tabpanel" aria-labelledby="tab-now">
+<div id="priority-alerts" class="priority-alerts" role="status" aria-live="polite">실제 서버 데이터를 불러오는 중입니다.</div>
+<div id="notice" class="notice" role="status" hidden></div><section id="overview" class="overview" hidden aria-label="기존 집계"></section>
+<section id="priority-overview" class="priority-overview" aria-label="현재 사용 현황"></section>
+<section class="current-section"><div class="current-heading"><h2>GPU 현황</h2><span id="current-updated">상태 확인 중</span><button id="current-refresh" type="button">새로고침</button></div>
+<div id="current-gpus"></div><p class="current-footnote">서버 수집 시점 기준 · 여유 표시는 독점 사용을 보장하지 않음 · 예정 일정은 자동 실행을 뜻하지 않음</p></section>
+<section class="current-section current-api"><div class="current-heading"><h2>API 실험</h2><span id="current-api-count"></span></div><div id="current-budgets" class="current-budgets"></div><div id="current-api"></div></section>
+</section><section id="panel-timeline" role="tabpanel" aria-labelledby="tab-timeline" hidden><section class="workspace" aria-labelledby="timeline-title"><div class="toolbar"><div><h2 id="timeline-title">실험 타임라인</h2><p id="window-label"></p></div><div class="controls"><div class="segmented" aria-label="표시 기간"><button data-hours="24">24시간</button><button data-hours="72" class="active" aria-pressed="true">3일</button><button data-hours="168">7일</button></div><div class="stepper"><button id="previous" aria-label="이전 기간">‹</button><button id="today">현재</button><button id="next" aria-label="다음 기간">›</button></div><button id="refresh">새로고침</button></div></div>
+
+
+<div class="legend"><span><i class="running"></i>실행 중</span><span><i class="planned"></i>예정</span><span><i class="completed"></i>완료</span><span><i class="uncertain"></i>종료 미정·초과</span><span class="legend-note">막대를 누르면 실험 상세를 볼 수 있어요.</span></div>
+<div class="timeline-scroll"><div id="timeline" class="timeline" aria-label="GPU별 실험 일정"></div></div><div class="timeline-foot"><span id="sync-label">상태 확인 중</span><span>Asia/Seoul · 예상 종료시간은 변경될 수 있습니다.</span></div><p id="calendar-note" class="calendar-note" role="note" aria-label="한국 공휴일 안내"></p></section></section><section id="panel-resources" role="tabpanel" aria-labelledby="tab-resources" hidden><section id="openrouter" class="openrouter" aria-labelledby="openrouter-title">
+  <div class="openrouter-heading"><div><h2 id="openrouter-title">OpenRouter tokens <small id="openrouter-count">0 keys</small></h2><p>API 키별 사용 금액 · USD · 오늘·주·월 집계는 UTC 기준</p></div><button type="button" class="edit-button" id="openrouter-add">+ 추가</button></div>
+  <div id="openrouter-grid" class="openrouter-grid"></div>
+  <p class="openrouter-help">키를 등록한 브라우저에서 관리자 로그인 중일 때 1시간마다 갱신합니다. 닫혀 있으면 마지막 조회값을 표시해요. 이름·사용량은 모두에게 공유됩니다.</p>
+  <p id="openrouter-feedback" class="openrouter-feedback" role="status" aria-live="polite"></p>
+</section><section id="resources" class="resources" aria-labelledby="resources-title">
+  <div class="resource-heading"><div><div class="resource-heading-title"><h2 id="resources-title">자원 통계</h2><span id="resource-state" class="resource-badge muted">수신 대기</span></div><p>서버별 CPU·GPU·RAM·저장장치 사용 추이</p></div><div class="resource-controls"><label>서버<select id="resource-server" aria-label="자원 통계 서버"></select></label><label>조회 기간<select id="resource-period" aria-label="자원 통계 기간"><option value="24">최근 24시간</option><option value="168">최근 7일</option><option value="720">최근 30일</option></select></label></div></div>
+  <div id="resource-meta" class="resource-meta" aria-live="polite"></div>
+  <div id="resource-grid" class="resource-grid"></div>
+  <div id="resource-cores" class="resource-cores"></div>
+  <div id="resource-storage"></div>
+  <p class="resource-help">GPU 배정 시간은 서버에 등록된 실행 중 실험의 샘플링 추정값이며 API 작업은 제외됩니다. 활동률과 별도 집계해요. 누락·미지원 값은 0으로 채우지 않으며, 통계는 수집기 업데이트 이후부터 쌓입니다.</p>
+</section><section id="bottlenecks" class="bottlenecks" aria-labelledby="bottlenecks-title">
+  <div class="resource-heading"><div><h2 id="bottlenecks-title">병목 분석</h2><p>자원 대기가 지속된 구간 · 판단 근거와 먼저 확인할 조치</p></div><span class="resource-badge amber">병목 후보 · 추가 확인 필요</span></div>
+  <div id="bottleneck-servers" class="resource-server-choices"></div>
+  <div id="bottleneck-detail" aria-live="polite"></div>
+  <details class="resource-thresholds"><summary>분석 기준과 범위</summary><p>다음 조건이 2분 이상 연속 관측된 구간을 표시합니다. RAM: 가용 메모리 5% 이하이면서 (메모리 PSI some 5% 이상 또는 스왑 입출력 1 MiB/s 이상). CPU: (전체 85% 이상 또는 한 코어 95% 이상)이면서 CPU PSI some 10% 이상. 저장장치: 장치 요청 지연 20 ms 이상과 I/O PSI some 10% 이상.</p><p>PSI는 해당 자원을 기다린 작업이 있었던 시간의 비율입니다. 임계값은 선별용 기준이며 장치별 성능 평가나 확정 진단이 아닙니다. 서버 전체를 관측하므로 동시 실험에 원인을 자동 귀속하지 않아요. API 작업의 낮은 GPU 활동률은 병목으로 판단하지 않습니다. <a href="https://github.com/shxyzn/gpu-timeline/blob/main/RESOURCE_STATS.md" target="_blank" rel="noopener noreferrer">수집·해석 안내 ↗</a></p></details>
+</section></section><section id="panel-servers" role="tabpanel" aria-labelledby="tab-servers" hidden><section class="details" aria-labelledby="details-title"><div class="section-title"><h2 id="details-title">서버 상세</h2><span>GPU 상태와 실행 정보</span></div><div id="servers" class="server-grid"></div></section></section><section id="panel-more" role="tabpanel" aria-labelledby="tab-more" hidden><aside id="patch-notes" class="patch-notes" role="note" aria-label="최신 패치노트">
+  <svg class="patch-notes-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="m8 12 2.5 2.5L16 9"></path></svg>
+  <div class="patch-notes-copy"><strong>패치노트 · v1.1.8</strong><p>OpenRouter 키 한도 사용률과 CPU·GPU·RAM·저장장치 통계를 추가했어요.<br>병목 후보와 판단 근거를 함께 확인하세요. 자원 통계는 서버 공용 수집기를 v1.1.8로 업데이트한 뒤부터 쌓여요. <a class="promo-note-link" href="#release-video">1분 소개 영상 보기 ↗</a></p></div>
+</aside><section id="hardware" class="hardware" aria-labelledby="hardware-title">
+  <div class="hardware-heading"><div><h2 id="hardware-title">연구실 부품 가격</h2><p>자원 확장을 위한 관심 부품 · 제품을 누르면 가격비교로 이동해요.</p></div><span class="hardware-source">다나와 가격비교 ↗</span></div>
+  <div id="hardware-grid" class="hardware-grid"><p class="hardware-empty">부품 가격을 불러오는 중이에요.</p></div>
+  <div class="hardware-foot"><p id="hardware-status" role="status">가격 확인 중</p><p>선택한 모델의 확인 시점 가격 · 카드·멤버십 혜택 제외 · 배송비·재고·호환성은 상품 페이지에서 확인</p></div>
+</section><section id="usage" class="usage" aria-labelledby="usage-title">
+  <div class="usage-heading">
+    <div><h2 id="usage-title">간단 사용법</h2><p>관리자가 공용 설치를 마치면, 누구나 자기 계정에서 사용할 수 있어요.</p></div>
+    <a href="https://github.com/shxyzn/gpu-timeline/blob/main/SHARED_SETUP.md">전체 설명서 ↗</a>
+  </div>
+  <div class="usage-grid">
+    <article class="usage-card usage-terminal" aria-labelledby="terminal-guide-title">
+      <header class="usage-card-heading"><span class="usage-label">TERMINAL</span><h3 id="terminal-guide-title">터미널에서 직접 입력</h3><p>내 계정의 SSH 터미널에서 실행하세요. 작업 폴더는 어디든 괜찮아요.</p></header>
+      <div class="usage-command">
+        <div class="usage-command-heading"><span><strong>공용 연결 확인</strong><small>계정별 설치·토큰 설정 없이</small></span><button type="button" class="usage-copy" data-copy-target="usage-alias" aria-label="공용 연결 확인 명령 복사">복사</button></div>
+        <pre><code id="usage-alias">/usr/local/bin/gputl status</code></pre>
+      </div>
+      <div class="usage-command">
+        <div class="usage-command-heading"><span><strong>실험 실행 + 자동 기록</strong><small>시작부터 완료·실패·취소까지 한 번에</small></span><button type="button" class="usage-copy" data-copy-target="usage-run" aria-label="실험 자동 기록 명령 복사">복사</button></div>
+        <pre><code id="usage-run">/usr/local/bin/gputl run --name "GEPA" --owner "내 이름" --gpus 0 \
+  -- python train.py</code></pre>
+      </div>
+      <p class="usage-card-note"><code>python train.py</code>를 원래 실행할 명령으로 바꾸세요. 사용할 Conda 환경과 작업 폴더에서 실행하면 돼요. 실험 ID는 자동 생성되며, 별도로 시작·완료를 기록할 필요가 없어요.</p>
+      <details class="usage-more"><summary>OpenRouter 등 API 실험 · 서버 v1.1.7 이상</summary><p class="usage-card-note">API 행은 해당 기간에 실험이 있을 때만 생겨요. 실행 중인 API가 여러 개면 번호를 나누고, 종료하면 빈 번호부터 재사용합니다. API 키는 원래 실험 환경에서 설정하세요.</p><div class="usage-command"><div class="usage-command-heading"><span><small>원래 실행 명령으로 변경 · API 키를 명령에 넣지 마세요</small></span><button type="button" class="usage-copy" data-copy-target="usage-api">복사</button></div><pre><code id="usage-api">/usr/local/bin/gputl run --name "API 평가" --owner "내 이름" --api \
+  -- python evaluate.py</code></pre></div><p class="usage-card-note">이미 실행 중이면 <code>gputl add --id api-exp01 --name "API 평가" --owner "내 이름" --api --pid 실제PID</code>로 등록하세요. API 호출 여부는 자동 추측하지 않습니다.</p></details>
+      <details class="usage-more"><summary>이미 실행 중인 실험을 기록하려면</summary><div class="usage-command"><div class="usage-command-heading"><span><small>기존 실험을 재실행하지 않고 등록 · 끝나면 완료 기록</small></span><button type="button" class="usage-copy" data-copy-target="usage-add" aria-label="실행 중 실험 등록 명령 복사">복사</button></div><pre><code id="usage-add">/usr/local/bin/gputl add --id exp01 --name "GEPA" --owner "내 이름" --gpus 0</code></pre></div><div class="usage-command"><div class="usage-command-heading"><span><small>실제 결과를 확인한 뒤 실행</small></span><button type="button" class="usage-copy" data-copy-target="usage-finish" aria-label="실험 완료 명령 복사">복사</button></div><pre><code id="usage-finish">/usr/local/bin/gputl finish --id exp01 --status completed</code></pre></div></details>
+      <details class="usage-more"><summary>예상 종료시간 · 기록 재전송</summary><div class="usage-command"><div class="usage-command-heading"><span><small>list에서 ID 확인 · exp01을 내 실험 ID로 변경</small></span><button type="button" class="usage-copy" data-copy-target="usage-update" aria-label="예상 종료시간 수정 명령 복사">복사</button></div><pre><code id="usage-update">/usr/local/bin/gputl list
+/usr/local/bin/gputl update --id exp01 \
+  --end "$(date -d '+2 hours' --iso-8601=seconds)"</code></pre></div><div class="usage-command"><div class="usage-command-heading"><span><small>종료 기록 전송 실패 안내가 나왔을 때</small></span><button type="button" class="usage-copy" data-copy-target="usage-replay" aria-label="종료 기록 재전송 명령 복사">복사</button></div><pre><code id="usage-replay">/usr/local/bin/gputl replay</code></pre></div></details>
+      <details class="usage-more"><summary>기록된 GPU를 바꾸려면 · 서버 v1.1.5 이상</summary><p class="usage-card-note">실험을 등록한 계정에서 실행하세요. 같은 ID의 GPU 목록 전체를 바꾸며 실제 프로세스는 이동하지 않아요. 이전 구간도 새 GPU 행에 표시됩니다.</p><div class="usage-command"><div class="usage-command-heading"><span><small>exp01을 내 실험 ID로 · 0을 실제 물리 GPU 번호로</small></span><button type="button" class="usage-copy" data-copy-target="usage-gpus" aria-label="GPU 기록 수정 명령 복사">복사</button></div><pre><code id="usage-gpus">/usr/local/bin/gputl update --id exp01 --gpus 0
+/usr/local/bin/gputl list
+/usr/local/bin/gputl status</code></pre></div></details>
+      <p class="usage-card-note"><code>내 이름</code>은 공개 표시 이름, <code>GEPA</code>는 실험명으로 바꾸세요. <code>--gpus 0,1</code>은 기록할 물리 GPU 번호예요. 실제 GPU 선택은 원래 실험 설정을 따릅니다. 오래 걸리는 실험은 tmux 안에서 실행하세요.</p>
+    </article>
+    <article class="usage-card usage-agent" aria-labelledby="agent-guide-title">
+      <header class="usage-card-heading"><span class="usage-label">AGENT</span><h3 id="agent-guide-title">Agent에게 요청</h3><p>아래 요청문을 복사해 서버에 연결된 Agent에게 보내세요.</p></header>
+      <div class="usage-prompt">
+        <div class="usage-prompt-heading"><span>그대로 붙여넣는 요청문</span><button type="button" class="usage-copy" data-copy-target="usage-agent-prompt" data-copy-label="요청문 복사" aria-label="Agent 요청문 전체 복사">요청문 복사</button></div>
+        <pre id="usage-agent-prompt">앞으로 이 서버에서 내가 요청하는 실험을 실행할 때 GPU Timeline에도 기록해줘.
+
+공용 명령: /usr/local/bin/gputl
+먼저 status와 run --help로 연결과 옵션을 확인해. 현재 로그인 계정의 작업 폴더·Conda 환경에서 실행해.
+
+• 외부 API 실험: 서버 v1.1.7 이상에서 --gpus 대신 --api로 기록해. API 번호는 자동 배정되고 종료 후 재사용돼. API 키는 원래 실험 환경에만 두고 공개 기록에 넣지 마.
+• 새 실험: gputl run --name "실험명" --owner "공개 표시 이름" --gpus 물리번호 -- 원래명령 형태로 실행해. 시작·종료는 자동 기록되니 add/finish를 중복 호출하지 마.
+• 이미 실행 중인 실험: 재실행하지 말고 add로 실제 시작시간과 정보를 기록해. 결과 확인 후 finish로 완료·실패·취소를 구분해.
+• 예상 종료를 알면 --end로 입력해. 진행량을 알면 update --completed 완료수 --total 전체수로 기록해. 사이트가 진행률로 완료 예정을 추정해.
+• 기록된 GPU가 실제와 다르면 update --help와 status에서 지원을 확인해. 서버 v1.1.5 이상에서는 같은 ID에 update --gpus 물리번호로 정정해. GPU 목록 전체를 바꾸는 기록 수정이며, 실제 프로세스 이동이나 구간별 GPU 이력 기록은 아니야. 옵션이 없으면 관리자에게 업데이트를 요청해.
+
+공개 표시 이름은 내가 지정한 이름을 사용하고 없으면 확인해. --gpus는 기록용이므로 실제 GPU 선택 설정도 일치시켜야 해. 원래 명령은 작업이 끝날 때까지 기다리는 형태로 실행하고, 장시간 작업은 tmux를 사용해.
+
+종료 기록 전송 실패 안내가 나오면 수집기 복구 후 replay로 재전송해. 강제 종료·서버 재부팅 등으로 결과를 못 받으면 완료로 단정하지 말고 실제 상태를 확인해.
+
+v1.1.0 이상 서버에서는 list의 reference가 사이트의 실험 ID와 같아. 사이트에서 복사한 서버/실험 ID를 update와 finish의 --id에 그대로 써도 돼. 이전 서버에서는 기존 명령어용 ID를 사용해.
+업로드는 공용 수집기가 처리하고 status에서 결과와 설치 버전을 확인해. 개인 수집기·토큰·서비스를 만들거나 sudo로 실험을 실행하지 마. run이 없으면 관리자에게 공용 수집기 업데이트를 요청해.</pre>
+      </div>
+      <p class="usage-card-note">각 사용자는 자기 실험만 수정합니다. GPU 사용률·VRAM 수집과 GitHub 업로드는 서버의 공용 수집기가 담당합니다.</p>
+    </article>
+  </div>
+  <div class="usage-bottom"><p>GPU 상태는 10분마다 업로드 · 실험 변경은 자동으로 업로드 요청됩니다. 화면 반영에는 전송·캐시 시간이 걸릴 수 있어요.</p><div class="usage-sync"><code id="usage-sync">/usr/local/bin/gputl sync</code><button type="button" class="usage-copy" data-copy-target="usage-sync" aria-label="즉시 업로드 명령 복사">복사</button></div></div>
+  <p class="usage-card-note">공용 명령이나 run 기능이 없으면 관리자에게 <a href="https://github.com/shxyzn/gpu-timeline/blob/main/SHARED_SETUP.md">서버당 한 번 설치·업데이트</a>를 요청하세요.</p>
+  <div class="usage-dashboard"><strong>대시보드에서 직접 기록하기</strong><p>오른쪽 위 <b>관리자 로그인</b> → <b>실험 추가</b>로 수동 등록하세요. 실험 막대를 누르면 이름·시간·설명 수정과 삭제가 가능하고, <b>기록 관리</b>에서 복구할 수 있어요. 처음 쓰는 브라우저에서는 GitHub 연결 키와 사용할 비밀번호를 한 번 설정합니다.</p><p>서버에서 수집한 실험도 이름·시간·설명을 수정할 수 있고, 수정 화면에서 서버 수집값으로 되돌릴 수 있어요. 수동 기록은 모두에게 공유되며 서버에서 실험을 실행하거나 종료하지 않아요. 상태도 자동으로 바뀌지 않습니다. 삭제해도 실제 GPU 점유·서버 로그는 유지됩니다.</p></div>
+  <div class="usage-dashboard"><strong>서버에 적용할 조치 확인하기</strong><p><b>관리자 로그인</b> 후 서버 상세의 <b>서버 관리</b>를 누르세요. 설치 버전과 필요한 조치를 확인하고 명령어를 복사해 해당 서버의 SSH 터미널에서 실행하면 돼요. 웹 버전마다 서버를 업데이트할 필요는 없습니다.</p></div>
+  <p id="usage-feedback" class="usage-feedback" role="status" aria-live="polite"></p>
+</section><details id="release-video" class="release-video" open>
+  <summary id="release-video-toggle" class="release-video-toggle">
+    <span class="release-video-summary"><span class="release-video-badge">v1.1.8</span><span>업데이트 영상 <small>· 1분</small></span></span>
+    <span class="release-video-toggle-label"><span class="release-video-hide">접기</span><span class="release-video-show">펼치기</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"></path></svg></span>
+  </summary>
+  <div class="release-video-body">
+  <div class="release-video-copy">
+    <span class="release-video-badge">WHAT’S NEW · v1.1.8</span>
+    <h2 id="release-video-title">새로운 기능을 <br>1분 안에 만나보세요.</h2>
+    <p id="release-video-description">GPU·API 실험부터 자원 사용량까지. <br>한도 바, 서버 통계, 병목 분석을 소개해요.</p>
+    <span class="release-video-meta">60초 · 소리 없이 볼 수 있어요</span>
+    <div class="release-video-downloads"><a href="../media/CVML-GPU-Timeline-v1.1.8-60s.gif" download>GIF 다운로드 ↓</a><a href="../media/CVML-GPU-Timeline-v1.1.8-60s.mp4" download>MP4 다운로드 ↓</a></div>
+  </div>
+  <div class="release-video-player">
+    <video controls playsinline preload="none" width="1280" height="720" poster="./media/poster-v1.1.8.jpg" aria-label="CVML GPU Timeline v1.1.8 소개 영상, 1분" aria-describedby="release-video-description">
+      <source src="../media/CVML-GPU-Timeline-v1.1.8-60s.mp4" type="video/mp4">
+      영상을 재생할 수 없으면 <a href="../media/CVML-GPU-Timeline-v1.1.8-60s.gif">GIF로 보기</a>를 이용해 주세요.
+    </video>
+  </div>
+  </div>
+</details></section><footer><div class="footer-version"><span>CVML GPU TIMELINE</span><a id="dashboard-version" class="version-tag" target="_blank" rel="noopener noreferrer">대시보드 버전 확인 중</a></div><span>서버 수집 상태 · 관리자 수동 기록</span></footer></main><dialog id="detail-dialog"><div class="dialog-heading"><span class="eyebrow">EXPERIMENT</span><button id="close-detail" aria-label="상세 닫기">×</button></div><div id="job-detail"></div></dialog>
+<dialog id="server-manage-dialog" class="admin-dialog server-manage-dialog" aria-labelledby="server-manage-title">
+  <div class="dialog-heading"><span class="eyebrow">SERVER MANAGEMENT</span><button id="server-manage-close" type="button" aria-label="서버 관리 닫기">×</button></div>
+  <h2 id="server-manage-title">서버 관리</h2><code id="server-manage-id" class="server-manage-id"></code>
+  <p class="admin-help">이 서버에 적용할 조치를 확인하고 명령어를 복사하세요. 실행은 해당 서버의 SSH 터미널에서 진행합니다.</p>
+  <div class="server-version-grid"><div><span>서버 설치 버전</span><strong id="server-manage-installed"></strong><small id="server-manage-source"></small></div><div><span>대시보드 버전</span><strong id="server-manage-target"></strong><small>필요한 서버 기능을 원하는 시점에 모아서 설치</small></div></div>
+  <div class="server-receipt"><div><strong id="server-manage-health"></strong><span id="server-manage-received"></span></div><button id="server-manage-refresh" type="button" class="edit-button">수신 다시 확인</button></div>
+  <p id="server-manage-feedback" class="server-copy-feedback" role="status" aria-live="polite"></p>
+  <div id="server-manage-body"></div>
+</dialog>
+<dialog id="admin-dialog" class="admin-dialog" aria-labelledby="admin-title">
+  <div class="dialog-heading"><span class="eyebrow">ADMIN ACCESS</span><button type="button" data-close-dialog="admin-dialog" aria-label="로그인 닫기">×</button></div>
+  <h2 id="admin-title">관리자 로그인</h2><p id="admin-description" class="admin-help"></p>
+  <form id="admin-form">
+    <label class="field">관리자 비밀번호<input id="admin-password" type="password" required autocomplete="current-password" maxlength="200"></label>
+    <div id="admin-setup" class="admin-setup" hidden>
+      <label class="field">비밀번호 확인<input id="admin-password-confirm" type="password" autocomplete="new-password" maxlength="200"></label>
+      <label class="field">GitHub 연결 키<input id="admin-token" type="password" autocomplete="off" spellcheck="false" placeholder="github_pat_…"></label>
+      <details><summary>연결 키는 어디서 만드나요?</summary><ol><li><a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener noreferrer">GitHub에서 Fine-grained token 만들기 ↗</a></li><li>Repository access에서 <b>Only select repositories</b> → <b>gpu-timeline</b> 선택</li><li>Repository permissions → <b>Contents: Read and write</b> 설정</li><li>생성한 토큰을 위 연결 키에 붙여넣으세요.</li></ol><p>토큰은 이 저장소의 내용을 수정할 권한이 있으니 관리자만 사용하세요. 코드에 붙여넣지 않습니다.</p></details>
+      <label class="admin-check"><input id="admin-remember" type="checkbox" checked>이 브라우저에 연결 기억</label>
+      <p class="admin-help">연결 키는 비밀번호로 암호화해 이 브라우저에만 저장합니다. 다른 브라우저에서는 다시 연결해야 해요. 비밀번호를 잊었거나 토큰이 만료되면 연결을 다시 설정하세요.</p>
+    </div>
+    <p id="admin-error" class="admin-error" role="alert"></p>
+    <div class="dialog-actions"><button id="admin-connect-again" type="button" class="edit-button">연결 다시 설정</button><button id="admin-submit" type="submit" class="edit-button primary">로그인</button></div>
+  </form>
+</dialog>
+<dialog id="openrouter-dialog" class="admin-dialog" aria-labelledby="openrouter-dialog-title">
+  <form id="openrouter-form"><div class="admin-dialog-heading"><h2 id="openrouter-dialog-title">OpenRouter token 추가</h2></div>
+    <p class="admin-help">실험에 쓰는 API 키를 입력하세요. 이 브라우저에 관리자 비밀번호로 암호화해 저장합니다. 다른 브라우저에서 갱신하려면 키를 다시 연결하세요.</p>
+    <label class="field">token 이름<input id="openrouter-name" required maxlength="100" placeholder="예: 연구실 공용 / 개인 실험"></label>
+    <label class="field">token<input id="openrouter-key" type="password" required maxlength="512" autocomplete="off" spellcheck="false" placeholder="OpenRouter API key"></label>
+    <p class="admin-help">이름과 조회한 사용 금액만 공유됩니다. 토큰 개수나 실험별 비용을 집계하는 기능은 아닙니다.</p>
+    <p id="openrouter-error" class="admin-error" role="alert"></p><div class="dialog-actions"><button type="button" class="edit-button" id="openrouter-cancel">취소</button><button type="submit" class="edit-button primary" id="openrouter-submit">확인하고 저장</button></div>
+  </form>
+</dialog>
+<dialog id="manual-dialog" class="admin-dialog" aria-labelledby="manual-title">
+  <div class="dialog-heading"><span class="eyebrow">MANUAL EXPERIMENT</span><button type="button" data-close-dialog="manual-dialog" aria-label="실험 추가 닫기">×</button></div>
+  <h2 id="manual-title">실험 추가</h2><p id="manual-edit-note" class="admin-help" hidden></p><p class="admin-help">대시보드에 공유할 기록을 입력하세요. 실제 실험 실행·자동 종료 추적은 서버에서 진행합니다.</p>
+  <form id="manual-form">
+    <label class="field">실험명<input id="manual-name" required maxlength="160" placeholder="예: GEPA · Qwen3-8B"></label>
+    <div class="field-grid"><label class="field">등록자<input id="manual-owner" maxlength="100" placeholder="공개 표시 이름"></label><label class="field">서버<select id="manual-server" required></select></label></div>
+    <label class="field">사용 자원<select id="manual-resource"><option value="gpu">로컬 GPU</option><option value="api">외부 API</option></select></label>
+    <p id="manual-api-note" class="admin-help" hidden>비어 있는 가장 낮은 API 번호에 기록합니다. 수동 기록은 서버에서 자동 종료되지 않아요. 서버 수집 실험과 번호가 겹치면 같은 행 안에 함께 표시됩니다.</p>
+    <fieldset id="manual-gpu-fieldset" class="gpu-fieldset"><legend>GPU · 여러 개 선택 가능</legend><div id="manual-gpus" class="gpu-options"></div></fieldset>
+    <div class="field-grid"><label class="field">상태<select id="manual-status"><option value="running">실행 중</option><option value="planned">예정</option><option value="completed">완료</option><option value="failed">실패</option><option value="cancelled">취소</option><option value="stopped" data-collector-status hidden>프로세스 종료 · 결과 미확인</option><option value="unknown" data-collector-status hidden>확인 필요</option></select></label><label class="field">시작시간 · 한국시간<input id="manual-start" type="datetime-local" required></label></div>
+    <div class="field-grid"><label class="field">예상 종료시간 · 선택<input id="manual-end" type="datetime-local"></label><label id="manual-ended-field" class="field" hidden>실제 종료시간<input id="manual-ended" type="datetime-local"></label></div>
+    <label class="field">설명 · 선택<textarea id="manual-description" maxlength="2000" placeholder="모델, 데이터셋 등 공유할 내용"></textarea></label>
+    <p class="admin-help">시간은 모두 Asia/Seoul 기준입니다. 실행 중 실험의 예상 종료를 비워 두면 현재까지 표시합니다. 예정 실험은 예상 종료시간도 입력하세요. 수동 기록의 상태는 자동으로 바뀌지 않습니다.</p>
+    <p id="manual-error" class="admin-error" role="alert"></p>
+    <div class="dialog-actions"><button type="button" class="edit-button" data-close-dialog="manual-dialog">취소</button><button id="manual-reset" type="button" class="edit-button" hidden>서버 수집값으로 되돌리기</button><button id="manual-submit" type="submit" class="edit-button primary">실험 등록</button></div>
+  </form>
+</dialog>
+<dialog id="records-dialog" class="admin-dialog" aria-labelledby="records-title">
+  <div class="dialog-heading"><span class="eyebrow">EXPERIMENT RECORDS</span><button type="button" data-close-dialog="records-dialog" aria-label="기록 관리 닫기">×</button></div>
+  <h2 id="records-title">기록 관리</h2><p class="admin-help">표시 기간 밖의 수동 기록도 관리할 수 있어요. 삭제된 실험은 원본 기록이 남아 있을 때 다시 표시됩니다.</p>
+  <div id="record-items"></div><p id="records-error" class="admin-error" role="alert"></p>
+</dialog>
+<dialog id="delete-dialog" class="admin-dialog" aria-labelledby="delete-title">
+  <div class="dialog-heading"><span class="eyebrow">DELETE RECORD</span><button type="button" data-close-dialog="delete-dialog" aria-label="삭제 창 닫기">×</button></div>
+  <h2 id="delete-title">대시보드에서 삭제할까요?</h2><p id="delete-name"></p><code id="delete-reference"></code><p class="admin-help">모든 사용자의 대시보드에서 이 기록을 숨깁니다. 실제 실험·서버 로그는 그대로 유지되며, 기록 관리에서 복구할 수 있어요.</p>
+  <form id="delete-form"><p id="delete-error" class="admin-error" role="alert"></p><div class="dialog-actions"><button type="button" class="edit-button" data-close-dialog="delete-dialog">취소</button><button type="submit" class="edit-button danger">삭제</button></div></form>
+</dialog>
+<script type="module" src="../promo.js?v=1.1.8-promo1"></script><script type="module" src="../usage.js"></script><script type="module" src="../test-server/app.js?v=test-server-1"></script></body></html>
