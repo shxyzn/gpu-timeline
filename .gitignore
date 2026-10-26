@@ -7,4 +7,5 @@ agent/state/
 .env
 agent/version.json
 dist/version.json
+dist/media/*v1.1.8*
 node_modules/
