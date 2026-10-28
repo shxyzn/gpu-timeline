@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "revision": 237,
-  "updated_at": "2026-10-28T13:03:02.805Z",
+  "revision": 238,
+  "updated_at": "2026-10-28T14:04:02.794Z",
   "manual_jobs": [],
   "hidden_jobs": [
     {
@@ -20,17 +20,17 @@
       "id": "or-142590b5-5ef8-4bf0-bb15-8742bd470801",
       "name": "psh-0",
       "usage": {
-        "usage": 475.97147711,
-        "usage_daily": 29.10059991,
-        "usage_weekly": 275.90737391,
-        "usage_monthly": 475.97147711,
+        "usage": 479.18043375,
+        "usage_daily": 32.30955655,
+        "usage_weekly": 279.11633055,
+        "usage_monthly": 479.18043375,
         "limit": 1000,
-        "limit_remaining": 524.02852289,
+        "limit_remaining": 520.81956625,
         "byok_usage": 0,
         "limit_reset": null
       },
-      "checked_at": "2026-10-28T13:03:02.805Z",
-      "attempted_at": "2026-10-28T13:03:02.755Z",
+      "checked_at": "2026-10-28T14:04:02.794Z",
+      "attempted_at": "2026-10-28T14:04:02.753Z",
       "error": null
     },
     {
