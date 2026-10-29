@@ -1,9 +1,9 @@
 import {OpenRouterBoard} from './openrouter.js?v=1.1.8';
 import {ResourceBoard} from './resources.js';
 import {loadHardware} from './hardware.js';
-import {DashboardEditor} from './admin.js';
+import {DashboardEditor} from './admin.js?v=parcel-board-1';
 import {ServerManager,installedVersion} from './server-management.js';
-import {mergeEdits} from './edits.js';
+import {mergeEdits} from './edits.js?v=parcel-board-1';
 import {demoSnapshot} from './demo.js';
 import {calendarDay} from './calendar.js';
 import {HOUR,timestamp,health,gpuState,layoutJobs,jobETA,versionLabel,isAPI,apiSlot,resourceLanes} from './model.js';
@@ -43,6 +43,19 @@ function editorChanged(){applyDashboardEdits();if(config)render();openRouter?.re
 function viewWindow(){const now=Date.now();const anchor=Math.floor((now+9*HOUR)/(24*HOUR))*24*HOUR-9*HOUR;return {now,start:anchor+(offset*hours)*HOUR,end:anchor+(offset*hours+hours)*HOUR};}
 async function readJSON(url){const u=new URL(url,import.meta.url);u.searchParams.set('_',String(Math.floor(Date.now()/60000)));const r=await fetch(u,{cache:'no-store',signal:AbortSignal.timeout(15000)});if(!r.ok)throw new Error(`HTTP ${r.status}`);return r.json();}
 export function dashboardView(){return {config,servers,telemetryServers,lastFetch,fetchErrors,tokens:editor?.data.openrouter_tokens||[],build:dashboardBuild};}
+export function parcelBoardView(){return {items:structuredClone(editor?.data.parcels||[]),enabled:!!editor?.enabled,unlocked:!!editor?.unlocked,busy:!!editor?.busy,loadError:editor?.loadError||''};}
+export function openDashboardLogin(){editor?.showLogin();}
+export async function saveParcelRecord(operation){
+  if(!['parcel_add','parcel_edit'].includes(operation?.type))throw new Error('지원하지 않는 주문 편집 요청이에요.');
+  if(!editor?.enabled||!editor.unlocked)throw new Error('관리자 로그인 후 등록·수정할 수 있어요.');
+  if(editor.busy)throw new Error('앞선 저장이 끝난 뒤 다시 시도해 주세요.');
+  const token=editor.token;editor.setBusy(true);editorChanged();
+  try{
+    const saved=await editor.store.save(token,operation);
+    if(saved.revision>=editor.data.revision)editor.data=saved;
+    editor.loadError='';
+  }finally{editor.setBusy(false);editorChanged();}
+}
 export function refreshDashboard(){return refresh();}
 export function openExperiment(server,id){
   if(!servers.some(s=>s.server_id===server&&s.jobs.some(j=>j.id===id)))return;
