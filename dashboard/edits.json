@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "revision": 254,
-  "updated_at": "2026-10-29T05:22:21.612Z",
+  "revision": 255,
+  "updated_at": "2026-10-29T05:22:48.446Z",
   "manual_jobs": [],
   "hidden_jobs": [
     {
@@ -63,6 +63,18 @@
       "archived_at": null,
       "created_at": "2026-10-29T05:22:21.612Z",
       "updated_at": "2026-10-29T05:22:21.612Z"
+    },
+    {
+      "id": "parcel-ddd78516-759c-41ca-a7c4-72d114c40825",
+      "name": "절연테이프",
+      "quantity": 1,
+      "carrier_id": "kr.cjlogistics",
+      "tracking_number": "507570522864",
+      "note": "",
+      "received_at": null,
+      "archived_at": null,
+      "created_at": "2026-10-29T05:22:48.446Z",
+      "updated_at": "2026-10-29T05:22:48.446Z"
     }
   ]
 }
