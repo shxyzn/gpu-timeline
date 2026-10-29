@@ -99,3 +99,22 @@ body.dashboard-v120{--purple:#0071e3;--teal:#0071e3;--green:#187642;--line:#e5e5
 .dashboard-v120 .parcel-field input,.dashboard-v120 .parcel-field select{border-radius:12px;border-color:#d2d2d7}
 .dashboard-v120 .parcel-order-card{border-radius:17px}
 @media(max-width:640px){.dashboard-v120 .parcel-board,.dashboard-v120 .parcel-form-card,.dashboard-v120 .parcel-result{padding:18px}.dashboard-v120 .parcel-heading h2{font-size:23px}}
+
+/* Give the boxed resource and help sections room around their content. */
+.dashboard-v120 :is(#panel-resources,#panel-more)>:is(.openrouter,.resources,.bottlenecks,.hardware,.usage){padding:32px;margin:0 0 24px;min-width:0}
+.dashboard-v120 :is(#panel-resources,#panel-more) :is(.openrouter-heading,.resource-heading,.hardware-heading,.usage-heading){gap:18px;margin-bottom:24px}
+.dashboard-v120 :is(#panel-resources,#panel-more) :is(.openrouter-heading,.hardware-heading,.usage-heading){align-items:flex-start;flex-wrap:wrap}
+.dashboard-v120 :is(#panel-resources,#panel-more) :is(.openrouter-heading,.hardware-heading,.usage-heading)>div{flex:1 1 220px;min-width:0}
+.dashboard-v120 :is(#panel-resources,#panel-more) :is(.openrouter-heading,.resource-heading,.hardware-heading,.usage-heading) h2{line-height:1.45}
+.dashboard-v120 :is(#panel-resources,#panel-more) :is(.openrouter-heading,.resource-heading,.hardware-heading,.usage-heading) p{margin-top:9px;line-height:1.85}
+.dashboard-v120 :is(#panel-resources,#panel-more) :is(.openrouter-grid,.resource-grid,.hardware-grid,.usage-grid){gap:20px}
+.dashboard-v120 :is(#panel-resources,#panel-more) :is(.openrouter-help,.resource-help,.hardware-foot,.usage-bottom){margin-top:20px;line-height:1.85}
+.dashboard-v120 #panel-more>.patch-notes{padding:24px 28px;margin-bottom:24px}
+@media(max-width:1000px){
+  .dashboard-v120 :is(#panel-resources,#panel-more)>:is(.openrouter,.resources,.bottlenecks,.hardware,.usage){padding:26px}
+}
+@media(max-width:640px){
+  .dashboard-v120 :is(#panel-resources,#panel-more)>:is(.openrouter,.resources,.bottlenecks,.hardware,.usage){padding:22px 20px;margin-bottom:20px}
+  .dashboard-v120 :is(#panel-resources,#panel-more) :is(.openrouter-heading,.resource-heading,.hardware-heading,.usage-heading){gap:14px;margin-bottom:20px}
+  .dashboard-v120 #panel-more>.patch-notes{padding:20px;margin-bottom:20px}
+}
