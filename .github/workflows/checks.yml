@@ -75,5 +75,6 @@ jobs:
           name: release-promo-60s
           path: |
             dist/media/*v1.1.8*
+            dist/media/*v1.2.0*
             /tmp/gpu-timeline-promo/*.png
           retention-days: 7

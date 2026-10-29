@@ -9,7 +9,8 @@ from PIL import Image
 
 def main():
     directory = Path(sys.argv[1] if len(sys.argv) > 1 else "dist/media")
-    name = "CVML-GPU-Timeline-v1.1.8-60s"
+    release = sys.argv[2] if len(sys.argv) > 2 else "1.1.8"
+    name = "CVML-GPU-Timeline-v" + release + "-60s"
     mp4 = directory / (name + ".mp4")
     probe = json.loads(subprocess.check_output([
         "ffprobe", "-v", "error", "-show_streams", "-show_format", "-of", "json", str(mp4)
@@ -29,7 +30,7 @@ def main():
             gif.seek(frame)
             milliseconds += gif.info.get("duration", 0)
         assert abs(milliseconds - 60000) <= 100
-    with Image.open(directory / "poster-v1.1.8.jpg") as poster:
+    with Image.open(directory / ("poster-v" + release + ".jpg")) as poster:
         assert poster.size == (1280, 720)
     print("Promo verified: H.264 1280x720, 60 seconds; GIF 960x540, 60 seconds; complete decode passed.")
 

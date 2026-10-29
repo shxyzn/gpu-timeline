@@ -13,6 +13,7 @@ export const stages = [
 ];
 const labels = Object.fromEntries(stages);
 labels.unknown='상태 확인 필요';
+export const deliveryTone=code=>code==='out_for_delivery'?'out-for-delivery':code==='delivered'?'delivered':'transit';
 const text = value => typeof value==='string'?value.slice(0,1500):'';
 export function trackingQuery(carrierId,input) {
   const carrier=carriers.find(item=>item.id===carrierId);

@@ -24,7 +24,7 @@
 .test-server .parcel-query{font-size:13px;color:#55677e;margin:0 0 22px}
 .test-server .parcel-summary{display:flex;justify-content:space-between;align-items:flex-start;gap:20px}
 .test-server .parcel-eyebrow{font-size:12px;color:#67778b}
-.test-server .parcel-summary h3{font-size:28px;line-height:1.3;color:#245798;margin:6px 0 12px;letter-spacing:-.035em}
+.test-server .parcel-summary h3{font-size:28px;line-height:1.3;color:var(--parcel-tone,#245798);margin:6px 0 12px;letter-spacing:-.035em}
 .test-server .parcel-summary p{font-size:16px;margin:0;color:#2d4058}
 .test-server .parcel-summary small{display:block;margin-top:4px;font-size:12px;font-weight:400;color:var(--muted)}
 .test-server .parcel-summary .parcel-checked{font-size:12px;text-align:right;line-height:1.7;color:var(--muted)}
@@ -32,8 +32,8 @@
 .test-server .parcel-stages li{font-size:13px;color:#6c7b8f;padding-top:11px;border-top:3px solid #e5eaf0;display:flex;align-items:center;gap:7px}
 .test-server .parcel-stages li>span{display:inline-flex;align-items:center;justify-content:center;border-radius:50%;width:22px;height:22px;flex:none;background:#eef1f5;font-size:12px}
 .test-server .parcel-stages li.done{border-color:#8eadd5;color:#547396}
-.test-server .parcel-stages li.active{border-color:#245798;color:#245798;font-weight:700}
-.test-server .parcel-stages li.active>span{background:#245798;color:#fff}
+.test-server .parcel-stages li.active{border-color:var(--parcel-tone,#245798);color:var(--parcel-tone,#245798);font-weight:700}
+.test-server .parcel-stages li.active>span{background:var(--parcel-tone,#245798);color:#fff}
 .test-server .parcel-history-heading{display:flex;justify-content:space-between;align-items:baseline;gap:10px;margin:24px 0 0;padding:0 0 12px;border-bottom:1px solid var(--line)}
 .test-server .parcel-history-heading h3{font-size:16px;margin:0}
 .test-server .parcel-history-heading>span{font-size:12px;color:var(--muted)}
@@ -91,6 +91,11 @@
 .test-server .parcel-order-status{font-size:12px;line-height:1.6;padding:3px 7px;background:#eef1f5;color:#52657e;border-radius:4px}
 .test-server .parcel-order-status.transit,.test-server .parcel-order-status.loading{color:#28548e;background:#eaf1fc}
 .test-server .parcel-order-status.received,.test-server .parcel-order-status.delivered{color:#256644;background:#e8f4ec}
+.test-server .parcel-order-status.out-for-delivery{color:#9a4d0b;background:#fff0dc}
+.test-server [data-delivery-tone=out-for-delivery]{--parcel-tone:#9a4d0b}
+.test-server [data-delivery-tone=delivered]{--parcel-tone:#256644}
+.test-server .parcel-event-status.out-for-delivery{color:#9a4d0b}
+.test-server .parcel-event-status.delivered{color:#256644}
 .test-server .parcel-order-status.warning{color:#875316;background:#fff2dd}
 .test-server .parcel-order-quantity{font-size:13px;white-space:nowrap;color:#5d6c80}
 .test-server .parcel-order-card h3{font-size:19px;line-height:1.5;margin:13px 0 9px;letter-spacing:-.025em}

@@ -8,4 +8,5 @@ agent/state/
 agent/version.json
 dist/version.json
 dist/media/*v1.1.8*
+dist/media/*v1.2.0*
 node_modules/
