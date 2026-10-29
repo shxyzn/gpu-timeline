@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "revision": 256,
-  "updated_at": "2026-10-29T05:23:12.903Z",
+  "revision": 257,
+  "updated_at": "2026-10-29T05:23:30.874Z",
   "manual_jobs": [],
   "hidden_jobs": [
     {
@@ -87,6 +87,18 @@
       "archived_at": null,
       "created_at": "2026-10-29T05:23:12.903Z",
       "updated_at": "2026-10-29T05:23:12.903Z"
+    },
+    {
+      "id": "parcel-8bd0bac2-a922-41bd-a50e-5072f3bd2cc8",
+      "name": "거치대",
+      "quantity": 1,
+      "carrier_id": "kr.cjlogistics",
+      "tracking_number": "301172860942",
+      "note": "",
+      "received_at": null,
+      "archived_at": null,
+      "created_at": "2026-10-29T05:23:30.874Z",
+      "updated_at": "2026-10-29T05:23:30.874Z"
     }
   ]
 }
