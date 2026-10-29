@@ -112,6 +112,8 @@ try {
   const calendarPage = await context.newPage();
   await calendarPage.addInitScript(() => { Date.now = () => Date.parse('2026-10-03T01:00:00Z'); });
   await calendarPage.goto(base);
+  await calendarPage.locator('.priority-tabs button[tabindex="0"]').waitFor();
+  await calendarPage.locator('#tab-timeline').click();
   const nationalDay = calendarPage.locator('.tick.holiday[title="10/3 (토) · 개천절"]').first();
   await nationalDay.waitFor();
   assert.equal(await nationalDay.locator('.tick-weekday').evaluate(e => getComputedStyle(e).color), 'rgb(182, 75, 84)');
@@ -122,6 +124,8 @@ try {
   await calendarPage.screenshot({path: path.join(output, 'holidays-mobile.png'), fullPage: true});
   await calendarPage.close();
   await page.goto(base);
+  await page.locator('.priority-tabs button[tabindex="0"]').waitFor();
+  await page.locator('#tab-more').click();
   await page.locator('.hardware-product').first().waitFor();
   assert.equal(await page.locator('.hardware-card').count(), 3);
   assert.equal(await page.locator('.hardware-product').count(), 44);
@@ -156,7 +160,8 @@ try {
   assert.ok(await page.locator('[data-hardware-group=gpu]').evaluate(e => e.scrollHeight > e.clientHeight && e.clientHeight === 520));
   await page.locator('#hardware').screenshot({path:path.join(output, 'hardware-mobile.png')});
   await page.setViewportSize({width:1440, height:1000});
-  await page.locator('[data-job="job-original"]').waitFor();
+  await page.locator('#tab-timeline').click();
+  await page.locator('#timeline [data-job="job-original"]').waitFor();
   assert.equal(await page.locator('[data-manage-server]').count(), 0);
   await page.locator('#admin-login').click();
   await page.locator('#admin-password').fill('cvml-test');
@@ -177,6 +182,7 @@ try {
   assert.match(await page.locator('#dashboard-version').innerText(), /v1\.1\.5\+aaaaaaa/);
   assert.match(await page.locator('.server-version').nth(0).innerText(), /v1\.0\.0/);
   assert.match(await page.locator('.server-version').nth(1).innerText(), /v1\.1\.2\+bbbbbbb/);
+  await page.locator('#tab-servers').click();
   await page.locator('[data-manage-server=server-a]').click();
   assert.equal(await page.locator('#server-manage-installed').innerText(), 'v1.0.0');
   assert.match(await page.locator('#server-manage-source').innerText(), /관리자 지정/);
@@ -200,8 +206,10 @@ try {
   assert.match(await page.locator('.server-action-overview').innerText(), /gputl update --gpus/);
   await page.locator('#server-manage-close').click();
   serverCStale = true;
+  await page.locator('#tab-timeline').click();
   await page.locator('#refresh').click();
   await page.waitForFunction(() => !document.getElementById('refresh').disabled);
+  await page.locator('#tab-servers').click();
   await page.locator('[data-manage-server=server-c]').click();
   assert.equal(await page.locator('#server-manage-health').innerText(), '갱신 지연');
   assert.equal(await page.locator('#server-inspect-command').isVisible(), true);
@@ -222,6 +230,7 @@ try {
   assert.equal(await page.locator('[data-manage-server]').count(), 0);
   assert.equal(writes, 0);
   serverCStale = false;
+  await page.locator('#tab-timeline').click();
   await page.locator('#refresh').click();
   await page.waitForFunction(() => !document.getElementById('refresh').disabled);
   await page.locator('#admin-login').click();
@@ -246,31 +255,35 @@ try {
   assert.match(await page.locator('#overview .stat').nth(1).innerText(), /1/);
   assert.match(await page.locator('#overview .stat').nth(2).innerText(), /2/);
 
-  await page.locator('[data-job="job-original"]').click();
+  await page.locator('#timeline [data-job="job-original"]').click();
   await page.locator('[data-delete-experiment]').click();
   await page.locator('#delete-form button[type=submit]').click();
   await page.locator('#delete-dialog').waitFor({state: 'hidden'});
   assert.equal(data.hidden_jobs.length, 1);
-  assert.equal(await page.locator('[data-job="job-original"]').count(), 0);
+  assert.equal(await page.locator('#timeline [data-job="job-original"]').count(), 0);
   assert.match(await page.locator('#overview .stat').nth(1).innerText(), /1/);
 
   staleRaw = true;
+  await page.locator('#tab-timeline').click();
   await page.locator('#refresh').click();
   await page.waitForFunction(() => !document.getElementById('refresh').disabled);
-  assert.equal(await page.locator('[data-job="job-original"]').count(), 0);
+  assert.equal(await page.locator('#timeline [data-job="job-original"]').count(), 0);
   assert.equal(await page.locator('.job-bar.manual').count(), 1);
   failRaw = true;
+  await page.locator('#tab-timeline').click();
   await page.locator('#refresh').click();
   await page.waitForFunction(() => !document.getElementById('refresh').disabled);
   assert.match(await page.locator('#edit-notice').innerText(), /수신 실패/);
-  assert.equal(await page.locator('[data-job="job-original"]').count(), 0);
+  assert.equal(await page.locator('#timeline [data-job="job-original"]').count(), 0);
   failRaw = false; staleRaw = false;
 
   // A separate visitor immediately sees shared edits without credentials.
   const visitor = await context.newPage();
   await visitor.goto(base);
+  await visitor.locator('.priority-tabs button[tabindex="0"]').waitFor();
+  await visitor.locator('#tab-timeline').click();
   await visitor.locator('.job-bar.manual').waitFor();
-  assert.equal(await visitor.locator('[data-job="job-original"]').count(), 0);
+  assert.equal(await visitor.locator('#timeline [data-job="job-original"]').count(), 0);
   assert.equal(await visitor.locator('#admin-tools').isVisible(), false);
   await visitor.close();
 
@@ -279,16 +292,16 @@ try {
   await page.waitForFunction(() => document.querySelectorAll('[data-record-action=restore]').length === 0);
   assert.equal(data.hidden_jobs.length, 0);
   await page.locator('[data-close-dialog=records-dialog]').click();
-  assert.equal(await page.locator('[data-job="job-original"]').count(), 1);
+  assert.equal(await page.locator('#timeline [data-job="job-original"]').count(), 1);
 
   // Denied writes must remain visible as errors with no optimistic removal.
   forbidden = true;
-  await page.locator('[data-job="job-original"]').click();
+  await page.locator('#timeline [data-job="job-original"]').click();
   await page.locator('[data-delete-experiment]').click();
   await page.locator('#delete-form button[type=submit]').click();
   await page.waitForFunction(() => document.getElementById('delete-error').textContent.includes('권한'));
   assert.equal(data.hidden_jobs.length, 0);
-  assert.equal(await page.locator('[data-job="job-original"]').count(), 1);
+  assert.equal(await page.locator('#timeline [data-job="job-original"]').count(), 1);
   await page.locator('[data-close-dialog=delete-dialog]').first().click();
   await page.locator('#close-detail').click();
   forbidden = false;
@@ -336,7 +349,7 @@ try {
 
   // Metadata-only collector edit must not freeze ETA, truncate seconds, or
   // replace automatically reported status/GPU/progress with a form snapshot.
-  await page.locator('[data-job="job-original"]').click();
+  await page.locator('#timeline [data-job="job-original"]').click();
   await page.locator('[data-edit-experiment]').click();
   assert.equal(await page.locator('#manual-status').isDisabled(), true);
   assert.equal(await page.locator('#manual-gpus input').isDisabled(), true);
@@ -353,9 +366,10 @@ try {
   assert.equal(data.job_overrides[0].fields.expected_end_at, new Date(`${newETA}+09:00`).toISOString());
   await page.locator('#close-detail').click();
   collectorFinished = true; progressCompleted = 100;
+  await page.locator('#tab-timeline').click();
   await page.locator('#refresh').click();
   await page.waitForFunction(() => !document.getElementById('refresh').disabled);
-  await page.locator('[data-job="job-original"]').click();
+  await page.locator('#timeline [data-job="job-original"]').click();
   const detail = await page.locator('#job-detail').innerText();
   assert.match(detail, /수집 실험 이름 수정/);
   assert.match(detail, /완료/);
@@ -411,6 +425,7 @@ try {
   assert.match(await page.locator('#job-detail').innerText(),/API 0 · 외부 API/);
   await page.locator('#close-detail').click();
   // API keys go only to OpenRouter; GitHub receives strictly numeric summaries.
+  await page.locator('#tab-resources').click();
   await page.locator('#openrouter-add').click();
   await page.locator('#openrouter-name').fill('연구실 공용');
   await page.locator('#openrouter-key').fill(fakeKey);
@@ -457,12 +472,16 @@ try {
   await page.locator('.openrouter-card').waitFor({state:'hidden'});
   assert.deepEqual(data.openrouter_tokens,[]);
 
-  // v1.1.8: production layout, missing-history states, measured stats and evidence.
-  const order=await page.locator('main>section[id]').evaluateAll(elements=>elements.map(e=>e.id).filter(id=>['openrouter','resources','bottlenecks','hardware','usage'].includes(id)));
-  assert.deepEqual(order,['openrouter','resources','bottlenecks','hardware','usage']);
+  // v1.2.0: grouped production panels, missing-history states, measured stats and evidence.
+  const order=await page.locator('#panel-resources>section[id]').evaluateAll(elements=>elements.map(e=>e.id));
+  assert.deepEqual(order,['openrouter','resources','bottlenecks']);
+  assert.equal(await page.locator('main').evaluate(e=>e.firstElementChild.id),'release-video');
+  assert.equal(await page.locator('main').evaluate(e=>e.lastElementChild.textContent),'designed by psh in suwon');
   assert.match(await page.locator('#resource-grid').innerText(),/수집기 업데이트 필요/);
   resourceEnabled=true;
+  await page.locator('#tab-timeline').click();
   await page.locator('#refresh').click();
+  await page.locator('#tab-resources').click();
   await page.locator('.resource-card').first().waitFor();
   assert.equal(await page.locator('.resource-card').count(),4);
   assert.match(await page.locator('#resource-meta').innerText(),/GPU·h/);
@@ -480,7 +499,9 @@ try {
   await page.locator('#resource-server').selectOption('server-b');
   await page.locator('#resource-period').selectOption('24');
   resourceFailed=true;
+  await page.locator('#tab-timeline').click();
   await page.locator('#refresh').click();
+  await page.locator('#tab-resources').click();
   await page.waitForFunction(()=>document.getElementById('resource-state').textContent==='마지막 수신 통계');
   assert.equal(await page.locator('.resource-card').count(),4);
   for(const width of [390,320]) {
@@ -493,6 +514,7 @@ try {
 
   // The release film must decode and seek through all 60 seconds.
   await page.setViewportSize({width:1440,height:1000});
+  await page.locator('#tab-more').click();
   await page.locator('.promo-note-link').click();
   await page.locator('#release-video').screenshot({path:path.join(output,'promo-desktop.png')});
   const media = await page.locator('#release-video video').evaluate(video=>new Promise((resolve,reject)=>{
@@ -512,7 +534,9 @@ try {
   await page.waitForFunction(()=>document.querySelector('#release-video video').paused);
   assert.equal(await page.locator('#release-video').evaluate(panel=>panel.open),false);
   await page.goto(base);
+  await page.locator('.priority-tabs button[tabindex="0"]').waitFor();
   assert.equal(await page.locator('#release-video').evaluate(panel=>panel.open),false);
+  await page.locator('#tab-more').click();
   await page.locator('.promo-note-link').click();
   assert.equal(await page.locator('#release-video').evaluate(panel=>panel.open),true);
   for(const width of [390,320]) {
@@ -522,6 +546,39 @@ try {
     await page.locator('#release-video').screenshot({path:path.join(output,`promo-mobile-${width}.png`)});
   }
   assert.deepEqual(errors,[]);
+
+  // The formal page opens on current status and exposes all panels on small screens.
+  const production=await context.newPage();
+  production.on('pageerror',error=>errors.push(error.message));
+  await production.addInitScript(()=>localStorage.setItem('cvml-release-video-v1.1.8-open','false'));
+  await production.goto(base+'/#release-video');
+  await production.locator('.current-gpu-table tbody tr').first().waitFor();
+  assert.equal(new URL(production.url()).hash,'#release-video');
+  // v1.2 preference is independent from the v1.1.8 collapse preference.
+  await production.evaluate(()=>localStorage.removeItem('cvml-release-video-v1.2.0-open'));
+  await production.goto(base);
+  await production.locator('.priority-tabs button[tabindex="0"]').waitFor();
+  assert.equal(await production.locator('#release-video').evaluate(e=>e.open),true);
+  assert.equal(await production.locator('#panel-now').isVisible(),true);
+  assert.match(await production.title(),/^CVML GPU Timeline$/);
+  await production.locator('.priority-home').click();
+  assert.equal(await production.locator('#panel-more').isVisible(),true);
+  assert.equal(new URL(production.url()).hash,'#patch-notes');
+  await production.locator('#tab-now').click();
+  await production.locator('#tab-now').press('ArrowRight');
+  assert.equal(await production.locator('#tab-timeline').getAttribute('aria-selected'),'true');
+  for(const width of [1440,390,320]) {
+    await production.setViewportSize({width,height:width===1440?1000:844});
+    for(const name of ['now','timeline','resources','servers','parcel','more']) {
+      await production.locator('#tab-'+name).click();
+      assert.ok(await production.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),`production ${name} overflows at ${width}px`);
+    }
+    await production.locator('#tab-now').click();
+    await production.locator('#release-video-toggle').click();
+    await production.screenshot({path:path.join(output,`production-v120-${width}.png`),fullPage:true});
+    await production.locator('#release-video-toggle').click();
+  }
+  await production.close();
 
   // The experimental page shares live data and editor behavior, with its entry at the bottom.
   collectorFinished=false;progressCompleted=25;serverCStale=true;testAPI=true;previewMode=true;
@@ -548,7 +605,9 @@ try {
   const preview=await context.newPage();
   preview.on('pageerror',error=>errors.push(error.message));
   await preview.goto(base);
-  assert.equal(await preview.locator('.test-server-entry').evaluate(e=>e===e.parentElement.lastElementChild),true);
+  await preview.locator('.priority-tabs button[tabindex="0"]').waitFor();
+  assert.equal(await preview.locator('.test-server-entry').evaluate(e=>e.nextElementSibling===e.parentElement.lastElementChild),true);
+  assert.equal(await preview.locator('main>.design-credit').innerText(),'designed by psh in suwon');
   await preview.getByRole('link',{name:'test-server',exact:true}).click();
   await preview.locator('.current-gpu-table tbody tr').first().waitFor();
   assert.equal(new URL(preview.url()).pathname,'/test-server/');
@@ -751,12 +810,12 @@ try {
   await viewer.close();
   await preview.locator('#tab-more').click();
   await preview.locator('.promo-note-link').click();
-  assert.match(await preview.locator('#release-video source').getAttribute('src'),/v1\.2\.0-preview-60s/);
+  assert.match(await preview.locator('#release-video source').getAttribute('src'),/v1\.2\.0-60s/);
   await preview.locator('#release-video video').evaluate(video=>video.load());
   await preview.waitForFunction(()=>document.querySelector('#release-video video').readyState>=1);
   assert.equal(await preview.locator('#release-video video').evaluate(v=>v.duration),60);
   assert.equal(await preview.locator('#release-video video').evaluate(v=>v.videoWidth),1280);
-  assert.equal(await preview.locator('#release-video video').getAttribute('poster'),'../media/poster-v1.2.0-preview.jpg');
+  assert.equal(await preview.locator('#release-video video').getAttribute('poster'),'../media/poster-v1.2.0.jpg');
 
   await preview.locator('#tab-now').click();
   for(const width of [390,320]) {

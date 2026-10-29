@@ -1,4 +1,4 @@
-import {carriers,trackingQuery} from './test-server/parcel-model.js?v=parcel-1';
+import {carriers,trackingQuery} from './dashboard/parcel-model.js?v=1.2.0';
 
 const fields=['name','quantity','carrier_id','tracking_number','note','received_at','archived_at'];
 const keys=['id',...fields,'created_at','updated_at'];

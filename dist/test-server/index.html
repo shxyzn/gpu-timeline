@@ -1,13 +1,35 @@
 <!doctype html>
-<html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="description" content="CVML GPU Timeline 새 UI 테스트 페이지"><title>test-server · CVML GPU Timeline</title><link rel="stylesheet" href="../styles.css"><link rel="stylesheet" href="../usage.css"><link rel="stylesheet" href="../admin.css"><link rel="stylesheet" href="../hardware.css"><link rel="stylesheet" href="../openrouter.css?v=1.1.8"><link rel="stylesheet" href="../resources.css?v=1.1.8"><link rel="stylesheet" href="../promo.css?v=1.1.8-promo1"><style id="patch-notes-styles">
+<html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="description" content="CVML GPU Timeline 새 UI 테스트 페이지"><title>test-server · CVML GPU Timeline</title><link rel="stylesheet" href="../styles.css"><link rel="stylesheet" href="../usage.css"><link rel="stylesheet" href="../admin.css"><link rel="stylesheet" href="../hardware.css"><link rel="stylesheet" href="../openrouter.css?v=1.2.0"><link rel="stylesheet" href="../resources.css?v=1.2.0"><link rel="stylesheet" href="../promo.css?v=1.2.0"><style id="patch-notes-styles">
 .patch-notes{display:flex;align-items:flex-start;gap:12px;margin:0 0 24px;padding:16px 20px;background:#effaf3;border:1px solid #ccebd7;border-radius:12px;color:#2f6143;font-size:.875rem;line-height:1.75}
 .patch-notes-icon{flex:0 0 20px;width:20px;height:20px;margin-top:2px;color:#3b8a59}
 .patch-notes-copy{display:flex;align-items:baseline;flex-wrap:wrap;gap:3px 16px;min-width:0}
 .patch-notes strong{color:#21613b;font-weight:600;white-space:nowrap}
 .patch-notes p{margin:0;word-break:keep-all;overflow-wrap:anywhere}
 @media(max-width:640px){.patch-notes{gap:10px;padding:14px 16px;margin-bottom:20px}.patch-notes-copy{display:block}.patch-notes p{margin-top:4px}}
-</style><link rel="stylesheet" href="../test-server/styles.css?v=test-server-3"><link rel="stylesheet" href="./parcel.css?v=parcel-tone-2"></head><body class="test-server"><main>
-<header class="priority-header"><div><h1>CVML GPU Timeline</h1><p>test-server · v1.2.0 UI 미리보기</p></div><div class="priority-header-actions"><a class="priority-home" href="../">기존 화면</a><span id="mode" class="badge">불러오는 중</span><span id="clock"></span><button id="admin-login" class="edit-button" hidden>관리자 로그인</button></div></header>
+</style><link rel="stylesheet" href="../test-server/styles.css?v=1.2.0"><link rel="stylesheet" href="./parcel.css?v=1.2.0"><link rel="stylesheet" href="../dashboard/apple.css?v=1.2.0"></head><body class="test-server dashboard-v120"><main>
+<details id="release-video" class="release-video" data-release="1.2.0" open>
+  <summary id="release-video-toggle" class="release-video-toggle">
+    <span class="release-video-summary"><span class="release-video-badge">v1.2.0</span><span>v1.2 업데이트 영상 <small>· 1분</small></span></span>
+    <span class="release-video-toggle-label"><span class="release-video-hide">접기</span><span class="release-video-show">펼치기</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"></path></svg></span>
+  </summary>
+  <div class="release-video-body">
+  <div class="release-video-copy">
+    <span class="release-video-badge">WHAT’S NEW · v1.2.0</span>
+    <h2 id="release-video-title">연구실의 지금, <br>한눈에.</h2>
+    <p id="release-video-description">필요한 정보가 먼저 보이는 새 화면. <br>GPU·API 현황과 연구실 주문·배송을 소개해요.</p>
+    <span class="release-video-meta">60초 · 소리 없이 볼 수 있어요</span>
+    <div class="release-video-downloads"><a href="../media/CVML-GPU-Timeline-v1.2.0-60s.gif" download>GIF 다운로드 ↓</a><a href="../media/CVML-GPU-Timeline-v1.2.0-60s.mp4" download>MP4 다운로드 ↓</a></div>
+  </div>
+  <div class="release-video-player">
+    <video controls playsinline preload="none" width="1280" height="720" poster="../media/poster-v1.2.0.jpg" aria-label="CVML GPU Timeline v1.2.0 소개 영상, 1분" aria-describedby="release-video-description">
+      <source src="../media/CVML-GPU-Timeline-v1.2.0-60s.mp4" type="video/mp4">
+      영상을 재생할 수 없으면 <a href="../media/CVML-GPU-Timeline-v1.2.0-60s.gif">GIF로 보기</a>를 이용해 주세요.
+    </video>
+  </div>
+  </div>
+</details>
+
+<header class="priority-header"><div><h1>CVML GPU Timeline</h1><p>test-server · v1.2.0 개발 화면</p></div><div class="priority-header-actions"><a class="priority-home" href="../">정식 화면</a><span id="mode" class="badge">불러오는 중</span><span id="clock"></span><button id="admin-login" class="edit-button" hidden>관리자 로그인</button></div></header>
 <nav class="priority-tabs" aria-label="대시보드 화면" role="tablist"><button type="button" id="tab-now" role="tab" aria-selected="true" aria-controls="panel-now" data-panel="now">현재 현황</button><button type="button" id="tab-timeline" role="tab" aria-selected="false" aria-controls="panel-timeline" data-panel="timeline">타임라인</button><button type="button" id="tab-resources" role="tab" aria-selected="false" aria-controls="panel-resources" data-panel="resources">자원·비용</button><button type="button" id="tab-servers" role="tab" aria-selected="false" aria-controls="panel-servers" data-panel="servers">서버</button><button type="button" id="tab-parcel" role="tab" aria-selected="false" aria-controls="panel-parcel" data-panel="parcel">택배 조회</button><button type="button" id="tab-more" role="tab" aria-selected="false" aria-controls="panel-more" data-panel="more">더보기</button></nav><div id="admin-tools" class="admin-tools" hidden><div class="admin-tools-copy"><strong id="admin-account">관리자</strong><span>실험 기록과 서버 조치 안내를 관리할 수 있어요.</span></div><div class="admin-tools-actions"><button id="manual-add" class="edit-button primary">＋ 실험 추가</button><button id="record-list" class="edit-button">기록 관리</button><button id="admin-logout" class="edit-button">로그아웃</button></div></div><p id="edit-feedback" class="edit-feedback" role="status" aria-live="polite"></p><div id="edit-notice" class="notice" role="status"></div><section id="panel-now" role="tabpanel" aria-labelledby="tab-now">
 <div id="priority-alerts" class="priority-alerts" role="status" aria-live="polite">실제 서버 데이터를 불러오는 중입니다.</div>
 <div id="notice" class="notice" role="status" hidden></div><section id="overview" class="overview" hidden aria-label="기존 집계"></section>
@@ -70,7 +92,7 @@
 </div>
 </section><section id="panel-more" role="tabpanel" aria-labelledby="tab-more" hidden><aside id="patch-notes" class="patch-notes" role="note" aria-label="최신 패치노트">
   <svg class="patch-notes-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="m8 12 2.5 2.5L16 9"></path></svg>
-  <div class="patch-notes-copy"><strong>v1.2.0 미리보기</strong><p>필요한 정보가 먼저 보이는 새 UI와 GPU·API 목록 전환을 준비했어요.<br>연구실 장비 주문·배송을 공용 목록에서 관리하고, 배송 출발과 완료를 다른 색으로 확인하세요. <a class="promo-note-link" href="#release-video">1분 소개 영상 보기 ↗</a></p></div>
+  <div class="patch-notes-copy"><strong>패치노트 · v1.2.0</strong><p>필요한 정보가 먼저 보이는 새 UI와 GPU·API 목록 전환을 추가했어요.<br>연구실 장비 주문·배송을 공용 목록에서 관리하고, 배송 출발과 완료를 다른 색으로 확인하세요. <a class="promo-note-link" href="#release-video">1분 소개 영상 보기 ↗</a></p></div>
 </aside><section id="hardware" class="hardware" aria-labelledby="hardware-title">
   <div class="hardware-heading"><div><h2 id="hardware-title">연구실 부품 가격</h2><p>자원 확장을 위한 관심 부품 · 제품을 누르면 가격비교로 이동해요.</p></div><span class="hardware-source">다나와 가격비교 ↗</span></div>
   <div id="hardware-grid" class="hardware-grid"><p class="hardware-empty">부품 가격을 불러오는 중이에요.</p></div>
@@ -134,27 +156,7 @@ v1.1.0 이상 서버에서는 list의 reference가 사이트의 실험 ID와 같
   <div class="usage-dashboard"><strong>대시보드에서 직접 기록하기</strong><p>오른쪽 위 <b>관리자 로그인</b> → <b>실험 추가</b>로 수동 등록하세요. 실험 막대를 누르면 이름·시간·설명 수정과 삭제가 가능하고, <b>기록 관리</b>에서 복구할 수 있어요. 처음 쓰는 브라우저에서는 GitHub 연결 키와 사용할 비밀번호를 한 번 설정합니다.</p><p>서버에서 수집한 실험도 이름·시간·설명을 수정할 수 있고, 수정 화면에서 서버 수집값으로 되돌릴 수 있어요. 수동 기록은 모두에게 공유되며 서버에서 실험을 실행하거나 종료하지 않아요. 상태도 자동으로 바뀌지 않습니다. 삭제해도 실제 GPU 점유·서버 로그는 유지됩니다.</p></div>
   <div class="usage-dashboard"><strong>서버에 적용할 조치 확인하기</strong><p><b>관리자 로그인</b> 후 서버 상세의 <b>서버 관리</b>를 누르세요. 설치 버전과 필요한 조치를 확인하고 명령어를 복사해 해당 서버의 SSH 터미널에서 실행하면 돼요. 웹 버전마다 서버를 업데이트할 필요는 없습니다.</p></div>
   <p id="usage-feedback" class="usage-feedback" role="status" aria-live="polite"></p>
-</section><details id="release-video" class="release-video" open>
-  <summary id="release-video-toggle" class="release-video-toggle">
-    <span class="release-video-summary"><span class="release-video-badge">v1.2.0</span><span>새 화면 미리보기 <small>· 1분</small></span></span>
-    <span class="release-video-toggle-label"><span class="release-video-hide">접기</span><span class="release-video-show">펼치기</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"></path></svg></span>
-  </summary>
-  <div class="release-video-body">
-  <div class="release-video-copy">
-    <span class="release-video-badge">PREVIEW · v1.2.0</span>
-    <h2 id="release-video-title">새로운 기능을 <br>1분 안에 만나보세요.</h2>
-    <p id="release-video-description">필요한 정보가 먼저 보이는 새 화면. <br>GPU·API 현황과 연구실 주문·배송을 소개해요.</p>
-    <span class="release-video-meta">60초 · 소리 없이 볼 수 있어요</span>
-    <div class="release-video-downloads"><a href="../media/CVML-GPU-Timeline-v1.2.0-preview-60s.gif" download>GIF 다운로드 ↓</a><a href="../media/CVML-GPU-Timeline-v1.2.0-preview-60s.mp4" download>MP4 다운로드 ↓</a></div>
-  </div>
-  <div class="release-video-player">
-    <video controls playsinline preload="none" width="1280" height="720" poster="../media/poster-v1.2.0-preview.jpg" aria-label="CVML GPU Timeline v1.2.0 미리보기 영상, 1분" aria-describedby="release-video-description">
-      <source src="../media/CVML-GPU-Timeline-v1.2.0-preview-60s.mp4" type="video/mp4">
-      영상을 재생할 수 없으면 <a href="../media/CVML-GPU-Timeline-v1.2.0-preview-60s.gif">GIF로 보기</a>를 이용해 주세요.
-    </video>
-  </div>
-  </div>
-</details></section><footer><div class="footer-version"><span>CVML GPU TIMELINE</span><a id="dashboard-version" class="version-tag" target="_blank" rel="noopener noreferrer">대시보드 버전 확인 중</a></div><span>서버 수집 상태 · 관리자 수동 기록</span></footer></main><dialog id="detail-dialog"><div class="dialog-heading"><span class="eyebrow">EXPERIMENT</span><button id="close-detail" aria-label="상세 닫기">×</button></div><div id="job-detail"></div></dialog>
+</section></section><footer><div class="footer-version"><span>CVML GPU TIMELINE</span><a id="dashboard-version" class="version-tag" target="_blank" rel="noopener noreferrer">대시보드 버전 확인 중</a></div><span>서버 수집 상태 · 관리자 수동 기록</span></footer><p class="design-credit">designed by psh in suwon</p></main><dialog id="detail-dialog"><div class="dialog-heading"><span class="eyebrow">EXPERIMENT</span><button id="close-detail" aria-label="상세 닫기">×</button></div><div id="job-detail"></div></dialog>
 <dialog id="server-manage-dialog" class="admin-dialog server-manage-dialog" aria-labelledby="server-manage-title">
   <div class="dialog-heading"><span class="eyebrow">SERVER MANAGEMENT</span><button id="server-manage-close" type="button" aria-label="서버 관리 닫기">×</button></div>
   <h2 id="server-manage-title">서버 관리</h2><code id="server-manage-id" class="server-manage-id"></code>
@@ -226,4 +228,4 @@ v1.1.0 이상 서버에서는 list의 reference가 사이트의 실험 ID와 같
   <h2 id="delete-title">대시보드에서 삭제할까요?</h2><p id="delete-name"></p><code id="delete-reference"></code><p class="admin-help">모든 사용자의 대시보드에서 이 기록을 숨깁니다. 실제 실험·서버 로그는 그대로 유지되며, 기록 관리에서 복구할 수 있어요.</p>
   <form id="delete-form"><p id="delete-error" class="admin-error" role="alert"></p><div class="dialog-actions"><button type="button" class="edit-button" data-close-dialog="delete-dialog">취소</button><button type="submit" class="edit-button danger">삭제</button></div></form>
 </dialog>
-<script type="module" src="../promo.js?v=1.1.8-promo1"></script><script type="module" src="../usage.js"></script><script type="module" src="../test-server/app.js?v=promo120-1"></script></body></html>
+<script type="module" src="../promo.js?v=1.2.0"></script><script type="module" src="../usage.js"></script><script type="module" src="../test-server/app.js?v=1.2.0"></script></body></html>
