@@ -2,8 +2,8 @@ import {dashboardView,openExperiment,refreshDashboard} from '../app.js?v=parcel-
 import {currentView,progressValue,experimentPresentation,humanDuration,gpuReadings} from './current-model.js?v=test-server-2';
 import {health,jobETA,timestamp,apiSlot} from '../model.js';
 import {budgetUsage,dollars,usageStatus} from '../openrouter-model.js?v=1.1.8';
-import './parcel.js?v=parcel-1';
-import './parcel-board.js?v=parcel-board-1';
+import './parcel.js?v=parcel-tone-2';
+import './parcel-board.js?v=parcel-tone-2';
 
 const $=id=>document.getElementById(id);
 const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));

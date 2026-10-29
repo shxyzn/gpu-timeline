@@ -538,9 +538,11 @@ try {
     if(parcelMode==='limited')return fulfill(route,{message:'private provider error'},429);
     if(parcelMode==='missing')return fulfill(route,{message:'not found'},404);
     if(parcelMode==='bad')return route.fulfill({body:'not JSON',contentType:'text/html'});
-    return fulfill(route,{carrier:{id:carrierId},state:{id:'out_for_delivery',text:'배송출발'},progresses:[
+    const delivered=parcelMode==='delivered'||(parcelMode==='mixed'&&route.request().url().endsWith('13'));
+    const deliveryState={id:delivered?'delivered':'out_for_delivery',text:delivered?'배송완료':'배송출발'};
+    return fulfill(route,{carrier:{id:carrierId},state:deliveryState,progresses:[
       {time:'2026-10-29T06:00:00+09:00',status:{id:'in_transit',text:'간선 하차'},location:{name:'대전 HUB'},description:'배송 지역으로 이동 중'},
-      {time:'2026-10-29T09:12:00+09:00',status:{id:'out_for_delivery',text:'배송출발'},location:{name:'성북 배송점'},description:'배송 예정 <script> test'},
+      {time:'2026-10-29T09:12:00+09:00',status:deliveryState,location:{name:'성북 배송점'},description:'배송 예정 <script> test'},
     ]});
   });
   const preview=await context.newPage();
@@ -621,6 +623,13 @@ try {
   await preview.locator('#tab-parcel').click();
   assert.equal(await preview.locator('.parcel-history li').count(),2);
   assert.equal(parcelCalls,1);
+  const departureColor=await preview.locator('.parcel-summary h3').evaluate(e=>getComputedStyle(e).color);
+  parcelMode='delivered';await preview.locator('#parcel-submit').click();
+  await preview.waitForFunction(()=>document.querySelector('.parcel-summary h3')?.textContent==='배송완료');
+  const deliveredColor=await preview.locator('.parcel-summary h3').evaluate(e=>getComputedStyle(e).color);
+  assert.notEqual(departureColor,deliveredColor,'departure and delivered summaries have distinct colors');
+  parcelMode='success';await preview.locator('#parcel-submit').click();
+  await preview.waitForFunction(()=>document.querySelector('.parcel-summary h3')?.textContent==='배송출발');
   for(const [mode,message] of [['missing',/아직 배송 정보/],['limited',/제한/],['network',/네트워크/],['bad',/응답/]]) {
     parcelMode=mode;
     await preview.locator('#parcel-submit').click();
@@ -713,10 +722,15 @@ try {
   parcelMode='network';await preview.locator(`[data-parcel-id="${microphone}"][data-parcel-action=query]`).click();
   await preview.waitForFunction(id=>!!document.querySelector(`[data-parcel-card="${id}"] .parcel-order-error`),microphone);
   assert.match(await preview.locator(`[data-parcel-card="${microphone}"] .parcel-order-status`).innerText(),/마지막 조회/);
-  parcelMode='success';const callsBeforeBulk=parcelCalls;
+  parcelMode='mixed';const callsBeforeBulk=parcelCalls;
   await preview.locator('#parcel-board-refresh').click();
   await preview.waitForFunction(()=>!document.querySelector('#parcel-board-refresh').disabled);
   assert.equal(parcelCalls-callsBeforeBulk,2);
+  const orderDeparture=preview.locator('.parcel-order-status.out-for-delivery');
+  const orderDelivered=preview.locator('.parcel-order-status.delivered');
+  assert.equal(await orderDeparture.count(),1);assert.equal(await orderDelivered.count(),1);
+  assert.notEqual(await orderDeparture.evaluate(e=>getComputedStyle(e).color),await orderDelivered.evaluate(e=>getComputedStyle(e).color));
+  assert.notEqual(await orderDeparture.evaluate(e=>getComputedStyle(e).backgroundColor),await orderDelivered.evaluate(e=>getComputedStyle(e).backgroundColor));
   assert.equal(data.openrouter_tokens[0].id,previewPublicToken.id);
   const writesAfterOrders=writes;
   await preview.locator('#parcel-board-sync').click();
@@ -735,6 +749,15 @@ try {
   assert.equal(await viewer.locator('[data-parcel-card]').count(),3);
   assert.equal(await viewer.locator('#parcel-count-active').innerText(),'3');
   await viewer.close();
+  await preview.locator('#tab-more').click();
+  await preview.locator('.promo-note-link').click();
+  assert.match(await preview.locator('#release-video source').getAttribute('src'),/v1\.2\.0-preview-60s/);
+  await preview.locator('#release-video video').evaluate(video=>video.load());
+  await preview.waitForFunction(()=>document.querySelector('#release-video video').readyState>=1);
+  assert.equal(await preview.locator('#release-video video').evaluate(v=>v.duration),60);
+  assert.equal(await preview.locator('#release-video video').evaluate(v=>v.videoWidth),1280);
+  assert.equal(await preview.locator('#release-video video').getAttribute('poster'),'../media/poster-v1.2.0-preview.jpg');
+
   await preview.locator('#tab-now').click();
   for(const width of [390,320]) {
     await preview.setViewportSize({width,height:844});

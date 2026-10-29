@@ -1,4 +1,4 @@
-import {carriers,stages,trackingQuery,fetchTrack} from './parcel-model.js?v=parcel-1';
+import {carriers,stages,trackingQuery,fetchTrack,deliveryTone} from './parcel-model.js?v=parcel-tone-2';
 
 const $=id=>document.getElementById(id);
 const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -20,9 +20,10 @@ function reset() {
   number.focus();
 }
 function render(track) {
+  $('parcel-result-body').dataset.deliveryTone=deliveryTone(track.code);
   const latest=track.events[0];
   const steps=track.stage<0?'':`<ol class="parcel-stages" aria-label="배송 단계">${stages.map((stage,index)=>`<li class="${index<track.stage?'done':index===track.stage?'active':''}"${index===track.stage?' aria-current="step"':''}><span aria-hidden="true">${index<track.stage?'✓':index+1}</span>${esc(stage[1])}</li>`).join('')}</ol>`;
-  $('parcel-result-body').innerHTML=`<div class="parcel-summary"><div><span class="parcel-eyebrow">현재 배송 상태</span><h3>${esc(track.status)}</h3>${latest?`<p>${esc(latest.location||'위치 미제공')}<small>마지막 이동 · ${esc(date(latest.at))}</small></p>`:'<p>상세 이동 내역은 아직 제공되지 않았어요.</p>'}</div><p class="parcel-checked">조회 ${esc(date(Date.now()))}<small>다시 조회하면 상태를 갱신해요.</small></p></div>${steps}<div class="parcel-history-heading"><h3>이동 내역</h3><span>최근 순 · ${track.events.length}건</span></div>${track.events.length?`<ol class="parcel-history">${track.events.map(event=>`<li><time${event.at===null?'':` datetime="${new Date(event.at).toISOString()}"`}>${esc(date(event.at))}</time><div><strong>${esc(event.status)}</strong>${event.location?`<span class="parcel-location">${esc(event.location)}</span>`:''}${event.description?`<p>${esc(event.description)}</p>`:''}</div></li>`).join('')}</ol>`:'<p class="parcel-no-events">등록된 이동 내역이 없어요. 잠시 후 다시 확인해 주세요.</p>'}`;
+  $('parcel-result-body').innerHTML=`<div class="parcel-summary"><div><span class="parcel-eyebrow">현재 배송 상태</span><h3>${esc(track.status)}</h3>${latest?`<p>${esc(latest.location||'위치 미제공')}<small>마지막 이동 · ${esc(date(latest.at))}</small></p>`:'<p>상세 이동 내역은 아직 제공되지 않았어요.</p>'}</div><p class="parcel-checked">조회 ${esc(date(Date.now()))}<small>다시 조회하면 상태를 갱신해요.</small></p></div>${steps}<div class="parcel-history-heading"><h3>이동 내역</h3><span>최근 순 · ${track.events.length}건</span></div>${track.events.length?`<ol class="parcel-history">${track.events.map(event=>`<li><time${event.at===null?'':` datetime="${new Date(event.at).toISOString()}"`}>${esc(date(event.at))}</time><div><strong class="parcel-event-status ${deliveryTone(event.code)}">${esc(event.status)}</strong>${event.location?`<span class="parcel-location">${esc(event.location)}</span>`:''}${event.description?`<p>${esc(event.description)}</p>`:''}</div></li>`).join('')}</ol>`:'<p class="parcel-no-events">등록된 이동 내역이 없어요. 잠시 후 다시 확인해 주세요.</p>'}`;
 }
 async function lookup(event) {
   event.preventDefault();

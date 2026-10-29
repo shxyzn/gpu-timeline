@@ -11,3 +11,6 @@ test -f "$promo_bold"
 python3 scripts/render_promo_v118.py --regular "$promo_regular" --bold "$promo_bold" --output "$promo_output"
 python3 scripts/render_promo_v118.py --regular "$promo_regular" --bold "$promo_bold" --output "$promo_preview" --preview
 python3 scripts/verify_promo.py "$promo_output"
+python3 scripts/render_promo_v120.py --regular "$promo_regular" --bold "$promo_bold" --output "$promo_output"
+python3 scripts/render_promo_v120.py --regular "$promo_regular" --bold "$promo_bold" --output "$promo_preview" --preview
+python3 scripts/verify_promo.py "$promo_output" 1.2.0-preview
