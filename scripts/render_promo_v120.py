@@ -1,7 +1,6 @@
-"""Render the 60-second v1.2.0 preview film. All UI data is fictional.
+"""Render the official 60-second v1.2.0 film with a 1.1 to 1.2 opening.
 
-The film illustrates implemented test-server features and does not announce
-the production switch or a new GPU bottleneck diagnosis feature.
+All illustrated UI data is fictional. No new GPU diagnosis is announced.
 """
 import argparse
 from functools import lru_cache
@@ -11,11 +10,11 @@ import subprocess
 from PIL import Image, ImageDraw, ImageFont
 
 W,H,FPS,DURATION=1280,720,25,60
-BG='#f4f6f8';INK='#1e2938';MUTED='#63738a';LINE='#dde4ee'
-BLUE='#245798';ORANGE='#9a4d0b';GREEN='#256644';NAVY='#14243d'
+BG='#f5f5f7';INK='#1d1d1f';MUTED='#626268';LINE='#e5e5e7'
+BLUE='#0071e3';ORANGE='#9a4d0b';GREEN='#256644';NAVY='#08090c'
 REGULAR=BOLD=None
 SCENES=[(0,6),(6,14),(14,22),(22,30),(30,38),(38,47),(47,54),(54,60)]
-NAME='CVML-GPU-Timeline-v1.2.0-preview-60s'
+NAME='CVML-GPU-Timeline-v1.2.0-60s'
 
 def clamp(v):return max(0,min(1,v))
 def ease(v):return 1-(1-clamp(v))**3
@@ -47,8 +46,8 @@ def line(d,x,y,w,value,color=BLUE):
 def shell(im,t,dark=False):
     d=ImageDraw.Draw(im);color='#a6b7ce' if dark else '#6e7e92'
     text(d,64,31,'CVML / GPU TIMELINE',16,color,True)
-    text(d,1216,31,'v1.2.0 / PREVIEW',16,color,True,'rt')
-    text(d,64,675,'화면 재구성 · 가상 데이터 · 정식 배포 준비 중',14,color)
+    text(d,1216,31,'v1.2.0 / NOW AVAILABLE',16,color,True,'rt')
+    text(d,64,675,'화면 재구성 · 가상 데이터',14,color)
     text(d,1216,675,f'{int(t):02d} / 60 SEC',14,color,True,'rt')
     line(d,64,704,1152,t/60,'#8fb4ec' if dark else BLUE)
 def heading(d,tag,title,subtitle,u):
@@ -68,10 +67,10 @@ def mini_nav(d,x,y,active='현재 현황'):
         if label==active:d.line((x,y+29,x+w,y+29),fill=BLUE,width=3)
         x+=w+33
 
-def intro(u,t):
+def intro_hook(u,t):
     im=Image.new('RGB',(W,H),NAVY);d=ImageDraw.Draw(im)
     for i in range(5):d.ellipse((760+i*39,110+i*48,1370-i*19,810-i*13),outline='#233b5c',width=1)
-    pill(d,76,112,'v1.2.0 미리보기','blue',20)
+    pill(d,76,112,'v1.2.0','blue',20)
     offset=(1-ease(u/.9))*22
     text(d,72,213+offset,'필요한 정보가,',65,'white',True)
     text(d,72,300+offset,'먼저 보이도록.',65,'white',True)
@@ -83,6 +82,32 @@ def intro(u,t):
         text(d,x+20,y+17,label,22,'#b9d4f8',True)
         text(d,x+20,y+54,sub,17,'#d6e2f2')
     shell(im,t,True);return im
+
+def version_upgrade(u,t):
+    im=Image.new('RGB',(W,H),NAVY);d=ImageDraw.Draw(im)
+    progress=ease((u-.85)/1.15)
+    # A clipped odometer rolls the final digit while the prefix stays fixed.
+    size=242;prefix='1.';prefix_width=font(size,True).getlength(prefix)
+    digit_width=round(font(size,True).getlength('2'))+22
+    x=round((W-prefix_width-digit_width)/2);y=211;stride=292
+    radius=220+ease(u/2.5)*80
+    for extra,color in [(0,'#152135'),(38,'#111a28'),(78,'#0d131d')]:
+        d.ellipse((W/2-radius-extra,H/2-radius-extra,W/2+radius+extra,H/2+radius+extra),outline=color,width=1)
+    text(d,W/2,123,'A NEW CHAPTER',18,'#99a5b6',True,'mt')
+    text(d,x,y,prefix,size,'white',True)
+    digits=Image.new('RGB',(digit_width,stride),NAVY);dd=ImageDraw.Draw(digits)
+    text(dd,0,-progress*stride,'1',size,'white',True)
+    text(dd,0,stride-progress*stride,'2',size,'#64afff',True)
+    im.paste(digits,(round(x+prefix_width),y))
+    text(d,W/2,537,'1.1  →  1.2',24,'#9fa9b8',True,'mt')
+    text(d,W/2,583,'더 명료해진 연구실의 하루.',24,'#d2d2d7',False,'mt')
+    shell(im,t,True);return im
+
+def intro(u,t):
+    if u<3.0:return version_upgrade(u,t)
+    hook=intro_hook(u-3.0,t)
+    if u<3.5:return Image.blend(version_upgrade(3.0,t),hook,ease((u-3.0)/.5))
+    return hook
 
 def current(u,t):
     im,d=light();heading(d,'01 / CURRENT STATUS','화면을 열면, 필요한 정보부터.','여유 GPU와 실행 중 실험, 먼저 확인하세요.',u)
@@ -190,13 +215,13 @@ def workflow(u,t):
 
 def ending(u,t):
     im=Image.new('RGB',(W,H),NAVY);d=ImageDraw.Draw(im)
-    pill(d,76,115,'v1.2.0 · PREVIEW','blue',20)
+    pill(d,76,115,'v1.2.0 · NOW AVAILABLE','blue',20)
     text(d,72,211,'실험도, 장비도.',68,'white',True)
     text(d,72,300,'한눈에.',68,'white',True)
     text(d,78,416,'새 대시보드 · GPU / API · 연구실 주문 배송',26,'#b8cce5',width=1120)
     box(d,(77,490,1204,558),'#d9e8fc',12)
-    text(d,103,512,'shxyzn.github.io/gpu-timeline/test-server/',28,NAVY,True,width=1076)
-    text(d,79,596,'정식 배포에 앞서 test-server에서 만나보세요.',23,'#adc3df')
+    text(d,103,512,'shxyzn.github.io/gpu-timeline/',28,NAVY,True,width=1076)
+    text(d,79,596,'designed by psh in suwon',23,'#adc3df')
     shell(im,t,True);return im
 
 FUNCTIONS=[intro,current,api,detail,statistics,orders,workflow,ending]
@@ -219,16 +244,19 @@ def main():
         for i,t in enumerate([4,11,19,27,35,44,51,58]):
             shot=frame(t);shot.save(out/f'v120-scene-{i+1:02d}.png')
             sheet.paste(shot.resize((640,360),Image.Resampling.LANCZOS),((i%2)*640,(i//2)*360))
-        sheet.save(out/'storyboard-v120.png');return
+        sheet.save(out/'storyboard-v120.png')
+        strip=Image.new('RGB',(1280,240),NAVY)
+        for i,t in enumerate([.6,1.35,2.6]):strip.paste(frame(t).resize((426,240),Image.Resampling.LANCZOS),(i*426,0))
+        strip.save(out/'intro-v120.png');return
     command=['ffmpeg','-hide_banner','-loglevel','error','-y','-f','rawvideo','-vcodec','rawvideo','-pix_fmt','rgb24','-s',f'{W}x{H}','-r',str(FPS),'-i','-','-an','-c:v','libx264','-preset','fast','-crf','19','-pix_fmt','yuv420p','-movflags','+faststart',str(out/(NAME+'.mp4'))]
     process=subprocess.Popen(command,stdin=subprocess.PIPE)
     for i in range(FPS*DURATION):
         process.stdin.write(frame(i/FPS).tobytes())
-        if i%(FPS*5)==0:print(f'v1.2.0 preview: {i/FPS:.0f}s / 60s',flush=True)
+        if i%(FPS*5)==0:print(f'v1.2.0: {i/FPS:.0f}s / 60s',flush=True)
     process.stdin.close()
     if process.wait():raise RuntimeError('Video encoding failed')
-    frame(4).save(out/'poster-v1.2.0-preview.jpg',quality=92)
+    frame(2.6).save(out/'poster-v1.2.0.jpg',quality=92)
     subprocess.run(['ffmpeg','-hide_banner','-loglevel','error','-y','-i',str(out/(NAME+'.mp4')),'-filter_complex','fps=10,scale=960:-1:flags=lanczos,split[s0][s1];[s0]palettegen=max_colors=128[p];[s1][p]paletteuse=dither=bayer:bayer_scale=3','-loop','0',str(out/(NAME+'.gif'))],check=True)
-    print('v1.2.0 preview MP4 and GIF rendered.',flush=True)
+    print('v1.2.0 MP4 and GIF rendered.',flush=True)
 
 if __name__=='__main__':main()

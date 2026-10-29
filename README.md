@@ -1,5 +1,7 @@
 # GPU Timeline
 
+v1.2.0: 현재 GPU/API 현황을 먼저 보여주는 새 대시보드와 연구실 장비 주문·배송 목록을 정식 제공합니다. [대시보드 열기](https://shxyzn.github.io/gpu-timeline/) · [변경 이력](CHANGELOG.md)
+
 SSH로 사용하는 여러 서버의 GPU 실험과 예상 종료시간을 조회하는 대시보드입니다. 상단은 서버/GPU별 가로 타임라인, 하단은 GPU 사용률·VRAM·마지막 갱신 정보입니다. 첨부한 일정표의 행/시간축/막대 구성을 바탕으로 만들었습니다.
 
 공개 대시보드: **https://shxyzn.github.io/gpu-timeline/**. 현재 설정은 실제 서버 데이터를 읽는 live 모드입니다.

@@ -1,4 +1,4 @@
-import {carriers,stages,trackingQuery,fetchTrack,deliveryTone} from './parcel-model.js?v=parcel-tone-2';
+import {carriers,stages,trackingQuery,fetchTrack,deliveryTone} from './parcel-model.js?v=1.2.0';
 
 const $=id=>document.getElementById(id);
 const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));

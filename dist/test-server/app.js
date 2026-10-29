@@ -1,9 +1,9 @@
-import {dashboardView,openExperiment,refreshDashboard} from '../app.js?v=parcel-board-1';
-import {currentView,progressValue,experimentPresentation,humanDuration,gpuReadings} from './current-model.js?v=test-server-2';
+import {dashboardView,openExperiment,refreshDashboard} from '../app.js?v=1.2.0';
+import {currentView,progressValue,experimentPresentation,humanDuration,gpuReadings} from './current-model.js?v=1.2.0';
 import {health,jobETA,timestamp,apiSlot} from '../model.js';
-import {budgetUsage,dollars,usageStatus} from '../openrouter-model.js?v=1.1.8';
-import './parcel.js?v=parcel-tone-2';
-import './parcel-board.js?v=parcel-tone-2';
+import {budgetUsage,dollars,usageStatus} from '../openrouter-model.js?v=1.2.0';
+import './parcel.js?v=1.2.0';
+import './parcel-board.js?v=1.2.0';
 
 const $=id=>document.getElementById(id);
 const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -91,11 +91,10 @@ function setResourceView(resource) {
   }
   $('current-list-title').textContent=resource==='gpu'?'GPU 현황':'API 실험';
 }
-function setPanel(name) {
+function setPanel(name,updateHash=true) {
   const tab=document.querySelector(`[data-panel="${name}"]`);if(!tab)return;
-  document.querySelectorAll('[data-panel]').forEach(button=>{const on=button===tab;button.setAttribute('aria-selected',String(on));$(button.getAttribute('aria-controls')).hidden=!on;});
-  if(name!=='more')document.querySelector('#release-video video')?.pause();
-  if(location.hash!==`#${name}`)history.replaceState(null,'',`#${name}`);
+  document.querySelectorAll('[data-panel]').forEach(button=>{const on=button===tab;button.setAttribute('aria-selected',String(on));button.tabIndex=on?0:-1;$(button.getAttribute('aria-controls')).hidden=!on;});
+  if(updateHash&&location.hash!==`#${name}`)history.replaceState(null,'',`#${name}`);
 }
 document.querySelectorAll('[data-panel]').forEach(button=>button.addEventListener('click',()=>setPanel(button.dataset.panel)));
 document.addEventListener('click',event=>{
@@ -106,7 +105,25 @@ document.addEventListener('click',event=>{
 });
 $('current-refresh').onclick=async()=>{if($('refresh').disabled)return;$('current-refresh').disabled=true;try{await refreshDashboard();}finally{$('current-refresh').disabled=false;}};
 document.addEventListener('dashboard:render',renderCurrent);
-window.addEventListener('hashchange',()=>setPanel(location.hash==='#release-video'?'more':location.hash.slice(1)));
-document.querySelectorAll('a[href="#release-video"]').forEach(link=>link.addEventListener('click',()=>setPanel('more')));
-setPanel(location.hash==='#release-video'?'more':location.hash.slice(1)||'now');
+function routeHash() {
+  const anchor=location.hash.slice(1);
+  if(['release-video','patch-notes'].includes(anchor)) {
+    setPanel(anchor==='patch-notes'?'more':'now',false);
+    requestAnimationFrame(()=>$(anchor)?.scrollIntoView({block:'start'}));
+  } else setPanel(anchor||'now');
+}
+window.addEventListener('hashchange',routeHash);
+document.querySelectorAll('a[href="#release-video"],a[href="#patch-notes"]').forEach(link=>link.addEventListener('click',()=>{
+  setPanel(link.hash==='#patch-notes'?'more':'now',false);
+  requestAnimationFrame(()=>$(link.hash.slice(1))?.scrollIntoView({block:'start'}));
+}));
+document.querySelector('.priority-tabs').addEventListener('keydown',event=>{
+  if(!['ArrowLeft','ArrowRight','Home','End'].includes(event.key))return;
+  const tabs=[...document.querySelectorAll('[data-panel]')],index=tabs.indexOf(document.activeElement);
+  if(index<0)return;
+  event.preventDefault();
+  const next=event.key==='Home'?0:event.key==='End'?tabs.length-1:(index+(event.key==='ArrowRight'?1:-1)+tabs.length)%tabs.length;
+  setPanel(tabs[next].dataset.panel);tabs[next].focus();
+});
+routeHash();
 renderCurrent();

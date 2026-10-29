@@ -1,6 +1,6 @@
 import {isAPI, nextAPISlot} from './model.js';
 import {validatePublicToken, applyTokenOperation} from './openrouter-model.js';
-import {validateParcels,applyParcelOperation} from './parcel-records.js?v=parcel-board-1';
+import {validateParcels,applyParcelOperation} from './parcel-records.js?v=1.2.0';
 // Dashboard records are deliberately separate from collector-owned snapshots.
 export const emptyEdits = () => ({schema_version: 1, revision: 0, updated_at: null, manual_jobs: [], hidden_jobs: []});
 export const reference = (server, job) => `${server}/${job}`;

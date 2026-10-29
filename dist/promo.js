@@ -1,7 +1,7 @@
 const panel = document.getElementById('release-video');
 
 if (panel) {
-  const storageKey = 'cvml-release-video-v1.1.8-open';
+  const storageKey = `cvml-release-video-v${panel.dataset.release || '1.1.8'}-open`;
   try {
     const saved = localStorage.getItem(storageKey);
     if (saved !== null) panel.open = saved === 'true';

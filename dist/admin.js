@@ -1,4 +1,4 @@
-import {emptyEdits, reference, makeManualJob, makeEditOperation, mergeEdits, GitHubEditsStore} from './edits.js?v=parcel-board-1';
+import {emptyEdits, reference, makeManualJob, makeEditOperation, mergeEdits, GitHubEditsStore} from './edits.js?v=1.2.0';
 import {sealToken, openToken} from './vault.js';
 import {jobETA,isAPI} from './model.js';
 
