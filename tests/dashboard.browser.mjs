@@ -528,6 +528,21 @@ try {
   resourceEnabled=true;resourceFailed=false;failRaw=false;staleRaw=false;
   data={...emptyEdits(),openrouter_tokens:[previewPublicToken]};
   const writesBeforePreview=writes;
+  let parcelCalls=0,parcelMode='success',releaseParcel=null,parcelHoldStarted=null;
+  await context.route('https://apis.tracker.delivery/carriers/*/tracks/*',async route=>{
+    parcelCalls++;
+    assert.equal(route.request().headers().authorization,undefined);
+    const carrierId=new URL(route.request().url()).pathname.split('/')[2];
+    if(parcelMode==='hold')await new Promise(resolve=>{releaseParcel=resolve;parcelHoldStarted?.();});
+    if(parcelMode==='network')return route.abort();
+    if(parcelMode==='limited')return fulfill(route,{message:'private provider error'},429);
+    if(parcelMode==='missing')return fulfill(route,{message:'not found'},404);
+    if(parcelMode==='bad')return route.fulfill({body:'not JSON',contentType:'text/html'});
+    return fulfill(route,{carrier:{id:carrierId},state:{id:'out_for_delivery',text:'배송출발'},progresses:[
+      {time:'2026-10-29T06:00:00+09:00',status:{id:'in_transit',text:'간선 하차'},location:{name:'대전 HUB'},description:'배송 지역으로 이동 중'},
+      {time:'2026-10-29T09:12:00+09:00',status:{id:'out_for_delivery',text:'배송출발'},location:{name:'성북 배송점'},description:'배송 예정 <script> test'},
+    ]});
+  });
   const preview=await context.newPage();
   preview.on('pageerror',error=>errors.push(error.message));
   await preview.goto(base);
@@ -575,13 +590,69 @@ try {
   assert.equal(await preview.locator('.server-card').count(),3);
   await preview.locator('#tab-more').click();
   assert.equal(await preview.locator('#usage').isVisible(),true);
+  await preview.locator('#tab-parcel').click();
+  assert.equal(new URL(preview.url()).hash,'#parcel');
+  assert.equal(parcelCalls,0);
+  await preview.locator('#parcel-submit').click();
+  assert.match(await preview.locator('#parcel-feedback').innerText(),/택배사를 선택/);
+  assert.equal(parcelCalls,0);
+  await preview.locator('#parcel-carrier').selectOption('kr.cjlogistics');
+  await preview.locator('#parcel-number').fill('000000000000');
+  await preview.locator('#parcel-submit').click();
+  assert.match(await preview.locator('#parcel-feedback').innerText(),/운송장 번호를 확인/);
+  assert.equal(parcelCalls,0);
+  await preview.locator('#parcel-number').fill('1234-5678 9012');
+  await preview.locator('#parcel-number').press('Enter');
+  await preview.locator('.parcel-history li').first().waitFor();
+  assert.equal(parcelCalls,1);
+  assert.equal(await preview.locator('#parcel-number').inputValue(),'123456789012');
+  assert.match(await preview.locator('.parcel-summary').innerText(),/배송출발/);
+  assert.match(await preview.locator('.parcel-history li').first().innerText(),/09:12.*KST[\s\S]*성북 배송점/);
+  assert.match(await preview.locator('.parcel-history').innerText(),/<script> test/);
+  assert.equal(await preview.locator('#parcel-result-body script').count(),0);
+  assert.match(await preview.locator('.parcel-stages [aria-current=step]').innerText(),/배송 출발/);
+  assert.match(await preview.locator('#parcel-official').getAttribute('href'),/gnbInvcNo=123456789012/);
+  await preview.locator('#parcel-copy').click();
+  assert.equal(await preview.evaluate(()=>navigator.clipboard.readText()),'123456789012');
+  await preview.screenshot({path:path.join(output,'test-server-parcel-desktop.png'),fullPage:true});
+  await preview.locator('#tab-now').click();
+  await preview.locator('#tab-parcel').click();
+  assert.equal(await preview.locator('.parcel-history li').count(),2);
+  assert.equal(parcelCalls,1);
+  for(const [mode,message] of [['missing',/아직 배송 정보/],['limited',/제한/],['network',/네트워크/],['bad',/응답/]]) {
+    parcelMode=mode;
+    await preview.locator('#parcel-submit').click();
+    await preview.waitForFunction(()=>document.querySelector('#parcel-result').getAttribute('aria-busy')==='false');
+    assert.match(await preview.locator('#parcel-feedback').innerText(),message);
+    assert.equal(await preview.locator('.parcel-history li').count(),0);
+    assert.equal(await preview.locator('#parcel-official').isVisible(),true);
+  }
+  parcelMode='hold';
+  const heldParcel=new Promise(resolve=>{parcelHoldStarted=resolve;});
+  await preview.locator('#parcel-submit').click();
+  await heldParcel;
+  await preview.waitForFunction(()=>document.querySelector('#parcel-result').getAttribute('aria-busy')==='true');
+  await preview.locator('#parcel-clear').click();
+  releaseParcel?.();parcelMode='success';
+  assert.equal(await preview.locator('#parcel-result').isVisible(),false);
+  assert.equal(await preview.locator('#parcel-number').inputValue(),'');
+  assert.equal(await preview.locator('#parcel-carrier').inputValue(),'');
+  assert.equal(await preview.locator('#parcel-result-body').innerText(),'');
+  assert.equal(await preview.locator('#parcel-query').innerText(),'');
+  assert.equal(await preview.locator('#parcel-official').getAttribute('href'),null);
+  assert.equal(await preview.locator('#parcel-feedback').innerText(),'');
+  await preview.locator('#parcel-carrier').selectOption('kr.cjlogistics');
+  await preview.locator('#parcel-number').fill('123456789012');
+  await preview.locator('#parcel-submit').click();
+  await preview.locator('.parcel-history li').first().waitFor();
+  assert.equal(await preview.evaluate(()=>JSON.stringify({...localStorage,...sessionStorage}).includes('123456789012')),false);
   await preview.locator('#admin-login').click();
   assert.equal(await preview.locator('#admin-dialog').isVisible(),true);
   await preview.locator('[data-close-dialog=admin-dialog]').first().click();
   await preview.locator('#tab-now').click();
   for(const width of [390,320]) {
     await preview.setViewportSize({width,height:844});
-    for(const name of ['now','timeline','resources','servers','more']) {
+    for(const name of ['now','timeline','resources','servers','parcel','more']) {
       await preview.locator('#tab-'+name).click();
       assert.ok(await preview.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),`test-server ${name} overflows at ${width}px`);
     }
@@ -594,7 +665,11 @@ try {
     await preview.locator('#current-api-tab').click();
     assert.ok(await preview.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),`test-server API overflows at ${width}px`);
     await preview.screenshot({path:path.join(output,`test-server-api-mobile-${width}.png`),fullPage:true});
+    await preview.locator('#tab-parcel').click();
+    assert.ok(await preview.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),`parcel result overflows at ${width}px`);
+    await preview.screenshot({path:path.join(output,`test-server-parcel-mobile-${width}.png`),fullPage:true});
   }
+  await preview.locator('#tab-now').click();
   serverCStale=false;testAPI=false;
   await preview.locator('#current-refresh').click();
   await preview.waitForFunction(()=>document.querySelectorAll('[data-gpu-state=unknown]').length===0);
