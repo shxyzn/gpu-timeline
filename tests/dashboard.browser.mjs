@@ -625,11 +625,11 @@ try {
   assert.equal(parcelCalls,1);
   const departureColor=await preview.locator('.parcel-summary h3').evaluate(e=>getComputedStyle(e).color);
   parcelMode='delivered';await preview.locator('#parcel-submit').click();
-  await preview.waitForFunction(()=>document.querySelector('.parcel-summary h3').textContent==='배송완료');
+  await preview.waitForFunction(()=>document.querySelector('.parcel-summary h3')?.textContent==='배송완료');
   const deliveredColor=await preview.locator('.parcel-summary h3').evaluate(e=>getComputedStyle(e).color);
   assert.notEqual(departureColor,deliveredColor,'departure and delivered summaries have distinct colors');
   parcelMode='success';await preview.locator('#parcel-submit').click();
-  await preview.waitForFunction(()=>document.querySelector('.parcel-summary h3').textContent==='배송출발');
+  await preview.waitForFunction(()=>document.querySelector('.parcel-summary h3')?.textContent==='배송출발');
   for(const [mode,message] of [['missing',/아직 배송 정보/],['limited',/제한/],['network',/네트워크/],['bad',/응답/]]) {
     parcelMode=mode;
     await preview.locator('#parcel-submit').click();

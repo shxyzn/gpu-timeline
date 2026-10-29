@@ -116,7 +116,7 @@ def api(u,t):
         text(d,840,y,str(pct)+'%',22,INK,True);line(d,840,y+37,120,pct/100*ease(u/1.1))
         text(d,1172,y,eta,20,INK,True,'rt');text(d,1172,y+34,'예상 종료',14,MUTED,anchor='rt')
     box(d,(100,544,1180,615),'#eef4fc',9)
-    text(d,121,561,'연구실 공용 키',18,BLUE,True)
+    text(d,121,561,'연구실 공용 키 · 사용 24%',18,BLUE,True)
     text(d,1160,561,'남은 한도 $760 · 76%',21,BLUE,True,'rt')
     line(d,122,599,1036,.24*ease(u/1.4))
     shell(im,t);return im
