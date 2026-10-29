@@ -49,7 +49,7 @@ body.dashboard-v120{--purple:#0071e3;--teal:#0071e3;--green:#187642;--line:#e5e5
 .dashboard-v120 .edit-button,.dashboard-v120 .controls>button,.dashboard-v120 .parcel-button{border-radius:99px}
 .dashboard-v120 .edit-button.primary,.dashboard-v120 button.parcel-primary{background:#0071e3;border-color:#0071e3;color:white}
 .dashboard-v120 .admin-tools{background:#fff;border-radius:18px;padding:18px 22px}
-.dashboard-v120 .server-card,.dashboard-v120 .resource-card,.dashboard-v120 .openrouter-card,.dashboard-v120 .hardware-product,.dashboard-v120 .parcel-order{border-color:var(--line);border-radius:17px;box-shadow:none}
+.dashboard-v120 .server-card,.dashboard-v120 .resource-card,.dashboard-v120 .openrouter-card,.dashboard-v120 .hardware-product,.dashboard-v120 .parcel-order-card{border-color:var(--line);border-radius:17px;box-shadow:none}
 .dashboard-v120 .server-card h3{font-size:18px;letter-spacing:-.03em;color:#1d1d1f}
 .dashboard-v120 .resource-heading h2,.dashboard-v120 .openrouter-heading h2,.dashboard-v120 .hardware-heading h2,.dashboard-v120 .usage-heading h2{font-size:21px;font-weight:600;color:#1d1d1f}
 .dashboard-v120 .resource-value,.dashboard-v120 .openrouter-total strong{font-size:31px;letter-spacing:-.04em;color:#1d1d1f}
@@ -97,5 +97,5 @@ body.dashboard-v120{--purple:#0071e3;--teal:#0071e3;--green:#187642;--line:#e5e5
 .dashboard-v120 .parcel-form button,.dashboard-v120 .parcel-board-tools button,.dashboard-v120 .parcel-order-filters button,.dashboard-v120 .parcel-order-actions button,.dashboard-v120 .parcel-order-actions a{border-radius:99px}
 .dashboard-v120 .parcel-form #parcel-submit,.dashboard-v120 .parcel-board-tools .parcel-primary{background:#0071e3;border-color:#0071e3;color:white}
 .dashboard-v120 .parcel-field input,.dashboard-v120 .parcel-field select{border-radius:12px;border-color:#d2d2d7}
-.dashboard-v120 .parcel-order{border-radius:17px}
+.dashboard-v120 .parcel-order-card{border-radius:17px}
 @media(max-width:640px){.dashboard-v120 .parcel-board,.dashboard-v120 .parcel-form-card,.dashboard-v120 .parcel-result{padding:18px}.dashboard-v120 .parcel-heading h2{font-size:23px}}
