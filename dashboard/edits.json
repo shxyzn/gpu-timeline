@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "revision": 258,
-  "updated_at": "2026-10-29T05:23:44.148Z",
+  "revision": 259,
+  "updated_at": "2026-10-29T05:24:16.727Z",
   "manual_jobs": [],
   "hidden_jobs": [
     {
@@ -111,6 +111,18 @@
       "archived_at": null,
       "created_at": "2026-10-29T05:23:44.148Z",
       "updated_at": "2026-10-29T05:23:44.148Z"
+    },
+    {
+      "id": "parcel-e1c29d51-686b-4452-9842-90824154e826",
+      "name": "엑추에이터-1",
+      "quantity": 1,
+      "carrier_id": "kr.cjlogistics",
+      "tracking_number": "306920030644",
+      "note": "",
+      "received_at": null,
+      "archived_at": null,
+      "created_at": "2026-10-29T05:24:16.727Z",
+      "updated_at": "2026-10-29T05:24:16.727Z"
     }
   ]
 }
