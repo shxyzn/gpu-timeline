@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "revision": 255,
-  "updated_at": "2026-10-29T05:22:48.446Z",
+  "revision": 256,
+  "updated_at": "2026-10-29T05:23:12.903Z",
   "manual_jobs": [],
   "hidden_jobs": [
     {
@@ -75,6 +75,18 @@
       "archived_at": null,
       "created_at": "2026-10-29T05:22:48.446Z",
       "updated_at": "2026-10-29T05:22:48.446Z"
+    },
+    {
+      "id": "parcel-176342ea-9242-499e-974e-c40d07030cd2",
+      "name": "마이크홀더",
+      "quantity": 1,
+      "carrier_id": "kr.cjlogistics",
+      "tracking_number": "587625626374",
+      "note": "",
+      "received_at": null,
+      "archived_at": null,
+      "created_at": "2026-10-29T05:23:12.903Z",
+      "updated_at": "2026-10-29T05:23:12.903Z"
     }
   ]
 }
