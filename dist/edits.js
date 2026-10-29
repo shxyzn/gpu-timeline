@@ -1,5 +1,6 @@
 import {isAPI, nextAPISlot} from './model.js';
 import {validatePublicToken, applyTokenOperation} from './openrouter-model.js';
+import {validateParcels,applyParcelOperation} from './parcel-records.js?v=parcel-board-1';
 // Dashboard records are deliberately separate from collector-owned snapshots.
 export const emptyEdits = () => ({schema_version: 1, revision: 0, updated_at: null, manual_jobs: [], hidden_jobs: []});
 export const reference = (server, job) => `${server}/${job}`;
@@ -74,6 +75,7 @@ export function validateEdits(data) {
     }
   }
   // GitHub's base64 Contents response is supported for files below 1 MB.
+  if (data.parcels !== undefined) validateParcels(data.parcels);
   if (new TextEncoder().encode(JSON.stringify(data)).length > 800000) {
     throw new Error('수동 기록 저장 용량에 도달했습니다. 기록 정리가 필요합니다.');
   }
@@ -139,7 +141,11 @@ export function makeEditOperation(input, server, job, servers, openedData, at = 
 
 export function applyOperation(original, operation) {
   const data = structuredClone(validateEdits(original));
-  if (operation.type.startsWith('token_')) {
+  if (operation.type.startsWith('parcel_')) {
+    const next = applyParcelOperation(data.parcels || [], operation);
+    if (same(next, data.parcels || [])) return data;
+    data.parcels = next;
+  } else if (operation.type.startsWith('token_')) {
     const next = applyTokenOperation(data.openrouter_tokens || [], operation);
     if (same(next, data.openrouter_tokens || [])) return data;
     data.openrouter_tokens = next;

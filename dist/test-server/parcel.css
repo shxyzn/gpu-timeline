@@ -70,3 +70,68 @@
   .test-server .parcel-stages{gap:4px}
   .test-server .parcel-stages li{font-size:11px;white-space:nowrap}
 }
+.test-server .parcel-shell{max-width:1200px}
+.test-server .parcel-board{margin-bottom:30px}
+.test-server .parcel-board-heading{display:flex;justify-content:space-between;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:16px}
+.test-server .parcel-board-heading h3{font-size:17px;margin:0}
+.test-server .parcel-board-heading p{font-size:12px;color:var(--muted);margin:5px 0 0}
+.test-server .parcel-board-tools{display:flex;gap:8px;flex-wrap:wrap}
+.test-server .parcel-board-tools button,.test-server .parcel-order-filters button,.test-server .parcel-order-actions button,.test-server .parcel-order-actions a{font-family:inherit;font-size:12px;border:1px solid #c8d2de;border-radius:6px;padding:8px 11px;background:#fff;color:#3b536e;text-decoration:none;min-height:38px;box-sizing:border-box;display:inline-flex;align-items:center;justify-content:center}
+.test-server .parcel-board-tools .parcel-primary{color:#fff;background:#245798;border-color:#245798;font-weight:600}
+.test-server .parcel-board button:disabled,.test-server .parcel-order-dialog button:disabled{opacity:.55;cursor:wait}
+.test-server .parcel-order-filters{display:flex;gap:8px;flex-wrap:wrap}
+.test-server .parcel-order-filters button{gap:9px;border-color:transparent;background:#e9edf3}
+.test-server .parcel-order-filters button[aria-pressed=true]{background:#e4edf9;color:#214e88;border-color:#b8cbe4;font-weight:600}
+.test-server .parcel-order-filters span{font-variant-numeric:tabular-nums}
+.test-server .parcel-board-feedback{min-height:20px;margin:11px 0 0;color:#345b84;font-size:13px;overflow-wrap:anywhere}
+.test-server .parcel-board #parcel-board-load-error:empty{display:none}
+.test-server .parcel-orders{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:15px;margin:8px 0 14px;align-items:start}
+.test-server .parcel-order-card{min-width:0;padding:20px;background:#fff;border:1px solid var(--line);border-radius:9px;overflow-wrap:anywhere}
+.test-server .parcel-order-top{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.test-server .parcel-order-status{font-size:12px;line-height:1.6;padding:3px 7px;background:#eef1f5;color:#52657e;border-radius:4px}
+.test-server .parcel-order-status.transit,.test-server .parcel-order-status.loading{color:#28548e;background:#eaf1fc}
+.test-server .parcel-order-status.received,.test-server .parcel-order-status.delivered{color:#256644;background:#e8f4ec}
+.test-server .parcel-order-status.warning{color:#875316;background:#fff2dd}
+.test-server .parcel-order-quantity{font-size:13px;white-space:nowrap;color:#5d6c80}
+.test-server .parcel-order-card h3{font-size:19px;line-height:1.5;margin:13px 0 9px;letter-spacing:-.025em}
+.test-server .parcel-order-note{font-size:13px;line-height:1.7;color:#64758b;margin:0 0 14px;white-space:pre-wrap}
+.test-server .parcel-order-waybill{font-size:12px;color:#566d87;margin:0;padding-top:12px;border-top:1px solid #edf0f5}
+.test-server .parcel-order-waybill>span{display:block;font-size:13px;margin-top:4px;letter-spacing:.02em}
+.test-server .parcel-order-waybill>span:last-child{line-height:1.6}
+.test-server .parcel-order-location{margin:14px 0 0;font-size:13px}
+.test-server .parcel-order-location strong{font-weight:600}
+.test-server .parcel-order-location span{display:block;margin-top:4px;font-size:11px;color:var(--muted)}
+.test-server .parcel-order-time{font-size:11px;color:var(--muted);margin:13px 0 0}
+.test-server .parcel-order-error{font-size:12px;line-height:1.7;color:#8a5422;margin:10px 0 0;overflow-wrap:anywhere}
+.test-server .parcel-order-actions{display:flex;gap:7px;flex-wrap:wrap;margin-top:17px}
+.test-server .parcel-order-actions button,.test-server .parcel-order-actions a{font-size:11px;min-height:34px;padding:6px 9px;background:#f7f9fc}
+.test-server .parcel-order-history{margin-top:14px;border-top:1px solid #e9edf3;padding-top:10px;font-size:12px;color:#4f6581}
+.test-server .parcel-order-history summary{cursor:pointer}
+.test-server .parcel-order-history ol{padding:0;list-style:none;margin:10px 0 0;max-height:300px;overflow-y:auto}
+.test-server .parcel-order-history li{padding:10px 0;border-bottom:1px solid #edf0f5}
+.test-server .parcel-order-history li>span:first-child{display:block;font-size:11px;margin-bottom:3px;color:var(--muted)}
+.test-server .parcel-order-history li>strong{margin-right:8px;font-size:12px}
+.test-server .parcel-order-history p{font-size:12px;color:#6d7e93;line-height:1.7;margin:5px 0 0}
+.test-server .parcel-board-empty{grid-column:1/-1;background:#fff;border:1px dashed #cdd6e2;padding:30px;border-radius:9px;color:#546a84}
+.test-server .parcel-board-empty strong{font-size:16px}
+.test-server .parcel-board-empty p{font-size:13px;line-height:1.8;margin:7px 0 0;color:var(--muted)}
+.test-server .parcel-quick-lookup{border-top:1px solid #dce3ec;padding-top:16px}
+.test-server .parcel-quick-lookup>summary{font-size:14px;font-weight:600;cursor:pointer;color:#445f80;margin-bottom:15px}
+.test-server .parcel-order-dialog{max-width:620px;width:calc(100% - 32px);box-sizing:border-box;padding:24px;border-radius:10px}
+.test-server .parcel-order-dialog h2{font-size:22px;margin:8px 0}
+.test-server .parcel-order-fields{display:grid;grid-template-columns:minmax(0,1fr) 90px;gap:17px 14px;margin-top:22px}
+.test-server .parcel-order-fields>label:nth-child(3){grid-column:1/-1}
+.test-server .parcel-order-fields>label:nth-child(4),.test-server .parcel-order-note-field{grid-column:1/-1}
+.test-server .parcel-order-fields textarea{box-sizing:border-box;width:100%;resize:vertical;border:1px solid #bac5d3;border-radius:6px;padding:10px 12px;font:inherit;font-weight:400;line-height:1.7}
+.test-server .parcel-order-public{font-size:12px;line-height:1.8;color:#63768e;padding:12px;background:#f1f5fa;border-radius:6px;margin:18px 0 0}
+@media(max-width:1000px){.test-server .parcel-orders{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:620px){
+  .test-server .parcel-orders{grid-template-columns:minmax(0,1fr)}
+  .test-server .parcel-board-tools{width:100%;gap:7px}
+  .test-server .parcel-board-tools .parcel-primary{flex-grow:1}
+  .test-server .parcel-order-card{padding:18px}
+  .test-server .parcel-order-filters{gap:6px}
+  .test-server .parcel-order-filters button{gap:6px;padding:8px 10px}
+  .test-server .parcel-order-dialog{padding:20px}
+  .test-server .parcel-order-fields{grid-template-columns:minmax(0,1fr) 72px;gap:15px 10px}
+}
