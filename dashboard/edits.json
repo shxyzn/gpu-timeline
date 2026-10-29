@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "revision": 257,
-  "updated_at": "2026-10-29T05:23:30.874Z",
+  "revision": 258,
+  "updated_at": "2026-10-29T05:23:44.148Z",
   "manual_jobs": [],
   "hidden_jobs": [
     {
@@ -99,6 +99,18 @@
       "archived_at": null,
       "created_at": "2026-10-29T05:23:30.874Z",
       "updated_at": "2026-10-29T05:23:30.874Z"
+    },
+    {
+      "id": "parcel-d6dea169-fdc3-4a49-b29f-f0f23ce993a8",
+      "name": "전선 20m",
+      "quantity": 1,
+      "carrier_id": "kr.hanjin",
+      "tracking_number": "463621913930",
+      "note": "",
+      "received_at": null,
+      "archived_at": null,
+      "created_at": "2026-10-29T05:23:44.148Z",
+      "updated_at": "2026-10-29T05:23:44.148Z"
     }
   ]
 }
