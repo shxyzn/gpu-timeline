@@ -6,9 +6,9 @@
 .patch-notes strong{color:#21613b;font-weight:600;white-space:nowrap}
 .patch-notes p{margin:0;word-break:keep-all;overflow-wrap:anywhere}
 @media(max-width:640px){.patch-notes{gap:10px;padding:14px 16px;margin-bottom:20px}.patch-notes-copy{display:block}.patch-notes p{margin-top:4px}}
-</style><link rel="stylesheet" href="../test-server/styles.css?v=test-server-2"></head><body class="test-server"><main>
+</style><link rel="stylesheet" href="../test-server/styles.css?v=test-server-3"><link rel="stylesheet" href="./parcel.css?v=parcel-1"></head><body class="test-server"><main>
 <header class="priority-header"><div><h1>CVML GPU Timeline</h1><p>test-server · v1.2.0 UI 미리보기</p></div><div class="priority-header-actions"><a class="priority-home" href="../">기존 화면</a><span id="mode" class="badge">불러오는 중</span><span id="clock"></span><button id="admin-login" class="edit-button" hidden>관리자 로그인</button></div></header>
-<nav class="priority-tabs" aria-label="대시보드 화면" role="tablist"><button type="button" id="tab-now" role="tab" aria-selected="true" aria-controls="panel-now" data-panel="now">현재 현황</button><button type="button" id="tab-timeline" role="tab" aria-selected="false" aria-controls="panel-timeline" data-panel="timeline">타임라인</button><button type="button" id="tab-resources" role="tab" aria-selected="false" aria-controls="panel-resources" data-panel="resources">자원·비용</button><button type="button" id="tab-servers" role="tab" aria-selected="false" aria-controls="panel-servers" data-panel="servers">서버</button><button type="button" id="tab-more" role="tab" aria-selected="false" aria-controls="panel-more" data-panel="more">더보기</button></nav><div id="admin-tools" class="admin-tools" hidden><div class="admin-tools-copy"><strong id="admin-account">관리자</strong><span>실험 기록과 서버 조치 안내를 관리할 수 있어요.</span></div><div class="admin-tools-actions"><button id="manual-add" class="edit-button primary">＋ 실험 추가</button><button id="record-list" class="edit-button">기록 관리</button><button id="admin-logout" class="edit-button">로그아웃</button></div></div><p id="edit-feedback" class="edit-feedback" role="status" aria-live="polite"></p><div id="edit-notice" class="notice" role="status"></div><section id="panel-now" role="tabpanel" aria-labelledby="tab-now">
+<nav class="priority-tabs" aria-label="대시보드 화면" role="tablist"><button type="button" id="tab-now" role="tab" aria-selected="true" aria-controls="panel-now" data-panel="now">현재 현황</button><button type="button" id="tab-timeline" role="tab" aria-selected="false" aria-controls="panel-timeline" data-panel="timeline">타임라인</button><button type="button" id="tab-resources" role="tab" aria-selected="false" aria-controls="panel-resources" data-panel="resources">자원·비용</button><button type="button" id="tab-servers" role="tab" aria-selected="false" aria-controls="panel-servers" data-panel="servers">서버</button><button type="button" id="tab-parcel" role="tab" aria-selected="false" aria-controls="panel-parcel" data-panel="parcel">택배 조회</button><button type="button" id="tab-more" role="tab" aria-selected="false" aria-controls="panel-more" data-panel="more">더보기</button></nav><div id="admin-tools" class="admin-tools" hidden><div class="admin-tools-copy"><strong id="admin-account">관리자</strong><span>실험 기록과 서버 조치 안내를 관리할 수 있어요.</span></div><div class="admin-tools-actions"><button id="manual-add" class="edit-button primary">＋ 실험 추가</button><button id="record-list" class="edit-button">기록 관리</button><button id="admin-logout" class="edit-button">로그아웃</button></div></div><p id="edit-feedback" class="edit-feedback" role="status" aria-live="polite"></p><div id="edit-notice" class="notice" role="status"></div><section id="panel-now" role="tabpanel" aria-labelledby="tab-now">
 <div id="priority-alerts" class="priority-alerts" role="status" aria-live="polite">실제 서버 데이터를 불러오는 중입니다.</div>
 <div id="notice" class="notice" role="status" hidden></div><section id="overview" class="overview" hidden aria-label="기존 집계"></section>
 <section id="priority-overview" class="priority-overview" aria-label="현재 사용 현황"></section>
@@ -38,7 +38,28 @@
   <div id="bottleneck-servers" class="resource-server-choices"></div>
   <div id="bottleneck-detail" aria-live="polite"></div>
   <details class="resource-thresholds"><summary>분석 기준과 범위</summary><p>다음 조건이 2분 이상 연속 관측된 구간을 표시합니다. RAM: 가용 메모리 5% 이하이면서 (메모리 PSI some 5% 이상 또는 스왑 입출력 1 MiB/s 이상). CPU: (전체 85% 이상 또는 한 코어 95% 이상)이면서 CPU PSI some 10% 이상. 저장장치: 장치 요청 지연 20 ms 이상과 I/O PSI some 10% 이상.</p><p>PSI는 해당 자원을 기다린 작업이 있었던 시간의 비율입니다. 임계값은 선별용 기준이며 장치별 성능 평가나 확정 진단이 아닙니다. 서버 전체를 관측하므로 동시 실험에 원인을 자동 귀속하지 않아요. API 작업의 낮은 GPU 활동률은 병목으로 판단하지 않습니다. <a href="https://github.com/shxyzn/gpu-timeline/blob/main/RESOURCE_STATS.md" target="_blank" rel="noopener noreferrer">수집·해석 안내 ↗</a></p></details>
-</section></section><section id="panel-servers" role="tabpanel" aria-labelledby="tab-servers" hidden><section class="details" aria-labelledby="details-title"><div class="section-title"><h2 id="details-title">서버 상세</h2><span>GPU 상태와 실행 정보</span></div><div id="servers" class="server-grid"></div></section></section><section id="panel-more" role="tabpanel" aria-labelledby="tab-more" hidden><aside id="patch-notes" class="patch-notes" role="note" aria-label="최신 패치노트">
+</section></section><section id="panel-servers" role="tabpanel" aria-labelledby="tab-servers" hidden><section class="details" aria-labelledby="details-title"><div class="section-title"><h2 id="details-title">서버 상세</h2><span>GPU 상태와 실행 정보</span></div><div id="servers" class="server-grid"></div></section></section><section id="panel-parcel" role="tabpanel" aria-labelledby="tab-parcel" hidden>
+<div class="parcel-shell">
+  <div class="parcel-heading"><div><h2>택배 조회</h2><p>운송장 번호로 현재 위치와 이동 내역을 확인하세요.</p></div><span class="parcel-trial">시험 기능</span></div>
+  <div class="parcel-form-card">
+    <form id="parcel-form" class="parcel-form" novalidate autocomplete="off">
+      <label class="parcel-field" for="parcel-carrier">택배사<select id="parcel-carrier" aria-describedby="parcel-help parcel-feedback"><option value="">택배사 선택</option></select></label>
+      <label class="parcel-field" for="parcel-number">운송장 번호<input id="parcel-number" type="text" inputmode="numeric" maxlength="40" placeholder="운송장 번호 입력" spellcheck="false" aria-describedby="parcel-help parcel-feedback"></label>
+      <button id="parcel-submit" type="submit">배송 조회</button><button id="parcel-clear" type="button">지우기</button>
+    </form>
+    <p id="parcel-help" class="parcel-help">CJ대한통운 · 우체국 · 한진 · 롯데 · 로젠 · 경동 지원. 택배사를 선택해 주세요. 공백·하이픈은 자동으로 정리해요.</p>
+    <p id="parcel-feedback" role="status" aria-live="polite" aria-atomic="true"></p>
+    <p class="parcel-privacy">조회 시 운송장 번호가 Delivery Tracker로 전송돼요. 이 사이트에는 저장하거나 다른 사용자와 공유하지 않아요.</p>
+  </div>
+  <div id="parcel-empty" class="parcel-empty"><svg viewBox="0 0 40 40" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true"><path d="m5 12 15-8 15 8v17l-15 8-15-8V12Z"></path><path d="m5 12 15 8 15-8M20 20v17M12 8l15 8v7"></path></svg><div><strong>내 택배, 어디쯤 왔을까?</strong><p>택배사와 운송장 번호를 입력하면 조회를 시작해요.</p></div></div>
+  <section id="parcel-result" class="parcel-result" aria-label="택배 조회 결과" aria-busy="false" hidden>
+    <p id="parcel-query" class="parcel-query"></p><div id="parcel-result-body"></div>
+    <div class="parcel-official-actions"><a id="parcel-official" target="_blank" rel="noopener noreferrer" referrerpolicy="no-referrer">택배사 공식 조회 ↗</a><button id="parcel-copy" type="button">운송장 번호 복사</button></div>
+    <p id="parcel-official-note"></p>
+  </section>
+  <p class="parcel-provider">배송 정보: <a href="https://tracker.delivery/docs/api-versioning/v1" target="_blank" rel="noopener noreferrer">Delivery Tracker</a> 시험 연동 · 제공사 제한으로 조회가 안 되면 택배사 공식 조회를 이용해 주세요.</p>
+</div>
+</section><section id="panel-more" role="tabpanel" aria-labelledby="tab-more" hidden><aside id="patch-notes" class="patch-notes" role="note" aria-label="최신 패치노트">
   <svg class="patch-notes-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="m8 12 2.5 2.5L16 9"></path></svg>
   <div class="patch-notes-copy"><strong>패치노트 · v1.1.8</strong><p>OpenRouter 키 한도 사용률과 CPU·GPU·RAM·저장장치 통계를 추가했어요.<br>병목 후보와 판단 근거를 함께 확인하세요. 자원 통계는 서버 공용 수집기를 v1.1.8로 업데이트한 뒤부터 쌓여요. <a class="promo-note-link" href="#release-video">1분 소개 영상 보기 ↗</a></p></div>
 </aside><section id="hardware" class="hardware" aria-labelledby="hardware-title">
@@ -186,4 +207,4 @@ v1.1.0 이상 서버에서는 list의 reference가 사이트의 실험 ID와 같
   <h2 id="delete-title">대시보드에서 삭제할까요?</h2><p id="delete-name"></p><code id="delete-reference"></code><p class="admin-help">모든 사용자의 대시보드에서 이 기록을 숨깁니다. 실제 실험·서버 로그는 그대로 유지되며, 기록 관리에서 복구할 수 있어요.</p>
   <form id="delete-form"><p id="delete-error" class="admin-error" role="alert"></p><div class="dialog-actions"><button type="button" class="edit-button" data-close-dialog="delete-dialog">취소</button><button type="submit" class="edit-button danger">삭제</button></div></form>
 </dialog>
-<script type="module" src="../promo.js?v=1.1.8-promo1"></script><script type="module" src="../usage.js"></script><script type="module" src="../test-server/app.js?v=test-server-2"></script></body></html>
+<script type="module" src="../promo.js?v=1.1.8-promo1"></script><script type="module" src="../usage.js"></script><script type="module" src="../test-server/app.js?v=test-server-3"></script></body></html>
