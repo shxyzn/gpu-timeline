@@ -5,3 +5,10 @@
 .maintenance-notice strong{display:block;font-size:14px;line-height:1.6;font-weight:650;color:#6b4800}
 .maintenance-notice p{margin:5px 0 0;font-size:13px;line-height:1.8;word-break:keep-all;overflow-wrap:anywhere}
 @media(max-width:640px){.dashboard-v120 .maintenance-notice{gap:11px;padding:17px 18px;border-radius:16px;margin-bottom:18px}.maintenance-notice p{font-size:12px}}
+
+.maintenance-times{display:flex;flex-wrap:wrap;gap:10px 30px;margin:13px 0 0}
+.maintenance-times>div{display:flex;align-items:baseline;flex-wrap:wrap;gap:4px 9px}
+.maintenance-times dt{font-size:12px;color:inherit}
+.maintenance-times dd{margin:0;font-size:13px;line-height:1.8;font-weight:600;font-variant-numeric:tabular-nums}
+.maintenance-notice .maintenance-time-note{font-size:11px;margin-top:8px}
+@media(max-width:640px){.maintenance-times{gap:7px 20px;margin-top:11px}.maintenance-times dd{font-size:12px}}
