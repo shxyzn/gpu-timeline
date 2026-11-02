@@ -580,7 +580,7 @@ try {
   }
   await production.close();
 
-  // The experimental page shares live data and editor behavior, with its entry at the bottom.
+  // The retained test URL shares data and editor behavior without a production footer link.
   collectorFinished=false;progressCompleted=25;serverCStale=true;testAPI=true;previewMode=true;
   resourceEnabled=true;resourceFailed=false;failRaw=false;staleRaw=false;
   data={...emptyEdits(),openrouter_tokens:[previewPublicToken]};
@@ -606,11 +606,15 @@ try {
   preview.on('pageerror',error=>errors.push(error.message));
   await preview.goto(base);
   await preview.locator('.priority-tabs button[tabindex="0"]').waitFor();
-  assert.equal(await preview.locator('.test-server-entry').evaluate(e=>e.nextElementSibling===e.parentElement.lastElementChild),true);
+  assert.equal(await preview.getByRole('link',{name:'test-server',exact:true}).count(),0);
+  assert.equal(await preview.locator('#maintenance-notice').count(),0);
   assert.equal(await preview.locator('main>.design-credit').innerText(),'designed by psh in suwon');
-  await preview.getByRole('link',{name:'test-server',exact:true}).click();
+  await preview.goto(base+'/test-server/');
   await preview.locator('.current-gpu-table tbody tr').first().waitFor();
   assert.equal(new URL(preview.url()).pathname,'/test-server/');
+  assert.equal(await preview.locator('#maintenance-notice').count(),1);
+  assert.match(await preview.locator('#maintenance-notice').textContent(),/사이트 점검 중/);
+  assert.match(await preview.locator('#maintenance-notice').textContent(),/일부 시스템에 일시적인 장애/);
   assert.equal(await preview.locator('#panel-now').isVisible(),true);
   assert.equal(await preview.locator('#panel-timeline').isVisible(),false);
   assert.equal(await preview.locator('.current-gpu-table tbody tr').count(),4);
