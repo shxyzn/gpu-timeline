@@ -19,7 +19,7 @@ const host = http.createServer(async (request, response) => {
     const filename = path.resolve(root, 'dist', `.${pathname.endsWith('/') ? pathname+'index.html' : pathname}`);
     if (!filename.startsWith(path.join(root, 'dist') + path.sep)) throw new Error('path');
     const bytes = await fs.readFile(filename);
-    const types = {'.html': 'text/html', '.js': 'text/javascript', '.json': 'application/json', '.css': 'text/css', '.mp4': 'video/mp4', '.gif': 'image/gif', '.jpg': 'image/jpeg'};
+    const types = {'.html': 'text/html', '.js': 'text/javascript', '.json': 'application/json', '.css': 'text/css', '.mp4': 'video/mp4', '.gif': 'image/gif', '.jpg': 'image/jpeg', '.png': 'image/png'};
     const headers = {'Content-Type': types[path.extname(filename)] || 'text/plain', 'Accept-Ranges': 'bytes'};
     // Match static hosting: media seeking requires byte ranges and known lengths.
     const range = request.headers.range?.match(/^bytes=(\d+)-(\d*)$/);
@@ -620,6 +620,8 @@ try {
   await preview.locator('.priority-tabs button[tabindex="0"]').waitFor();
   assert.equal(await preview.getByRole('link',{name:'test-server',exact:true}).count(),0);
   assert.equal(await preview.locator('#maintenance-notice').count(),0);
+  assert.equal(await preview.locator('#kimi-service-notice').count(),0);
+  assert.equal(await preview.locator('#kimi-tribute-dialog').count(),0);
   assert.equal(await preview.locator('main>.design-credit').innerText(),'designed by psh in suwon');
   await preview.goto(base+'/test-server/');
   await preview.locator('.current-gpu-table tbody tr').first().waitFor();
@@ -627,6 +629,29 @@ try {
   assert.equal(await preview.locator('#maintenance-notice').count(),1);
   assert.match(await preview.locator('#maintenance-notice').textContent(),/사이트 점검 중/);
   assert.match(await preview.locator('#maintenance-notice').textContent(),/일부 시스템에 일시적인 장애/);
+  // Test-only Kimi tribute: user gesture, keyboard guardrails, original asset, dismissal.
+  assert.equal(await preview.locator('#kimi-service-notice').evaluate(e=>e.previousElementSibling.id),'release-video');
+  assert.match(await preview.locator('#kimi-service-notice').innerText(),/Kimi\(191\).*서버 장애로 A\/S 진행 중/s);
+  await preview.locator('#kimi-tribute-open').click();
+  await preview.locator('#kimi-tribute-dialog').waitFor({state:'visible'});
+  await preview.waitForFunction(()=>document.querySelector('#kimi-tribute-image').naturalWidth===401);
+  assert.equal(await preview.locator('#kimi-tribute-image').evaluate(e=>e.naturalHeight),498);
+  assert.match(await preview.locator('#kimi-tribute-caption').innerText(),/드라이버 챔피언을 확정 짓고 휴가를 떠났습니다/);
+  await preview.screenshot({path:path.join(output,'kimi-tribute-desktop.png'),fullPage:false});
+  await preview.keyboard.press('Escape');
+  assert.equal(await preview.locator('#kimi-tribute-dialog').isVisible(),false);
+  assert.equal(await preview.locator('#kimi-tribute-open').evaluate(e=>e===document.activeElement),true);
+  await preview.keyboard.press('x');
+  assert.equal(await preview.locator('#kimi-tribute-dialog').isVisible(),true);
+  await preview.mouse.click(8,8);
+  assert.equal(await preview.locator('#kimi-tribute-dialog').isVisible(),false);
+  await preview.locator('.kimi-service-toggle').click();
+  await preview.keyboard.press('x');
+  assert.equal(await preview.locator('#kimi-tribute-dialog').isVisible(),false);
+  await preview.locator('.kimi-service-toggle').click();
+  await preview.keyboard.press('Shift+X');
+  assert.equal(await preview.locator('#kimi-tribute-dialog').isVisible(),true);
+  await preview.locator('#kimi-tribute-close').click();
   assert.equal(await preview.locator('#panel-now').isVisible(),true);
   assert.equal(await preview.locator('#panel-timeline').isVisible(),false);
   assert.equal(await preview.locator('.current-gpu-table tbody tr').count(),4);
@@ -659,6 +684,8 @@ try {
   assert.match(await preview.locator('#as-history-dialog').innerText(),/server-a\/job-original/);
   assert.match(await preview.locator('#as-history-dialog').innerText(),/정답 2회 연속 시 진짜 AIME 문제로 교체/);
   assert.match(await preview.locator('#as-history-dialog').innerText(),/수집 당시 실행 중/);
+  await preview.keyboard.press('x');
+  assert.equal(await preview.locator('#kimi-tribute-dialog').isVisible(),false);
   await preview.locator('[data-as-close]').click();
   await preview.screenshot({path:path.join(output,'test-server-desktop.png'),fullPage:true});
   await preview.locator('#tab-resources').click();
@@ -692,6 +719,9 @@ try {
   assert.equal(parcelCalls,0);
   assert.equal(await preview.locator('#parcel-count-active').innerText(),'0');
   await preview.locator('#parcel-quick-lookup > summary').click();
+  await preview.locator('#parcel-number').press('x');
+  assert.equal(await preview.locator('#kimi-tribute-dialog').isVisible(),false);
+  await preview.locator('#parcel-number').fill('');
   await preview.locator('#parcel-submit').click();
   assert.match(await preview.locator('#parcel-feedback').innerText(),/택배사를 선택/);
   assert.equal(parcelCalls,0);
@@ -927,6 +957,11 @@ try {
     }
     await preview.locator('#tab-now').click();
     await preview.locator('#current-gpu-tab').click();
+    await preview.locator('#kimi-tribute-open').click();
+    assert.ok(await preview.locator('#kimi-tribute-dialog').evaluate(e=>e.scrollWidth<=e.clientWidth+1));
+    assert.ok(await preview.locator('#kimi-tribute-dialog').evaluate(e=>e.getBoundingClientRect().height<=innerHeight));
+    await preview.locator('#kimi-tribute-dialog').screenshot({path:path.join(output,`kimi-tribute-mobile-${width}.png`)});
+    await preview.locator('#kimi-tribute-close').click();
     await preview.screenshot({path:path.join(output,`test-server-mobile-${width}.png`),fullPage:true});
     await preview.locator('#current-gpus [data-as-history="server-a"]').click();
     assert.ok(await preview.locator('#as-history-dialog').evaluate(e=>e.scrollWidth<=e.clientWidth+1));
