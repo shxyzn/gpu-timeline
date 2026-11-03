@@ -5,6 +5,7 @@ import {isUnavailable} from './availability-model.js?v=2.1-as';
 import {health} from '../model.js';
 
 const $=id=>document.getElementById(id);
+const reportFor=s=>s?.monitoring?.profile==='test'?s.monitoring:null;
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const stamp=t=>t&&Number.isFinite(new Date(t).getTime())?new Intl.DateTimeFormat('ko-KR',{timeZone:'Asia/Seoul',month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit',hourCycle:'h23'}).format(new Date(t))+' KST':'아직 없음';
 const checkName=id=>CHECKS.find(c=>c.id===id)?.name||id;
@@ -37,7 +38,7 @@ $('monitor-checks').innerHTML=[...new Set(CHECKS.map(c=>c.group))].map(group=>`<
 function server(){return dashboardView().telemetryServers.find(s=>s.server_id===serverID)||dashboardView().servers.find(s=>s.server_id===serverID);}
 function savedConfig(id){return data.servers.find(c=>c.server_id===id);}
 function state(s,c){
-  const m=s?.monitoring,ok=s&&health(s,Date.now(),dashboardView().config?.stale_after_seconds||1200).ok;
+  const m=reportFor(s),ok=s&&health(s,Date.now(),dashboardView().config?.stale_after_seconds||1200).ok;
   if(!loaded)return {label:loading?'설정 불러오는 중':'설정 확인 필요',tone:'muted'};
   if(!c)return {label:'일정 미설정',tone:'muted'};
   if(!ok)return {label:'서버 수신 지연 · 적용 확인 필요',tone:'warning'};
@@ -62,7 +63,7 @@ function renderCards(){
     card.querySelector('.monitor-card')?.remove();
     if(isUnavailable(s.server_id))return;
     const box=document.createElement('div');box.className='monitor-card';
-    const run=s.monitoring?.last_run;
+    const run=reportFor(s)?.last_run;
     box.innerHTML=`<div class="monitor-card-top"><strong>상태 모니터링</strong><span class="monitor-badge ${st.tone}">${esc(st.label)}</span></div><p>${c?`${c.schedules.filter(x=>x.enabled).length}개 활성 일정 · 설정 v${c.revision}`:'일반·정밀 점검 일정을 추가해 주세요.'}</p>${run?`<p>마지막 점검 ${esc(stamp(run.finished_at))} · ${esc(resultLabel(run.status))}</p>`:''}<button type="button" class="monitor-settings-button" data-monitor-server="${esc(s.server_id)}">모니터링 설정</button>`;
     card.append(box);
   });
@@ -76,7 +77,7 @@ async function refreshPublic(){
 }
 function resultLabel(status){return ({ok:'정상',warning:'확인 필요',error:'점검 실패',unsupported:'지원·권한 확인',running:'점검 중'})[status]||'상태 확인 필요';}
 function updateConnection(){
-  const s=server(),c=savedConfig(serverID),st=state(s,c),m=s?.monitoring;
+  const s=server(),c=savedConfig(serverID),st=state(s,c),m=reportFor(s);
   $('monitor-connection').className='monitor-connection '+st.tone;
   $('monitor-connection').innerHTML=`<strong>${esc(st.label)}</strong><p>${c?`공용 설정 v${c.revision} · 저장 ${esc(stamp(c.updated_at))}`:'아직 저장된 일정이 없습니다.'}${m?.applied_at?`<br>서버 적용 ${esc(stamp(m.applied_at))}`:''}${m?.config_error?'<br>서버가 최신 설정을 확인하지 못했어요. 마지막 적용 설정으로 동작할 수 있습니다.':''}</p>`;
   const runs=Array.isArray(m?.history)?m.history.filter(r=>r&&typeof r==='object').slice(-5).reverse():[];
@@ -104,7 +105,7 @@ async function openSettings(id){
 function renderSchedules(){
   $('monitor-schedule-count').textContent=draft.schedules.length+' / 12';
   $('monitor-schedule-list').innerHTML=draft.schedules.length?draft.schedules.map(s=>{
-    const report=server()?.monitoring?.schedules?.find(x=>x.id===s.id),at=draft.enabled?(report?.next_run_at||nextRun(s)):null;
+    const report=reportFor(server())?.schedules?.find(x=>x.id===s.id),at=draft.enabled?(report?.next_run_at||nextRun(s)):null;
     return `<article class="monitor-schedule-row"><div><div class="monitor-schedule-title"><strong>${esc(s.name)}</strong><span class="monitor-badge ${s.enabled?'':'muted'}">${s.kind==='daily'?'정밀 점검':'일반 점검'}</span>${s.enabled?'':'<small>일시 중지</small>'}</div><p>${esc(scheduleLabel(s))}</p><div class="monitor-check-chips">${s.checks.map(id=>`<span>${esc(checkName(id))}</span>`).join('')}</div><small>다음 예정 ${!draft.enabled?'모니터링 중지':s.enabled?esc(stamp(at)):'일시 중지'}${report?.next_run_at?'':' · 서버 적용 후 실행'}</small></div><div class="monitor-row-actions"><button type="button" data-monitor-edit="${s.id}">수정</button><button type="button" data-monitor-toggle="${s.id}">${s.enabled?'일시 중지':'활성화'}</button><button type="button" data-monitor-delete="${s.id}">삭제</button></div></article>`;
   }).join(''):'<div class="monitor-empty-box"><strong>첫 점검 일정을 만들어 보세요.</strong><p>예: GPU 인식 확인은 30분마다, 전체 정밀 점검은 매일 09:00와 21:00에.</p></div>';
   $('monitor-add').disabled=draft.schedules.length>=12;

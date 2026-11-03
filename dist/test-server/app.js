@@ -133,5 +133,5 @@ document.querySelector('.priority-tabs').addEventListener('keydown',event=>{
 routeHash();
 renderCurrent();
 
-import './monitoring.js?v=2.1-as';
+import './monitoring.js?v=2.1-profiles';
 import './availability.js?v=2.1-as';

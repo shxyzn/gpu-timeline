@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {CHECKS,monitoringID,makeSchedule,defaultConfig,validateConfig,validateSchedule,inWindow,nextRun,emptyMonitoring} from '../dist/test-server/monitoring-model.js';
+import {MonitoringStore as ProductionMonitoringStore} from '../dist/release/monitoring-store.js';
 import {MonitoringStore} from '../dist/test-server/monitoring-store.js';
 import {encodeJSON,decodeJSON} from '../dist/edits.js';
 
@@ -64,4 +65,18 @@ test('missing public configuration is empty; invalid shared configuration is not
 test('schedule IDs work on a non-secure preview origin without randomUUID',()=>{
   const id=monitoringID({getRandomValues:bytes=>{bytes.fill(3);return bytes;}});
   assert.match(id,/^[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/);
+});
+
+test('production monitoring saves to its own file and never changes test schedules',async()=>{
+  const testDocument=emptyMonitoring();testDocument.revision=9;
+  let production=emptyMonitoring();const paths=[];
+  const fetcher=async(url,options={})=>{
+    paths.push(String(url));assert.match(String(url),/dashboard\/monitoring\.json/);assert.doesNotMatch(String(url),/monitoring-test/);
+    if(options.method==='PUT'){const body=JSON.parse(options.body);assert.equal(body.branch,'status');production=decodeJSON(body.content);return new Response('{}',{status:200});}
+    if(String(url).includes('raw.githubusercontent.com'))return new Response(JSON.stringify(production),{status:200});
+    return new Response(JSON.stringify({type:'file',encoding:'base64',sha:'production-sha',content:encodeJSON(production)}),{status:200});
+  };
+  const store=new ProductionMonitoringStore({repository:'shxyzn/gpu-timeline',branch:'status',path:'dashboard/edits.json'},fetcher);
+  await store.saveServer('fake-token',config(),0,monitoringID());
+  assert.equal(production.servers.length,1);assert.equal((await store.readPublic()).revision,1);assert.equal(testDocument.revision,9);assert.ok(paths.length>=3);
 });

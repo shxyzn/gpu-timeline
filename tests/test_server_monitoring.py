@@ -116,6 +116,25 @@ class MonitoringTests(unittest.TestCase):
         self.assertTrue(all(method == 'GET' and 'monitoring-test.json?ref=status' in path for method, path in requests))
         self.assertNotIn('never-publish-this-token', json.dumps(self.monitor.public()))
 
+    def test_production_profile_has_independent_configuration_and_restart_state(self):
+        self.monitor.tick()
+        requests = []
+        def api(method, path, token):
+            requests.append((method, path))
+            return {"encoding": "base64", "content": base64.b64encode(json.dumps({"schema_version": 1, "servers": [configuration()]}).encode()).decode()}
+        production = HealthMonitor(dict(self.monitor.config, monitoring_enabled=True, monitoring_profile="production"),
+                                   runner=self.monitor.runner, api=api, clock=lambda: self.now)
+        self.assertIsNone(production.settings)
+        self.assertNotEqual(production.path, self.monitor.path)
+        with patch.dict(os.environ, {"GPU_TIMELINE_TOKEN": "test-token"}):
+            self.assertTrue(production.sync())
+        self.assertEqual(production.public()["profile"], "production")
+        self.assertEqual(self.monitor.public()["profile"], "test")
+        self.assertTrue(all(method == "GET" and "dashboard/monitoring.json?ref=status" in path for method, path in requests))
+        self.assertTrue(production.tick())
+        self.assertFalse(HealthMonitor(production.config, clock=lambda: self.now).tick())
+        self.assertEqual(len(self.monitor.history), 1)
+
     def test_missing_tools_are_unsupported_and_corrupt_cached_state_cannot_break_startup(self):
         self.monitor.runner = lambda *a, **k: (_ for _ in ()).throw(FileNotFoundError())
         self.monitor.tick()

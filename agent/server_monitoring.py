@@ -1,4 +1,4 @@
-"""Opt-in, read-only monitoring for the v2.1 test dashboard. Python 3.8+."""
+"""Opt-in, read-only monitoring for the v2.1 dashboards. Python 3.8+."""
 import base64
 from copy import deepcopy
 from datetime import datetime, timedelta, timezone
@@ -129,7 +129,12 @@ class HealthMonitor:
     def __init__(self, config, upload_status=lambda: {}, runner=subprocess.run, api=agent.github_request, clock=None):
         self.config, self.upload_status, self.runner, self.api = config, upload_status, runner, api
         self.clock = clock or (lambda: datetime.now(timezone.utc))
-        self.path = Path(config["state_dir"]) / "monitoring-test-state.json"
+        self.profile = config.get("monitoring_profile", "test")
+        if self.profile not in ("production", "test"):
+            raise ValueError("invalid monitoring profile")
+        filename = "monitoring.json" if self.profile == "production" else "monitoring-test.json"
+        self.config_file = filename
+        self.path = Path(config["state_dir"]) / filename.replace(".json", "-state.json")
         self.lock = threading.RLock()
         self.settings = None
         self.error = None
@@ -162,7 +167,7 @@ class HealthMonitor:
             token = os.environ.get("GPU_TIMELINE_TOKEN", "").strip()
             if not token:
                 raise ValueError("token required")
-            url = "/repos/" + repo + "/contents/dashboard/monitoring-test.json?" + urlencode({"ref": "status"})
+            url = "/repos/" + repo + "/contents/dashboard/" + self.config_file + "?" + urlencode({"ref": "status"})
             try:
                 file = self.api("GET", url, token)
             except HTTPError as error:
@@ -325,7 +330,7 @@ class HealthMonitor:
             for s in settings["schedules"] if settings else []:
                 due = next_run(s, now, self.last.get(s["id"])) if settings["enabled"] else None
                 schedules.append({"id": s["id"], "last_run_at": self.last.get(s["id"]), "next_run_at": iso(due) if due else None})
-            return {"schema_version": 1, "profile": "test", "capabilities": ["server-monitoring-v1"],
+            return {"schema_version": 1, "profile": self.profile, "capabilities": ["server-monitoring-v1"],
                     "enabled": bool(settings and settings["enabled"]), "applied_revision": settings["revision"] if settings else 0,
                     "applied_at": self.applied_at, "config_error": self.error, "schedules": schedules,
                     "last_run": deepcopy(self.history[-1]) if self.history else None, "history": deepcopy(self.history[-20:])}

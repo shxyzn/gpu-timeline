@@ -114,6 +114,14 @@ class SharedTests(unittest.TestCase):
         self.assertEqual(snapshot["resources"]["current"]["values"]["allocated_gpus"], 1)
         self.assertNotIn("_owner_uid", json.dumps(snapshot))
 
+    def test_monitoring_is_opt_in_and_preserves_the_legacy_test_profile(self):
+        self.assertIsNone(self.broker.monitoring)
+        production = shared.Broker(dict(self.config, monitoring_enabled=True, monitoring_profile="production"))
+        self.assertEqual(production.monitoring.public()["profile"], "production")
+        legacy = shared.Broker(dict(self.config, monitoring_test_enabled=True))
+        self.assertEqual(legacy.monitoring.public()["profile"], "test")
+        self.assertNotEqual(production.monitoring.path, legacy.monitoring.path)
+
     def test_legacy_migration_preserves_job_and_is_idempotent(self):
         old = [{"id": "legacy", "status": "running", "_pid": 123,
                 "_pid_identity": "identity", "started_at": "2026-09-01T01:00:00+00:00"}]

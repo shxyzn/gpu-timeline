@@ -16,8 +16,9 @@ await fs.mkdir(output, {recursive: true});
 const host = http.createServer(async (request, response) => {
   try {
     const pathname = new URL(request.url, 'http://localhost').pathname;
-    const filename = path.resolve(root, 'dist', `.${pathname.endsWith('/') ? pathname+'index.html' : pathname}`);
-    if (!filename.startsWith(path.join(root, 'dist') + path.sep)) throw new Error('path');
+    const legacy=pathname==='/__legacy.html';
+    const filename = legacy ? path.join(root,'tests/fixtures/dashboard-v120.html') : path.resolve(root, 'dist', `.${pathname.endsWith('/') ? pathname+'index.html' : pathname}`);
+    if (!legacy && !filename.startsWith(path.join(root, 'dist') + path.sep)) throw new Error('path');
     const bytes = await fs.readFile(filename);
     const types = {'.html': 'text/html', '.js': 'text/javascript', '.json': 'application/json', '.css': 'text/css', '.mp4': 'video/mp4', '.gif': 'image/gif', '.jpg': 'image/jpeg', '.png': 'image/png'};
     const headers = {'Content-Type': types[path.extname(filename)] || 'text/plain', 'Accept-Ranges': 'bytes'};
@@ -48,10 +49,11 @@ try {
   let data = emptyEdits(), staleRaw = false, failRaw = false, forbidden = false, writes = 0;
   let collectorFinished = false, progressCompleted = 25, serverUpgraded = false, serverCStale = false;
   let resourceEnabled = false, resourceFailed = false, testAPI = false, previewMode = false;
-  let monitoringData=emptyMonitoring(),monitoringWrites=0,monitoringForbidden=false,monitoringApplied=false;
+  let monitoringData=emptyMonitoring(),monitoringWrites=0,monitoringForbidden=false,monitoringApplied=false,monitoringProfile='test',monitoringReportProfile=null;
+  const monitoringProfiles={test:emptyMonitoring(),production:emptyMonitoring()};
   const telemetry = id => ({server_id: id, name: `Server ${id.slice(-1).toUpperCase()}`, updated_at: iso(id === 'server-c' && serverCStale ? -2 : 0), collector_ok: true,
     resources: resourceEnabled && id !== 'server-c' ? resourceFixture(Date.now(),resourceFailed) : undefined,
-    monitoring: monitoringApplied&&id==='server-b'?{profile:'test',enabled:true,applied_revision:monitoringData.servers.find(c=>c.server_id===id)?.revision||0,applied_at:iso(0),config_error:null,schedules:[],history:[{name:'일반 점검',finished_at:iso(0),status:'warning',checks:[{id:'gpu_count',status:'warning',summary:'인식 1 / 설정 2 GPU'}]}]}:undefined,
+    monitoring: monitoringApplied&&id==='server-b'?{profile:monitoringReportProfile||monitoringProfile,enabled:true,applied_revision:monitoringData.servers.find(c=>c.server_id===id)?.revision||0,applied_at:iso(0),config_error:null,schedules:[],history:[{name:'일반 점검',finished_at:iso(0),status:'warning',checks:[{id:'gpu_count',status:'warning',summary:'인식 1 / 설정 2 GPU'}]}]}:undefined,
     agent_version: id === 'server-b' ? {version: '1.1.2', revision: 'b'.repeat(40)} : id === 'server-a' && serverUpgraded ? {version: '1.1.5', revision: 'a'.repeat(40)} : null,
     gpus: [{uuid: `${id}-gpu`, index: 0, name: 'NVIDIA GeForce RTX 4090', process_count: 0, utilization: previewMode && id === 'server-a' ? 86 : 0,
       memory_used_mib: previewMode && id === 'server-a' ? 21000 : 0, memory_total_mib: 24564},
@@ -73,7 +75,7 @@ try {
   await context.route('https://raw.githubusercontent.com/**', async route => {
     const url = new URL(route.request().url());
     if (url.pathname.endsWith('/hardware-prices/prices.json')) return fulfill(route, JSON.parse(await fs.readFile(path.join(root, 'dist/hardware-prices.json'), 'utf8')));
-    if(url.pathname.endsWith('/dashboard/monitoring-test.json'))return fulfill(route,monitoringData);
+    if(/\/dashboard\/monitoring(?:-test)?\.json$/.test(url.pathname))return fulfill(route,monitoringProfiles[url.pathname.endsWith('monitoring-test.json')?'test':'production']);
     if (url.pathname.endsWith('/dashboard/edits.json')) {
       assert.equal(route.request().headers().authorization, undefined);
       if (failRaw) return fulfill(route, {}, 503);
@@ -89,11 +91,13 @@ try {
     if (url.pathname === '/user') return fulfill(route, {login: 'cvml-admin'});
     if (url.pathname === '/repos/shxyzn/gpu-timeline') return fulfill(route, {permissions: {push: true}});
     if (url.pathname.endsWith('/git/ref/heads/status')) return fulfill(route, {ref: 'refs/heads/status'});
-    if(url.pathname.endsWith('/contents/dashboard/monitoring-test.json')){
+    if(/\/contents\/dashboard\/monitoring(?:-test)?\.json$/.test(url.pathname)){
+      const profile=url.pathname.endsWith('monitoring-test.json')?'test':'production';
+      assert.equal(profile,monitoringProfile,'each dashboard must save only its own monitoring profile');
       if(request.method()==='PUT'){
         if(monitoringForbidden)return fulfill(route,{},403);
         const body=request.postDataJSON();assert.equal(body.branch,'status');assert.equal(body.sha,'monitor-'+monitoringData.revision);
-        monitoringData=decodeJSON(body.content);monitoringWrites++;return fulfill(route,{content:{sha:'monitor-'+monitoringData.revision}});
+        monitoringData=decodeJSON(body.content);monitoringProfiles[profile]=monitoringData;monitoringWrites++;return fulfill(route,{content:{sha:'monitor-'+monitoringData.revision}});
       }
       return fulfill(route,{type:'file',encoding:'base64',sha:'monitor-'+monitoringData.revision,content:encodeJSON(monitoringData)});
     }
@@ -123,7 +127,7 @@ try {
   // Freeze only this page so the existing live-time editor fixtures stay intact.
   const calendarPage = await context.newPage();
   await calendarPage.addInitScript(() => { Date.now = () => Date.parse('2026-10-03T01:00:00Z'); });
-  await calendarPage.goto(base);
+  await calendarPage.goto(base+'/__legacy.html');
   await calendarPage.locator('.priority-tabs button[tabindex="0"]').waitFor();
   await calendarPage.locator('#tab-timeline').click();
   const nationalDay = calendarPage.locator('.tick.holiday[title="10/3 (토) · 개천절"]').first();
@@ -135,7 +139,7 @@ try {
   assert.ok(await calendarPage.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
   await calendarPage.screenshot({path: path.join(output, 'holidays-mobile.png'), fullPage: true});
   await calendarPage.close();
-  await page.goto(base);
+  await page.goto(base+'/__legacy.html');
   await page.locator('.priority-tabs button[tabindex="0"]').waitFor();
   await page.locator('#tab-more').click();
   await page.locator('.hardware-product').first().waitFor();
@@ -291,7 +295,7 @@ try {
 
   // A separate visitor immediately sees shared edits without credentials.
   const visitor = await context.newPage();
-  await visitor.goto(base);
+  await visitor.goto(base+'/__legacy.html');
   await visitor.locator('.priority-tabs button[tabindex="0"]').waitFor();
   await visitor.locator('#tab-timeline').click();
   await visitor.locator('.job-bar.manual').waitFor();
@@ -545,7 +549,7 @@ try {
   await page.locator('#release-video-toggle').click();
   await page.waitForFunction(()=>document.querySelector('#release-video video').paused);
   assert.equal(await page.locator('#release-video').evaluate(panel=>panel.open),false);
-  await page.goto(base);
+  await page.goto(base+'/__legacy.html');
   await page.locator('.priority-tabs button[tabindex="0"]').waitFor();
   assert.equal(await page.locator('#release-video').evaluate(panel=>panel.open),false);
   await page.locator('#tab-more').click();
@@ -559,39 +563,11 @@ try {
   }
   assert.deepEqual(errors,[]);
 
-  // The formal page opens on current status and exposes all panels on small screens.
-  const production=await context.newPage();
-  production.on('pageerror',error=>errors.push(error.message));
-  await production.addInitScript(()=>localStorage.setItem('cvml-release-video-v1.1.8-open','false'));
-  await production.goto(base+'/#release-video');
-  await production.locator('.current-gpu-table tbody tr').first().waitFor();
-  assert.equal(new URL(production.url()).hash,'#release-video');
-  // v1.2 preference is independent from the v1.1.8 collapse preference.
-  await production.evaluate(()=>localStorage.removeItem('cvml-release-video-v1.2.0-open'));
-  await production.goto(base);
-  await production.locator('.priority-tabs button[tabindex="0"]').waitFor();
-  assert.equal(await production.locator('#release-video').evaluate(e=>e.open),true);
-  assert.equal(await production.locator('#panel-now').isVisible(),true);
-  assert.match(await production.title(),/^CVML GPU Timeline$/);
-  await production.locator('.priority-home').click();
-  assert.equal(await production.locator('#panel-more').isVisible(),true);
-  assert.equal(new URL(production.url()).hash,'#patch-notes');
-  await production.locator('#tab-now').click();
-  await production.locator('#tab-now').press('ArrowRight');
-  assert.equal(await production.locator('#tab-timeline').getAttribute('aria-selected'),'true');
-  for(const width of [1440,390,320]) {
-    await production.setViewportSize({width,height:width===1440?1000:844});
-    for(const name of ['now','timeline','resources','servers','parcel','more']) {
-      await production.locator('#tab-'+name).click();
-      assert.ok(await production.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),`production ${name} overflows at ${width}px`);
-    }
-    await production.locator('#tab-now').click();
-    await production.locator('#release-video-toggle').click();
-    await production.screenshot({path:path.join(output,`production-v120-${width}.png`),fullPage:true});
-    await production.locator('#release-video-toggle').click();
-  }
-  await production.close();
-
+  // Run the approved v2.1 workflows on both independently published entry points.
+  for(const environment of [{path:'/',profile:'production'},{path:'/test-server/',profile:'test'}]){
+  monitoringProfile=environment.profile;monitoringData=monitoringProfiles[monitoringProfile];monitoringWrites=0;monitoringForbidden=false;monitoringApplied=false;
+  const otherMonitoring=structuredClone(monitoringProfiles[monitoringProfile==='test'?'production':'test']);
+  await context.unroute('https://apis.tracker.delivery/carriers/*/tracks/*');
   // The retained test URL shares data and editor behavior without a production footer link.
   collectorFinished=false;progressCompleted=25;serverCStale=true;testAPI=true;previewMode=true;
   resourceEnabled=true;resourceFailed=false;failRaw=false;staleRaw=false;
@@ -616,20 +592,23 @@ try {
   });
   const preview=await context.newPage();
   preview.on('pageerror',error=>errors.push(error.message));
-  await preview.goto(base);
-  await preview.locator('.priority-tabs button[tabindex="0"]').waitFor();
-  assert.equal(await preview.getByRole('link',{name:'test-server',exact:true}).count(),0);
-  assert.equal(await preview.locator('#maintenance-notice').count(),0);
-  assert.equal(await preview.locator('#kimi-service-notice').count(),0);
-  assert.equal(await preview.locator('#kimi-tribute-dialog').count(),0);
-  assert.equal(await preview.locator('main>.design-credit').innerText(),'designed by psh in suwon');
-  await preview.goto(base+'/test-server/');
+  await preview.goto(base+environment.path);
   await preview.locator('.current-gpu-table tbody tr').first().waitFor();
-  assert.equal(new URL(preview.url()).pathname,'/test-server/');
-  assert.equal(await preview.locator('#maintenance-notice').count(),1);
-  assert.match(await preview.locator('#maintenance-notice').textContent(),/사이트 점검 중/);
-  assert.match(await preview.locator('#maintenance-notice').textContent(),/일부 시스템에 일시적인 장애/);
-  // Test-only Kimi tribute: user gesture, keyboard guardrails, original asset, dismissal.
+  assert.equal(new URL(preview.url()).pathname,environment.path);
+  assert.equal(await preview.getByRole('link',{name:'test-server',exact:true}).count(),0);
+  assert.equal(await preview.locator('main>.design-credit').innerText(),'designed by psh in suwon');
+  assert.equal(await preview.locator('#patch-notes').count(),0);
+  if(environment.profile==='production'){
+    assert.equal(await preview.title(),'CVML GPU Timeline');
+    assert.equal(await preview.locator('#maintenance-notice').count(),0);
+    assert.equal(await preview.locator('#production-maintenance-notice').isVisible(),false);
+    assert.equal(await preview.locator('.priority-home').count(),0);
+    assert.match(await preview.locator('#dashboard-version').innerText(),/대시보드 v2.1/);
+  }else{
+    assert.equal(await preview.locator('#maintenance-notice').count(),1);
+    assert.match(await preview.locator('#maintenance-notice').textContent(),/사이트 점검 중/);
+  }
+  // Kimi tribute: user gesture, keyboard guardrails, original asset, dismissal.
   assert.equal(await preview.locator('#kimi-service-notice').evaluate(e=>e.previousElementSibling.id),'release-video');
   assert.match(await preview.locator('#kimi-service-notice').innerText(),/Kimi\(191\).*서버 장애로 A\/S 진행 중/s);
   await preview.locator('#kimi-tribute-open').click();
@@ -637,7 +616,7 @@ try {
   await preview.waitForFunction(()=>document.querySelector('#kimi-tribute-image').naturalWidth===401);
   assert.equal(await preview.locator('#kimi-tribute-image').evaluate(e=>e.naturalHeight),498);
   assert.match(await preview.locator('#kimi-tribute-caption').innerText(),/드라이버 챔피언을 확정 짓고 휴가를 떠났습니다/);
-  await preview.screenshot({path:path.join(output,'kimi-tribute-desktop.png'),fullPage:false});
+  await preview.screenshot({path:path.join(output,environment.profile+'-kimi-tribute-desktop.png'),fullPage:false});
   await preview.keyboard.press('Escape');
   assert.equal(await preview.locator('#kimi-tribute-dialog').isVisible(),false);
   assert.equal(await preview.locator('#kimi-tribute-open').evaluate(e=>e===document.activeElement),true);
@@ -677,7 +656,7 @@ try {
   await preview.locator('#current-api [data-job="api-live"]').click();
   assert.match(await preview.locator('#job-detail').innerText(),/API current <script> test/);
   await preview.locator('#close-detail').click();
-  await preview.screenshot({path:path.join(output,'test-server-api-desktop.png'),fullPage:true});
+  await preview.screenshot({path:path.join(output,environment.profile+'-test-server-api-desktop.png'),fullPage:true});
   await preview.locator('#current-gpu-tab').click();
   assert.equal(await preview.locator('#current-gpus [data-job="job-original"]').count(),0);
   await preview.locator('#current-gpus [data-as-history="server-a"]').click();
@@ -687,7 +666,7 @@ try {
   await preview.keyboard.press('x');
   assert.equal(await preview.locator('#kimi-tribute-dialog').isVisible(),false);
   await preview.locator('[data-as-close]').click();
-  await preview.screenshot({path:path.join(output,'test-server-desktop.png'),fullPage:true});
+  await preview.screenshot({path:path.join(output,environment.profile+'-test-server-desktop.png'),fullPage:true});
   await preview.locator('#tab-resources').click();
   await preview.locator('.resource-card').first().waitFor({state:'visible'});
   assert.equal(await preview.locator('.resource-card').count(),4);
@@ -743,7 +722,7 @@ try {
   assert.match(await preview.locator('#parcel-official').getAttribute('href'),/gnbInvcNo=123456789012/);
   await preview.locator('#parcel-copy').click();
   assert.equal(await preview.evaluate(()=>navigator.clipboard.readText()),'123456789012');
-  await preview.screenshot({path:path.join(output,'test-server-parcel-desktop.png'),fullPage:true});
+  await preview.screenshot({path:path.join(output,environment.profile+'-test-server-parcel-desktop.png'),fullPage:true});
   await preview.locator('#tab-now').click();
   await preview.locator('#tab-parcel').click();
   assert.equal(await preview.locator('.parcel-history li').count(),2);
@@ -863,10 +842,10 @@ try {
   assert.equal(await preview.locator('[data-parcel-card]').count(),3);
   await preview.locator('#parcel-quick-lookup > summary').click();
   await preview.locator('#parcel-board-title').scrollIntoViewIfNeeded();
-  await preview.screenshot({path:path.join(output,'test-server-parcel-orders-desktop.png'),fullPage:true});
+  await preview.screenshot({path:path.join(output,environment.profile+'-test-server-parcel-orders-desktop.png'),fullPage:true});
   const viewer=await context.newPage();viewer.on('pageerror',error=>errors.push(error.message));
   const callsBeforeViewer=parcelCalls;
-  await viewer.goto(base+'/test-server/#parcel');await viewer.locator('[data-parcel-card]').first().waitFor();
+  await viewer.goto(base+environment.path+'#parcel');await viewer.locator('[data-parcel-card]').first().waitFor();
   assert.equal(await viewer.locator('[data-parcel-card]').count(),3);
   assert.equal(await viewer.locator('[data-parcel-action=edit]').count(),0);
   assert.equal(parcelCalls,callsBeforeViewer);assert.equal(writes,writesAfterOrders);
@@ -911,7 +890,7 @@ try {
   assert.deepEqual(monitoringData.servers[0].schedules[1].times,['09:00','21:00']);
   assert.deepEqual(monitoringData.servers[0].schedules[1].days,[0,1,2,3,4]);
   assert.match(await preview.locator('#monitor-connection').innerText(),/수집기 연결 필요/);
-  await preview.locator('#monitor-dialog').screenshot({path:path.join(output,'monitoring-settings-desktop.png')});
+  await preview.locator('#monitor-dialog').screenshot({path:path.join(output,environment.profile+'-monitoring-settings-desktop.png')});
   await preview.locator('#monitor-close').click();
   const bConfig=structuredClone(monitoringData.servers[0]);
   await preview.locator('[data-monitor-server="server-c"]').click();
@@ -924,14 +903,19 @@ try {
   await preview.waitForFunction(()=>document.getElementById('monitor-feedback').textContent.includes('공용 설정을 저장'));
   assert.equal(monitoringWrites,2);assert.deepEqual(monitoringData.servers.find(c=>c.server_id==='server-b'),bConfig);
   await preview.locator('#monitor-close').click();
-  monitoringApplied=true;
+  monitoringApplied=true;monitoringReportProfile=monitoringProfile==='test'?'production':'test';
+  await preview.locator('#tab-now').click();await preview.locator('#current-refresh').click();await preview.locator('#tab-servers').click();
+  await preview.locator('[data-monitor-server="server-b"]').click();
+  assert.match(await preview.locator('#monitor-connection').innerText(),/수집기 연결 필요/);
+  assert.match(await preview.locator('#monitor-results').innerText(),/아직 없어요/);
+  await preview.locator('#monitor-close').click();monitoringReportProfile=null;
   await preview.locator('#tab-now').click();await preview.locator('#current-refresh').click();await preview.locator('#tab-servers').click();
   await preview.locator('[data-monitor-server="server-b"]').click();
   assert.match(await preview.locator('#monitor-connection').innerText(),/서버 적용 완료/);
   assert.match(await preview.locator('#monitor-results').innerText(),/확인 필요/);
   await preview.locator('#monitor-close').click();
   assert.equal(writes,experimentWritesBeforeMonitoring);assert.deepEqual(data.parcels,ordersBeforeMonitoring);
-  const monitoringViewer=await context.newPage();await monitoringViewer.goto(base+'/test-server/#servers');
+  const monitoringViewer=await context.newPage();await monitoringViewer.goto(base+environment.path+'#servers');
   await monitoringViewer.locator('[data-monitor-server="server-b"]').click();
   await monitoringViewer.waitForFunction(()=>document.querySelectorAll('.monitor-schedule-row').length===2);
   assert.match(await monitoringViewer.locator('#monitor-auth').innerText(),/로그인이 필요/);
@@ -960,28 +944,28 @@ try {
     await preview.locator('#kimi-tribute-open').click();
     assert.ok(await preview.locator('#kimi-tribute-dialog').evaluate(e=>e.scrollWidth<=e.clientWidth+1));
     assert.ok(await preview.locator('#kimi-tribute-dialog').evaluate(e=>e.getBoundingClientRect().height<=innerHeight));
-    await preview.locator('#kimi-tribute-dialog').screenshot({path:path.join(output,`kimi-tribute-mobile-${width}.png`)});
+    await preview.locator('#kimi-tribute-dialog').screenshot({path:path.join(output,environment.profile+`-kimi-tribute-mobile-${width}.png`)});
     await preview.locator('#kimi-tribute-close').click();
-    await preview.screenshot({path:path.join(output,`test-server-mobile-${width}.png`),fullPage:true});
+    await preview.screenshot({path:path.join(output,environment.profile+`-test-server-mobile-${width}.png`),fullPage:true});
     await preview.locator('#current-gpus [data-as-history="server-a"]').click();
     assert.ok(await preview.locator('#as-history-dialog').evaluate(e=>e.scrollWidth<=e.clientWidth+1));
     await preview.locator('[data-as-close]').click();
     await preview.locator('#current-api-tab').click();
     assert.ok(await preview.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),`test-server API overflows at ${width}px`);
-    await preview.screenshot({path:path.join(output,`test-server-api-mobile-${width}.png`),fullPage:true});
+    await preview.screenshot({path:path.join(output,environment.profile+`-test-server-api-mobile-${width}.png`),fullPage:true});
     await preview.locator('#tab-parcel').click();
     assert.ok(await preview.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),`parcel result overflows at ${width}px`);
-    await preview.screenshot({path:path.join(output,`test-server-parcel-mobile-${width}.png`),fullPage:true});
+    await preview.screenshot({path:path.join(output,environment.profile+`-test-server-parcel-mobile-${width}.png`),fullPage:true});
     await preview.locator('#parcel-order-add').click();
     assert.ok(await preview.locator('#parcel-order-dialog').evaluate(e=>e.scrollWidth<=e.clientWidth+1));
-    await preview.screenshot({path:path.join(output,`test-server-parcel-order-form-${width}.png`),fullPage:true});
+    await preview.screenshot({path:path.join(output,environment.profile+`-test-server-parcel-order-form-${width}.png`),fullPage:true});
     await preview.locator('#parcel-order-dialog [data-close-parcel]').first().click();
     await preview.locator('#tab-servers').click();
     await preview.locator('[data-monitor-server="server-b"]').click();
     await preview.locator('#monitor-add').click();await preview.locator('#monitor-kind').selectOption('daily');await preview.locator('#monitor-daily-count').selectOption('2');
     assert.ok(await preview.locator('#monitor-dialog').evaluate(e=>e.scrollWidth<=e.clientWidth+1),`monitoring dialog overflows at ${width}px`);
     assert.ok(await preview.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
-    await preview.locator('#monitor-dialog').screenshot({path:path.join(output,`monitoring-schedule-mobile-${width}.png`)});
+    await preview.locator('#monitor-dialog').screenshot({path:path.join(output,environment.profile+`-monitoring-schedule-mobile-${width}.png`)});
     await preview.locator('#monitor-close').click();
 
   }
@@ -995,6 +979,8 @@ try {
   assert.equal(writes,writesAfterOrders);
   assert.deepEqual(errors,[]);
   await preview.close();
+  assert.deepEqual(monitoringProfiles[monitoringProfile==='test'?'production':'test'],otherMonitoring,'testing one dashboard must preserve the other monitoring profile');
+  }
 
   console.log('Browser checks passed: existing dashboard workflows plus test-server live data, shared editor, stale GPU/API handling, tabs, details, refresh and 320/390px layouts.');
   console.log(`Screenshots: ${output}`);

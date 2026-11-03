@@ -1,0 +1,73 @@
+/* v2.1 test canvas. Production uses its existing stylesheet. */
+body.cinema-v21{--atelier-ink:#19191b;--atelier-muted:#737379;--atelier-accent:#0071e3;background:#f5f5f7;color:var(--atelier-ink);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans KR",sans-serif;-webkit-font-smoothing:antialiased}
+.cinema-v21 main{max-width:1360px;padding:32px 40px 0}
+.cinema-v21 .release-video{position:relative;border:0;border-radius:30px;overflow:hidden;background:#050507;color:#f5f5f7;box-shadow:none;margin:0 0 54px}
+.cinema-v21 .release-video-toggle{padding:24px 30px;border:0;background:#050507;color:#b8b8bf;min-height:64px}
+.cinema-v21 .release-video[open]>.release-video-toggle{border-bottom:1px solid #1b1b22}
+.cinema-v21 .release-video-toggle:hover{background:#101014}
+.cinema-v21 .release-video-toggle:focus-visible{outline-color:#6babff}
+.cinema-v21 .release-video-summary{font-size:13px;font-weight:500;letter-spacing:.01em;gap:12px}
+.cinema-v21 .release-video-badge{background:transparent;color:inherit;border:1px solid #36363c;border-radius:99px;padding:4px 10px;font-size:11px}
+.cinema-v21 .release-video-toggle-label{font-size:12px;color:#a7a7af}
+.cinema-v21 .release-video-body{display:block;padding:0 0 22px;background:#050507}
+.cinema-v21 .release-video-player{margin:0 auto;max-width:1120px;border-radius:0;background:#050507;aspect-ratio:16/9;overflow:hidden}
+.cinema-v21 .release-video-player video{display:block;width:100%;height:100%;border-radius:0;object-fit:contain;background:#050507}
+.cinema-v21 .film-caption{display:flex;align-items:center;justify-content:center;gap:8px 24px;flex-wrap:wrap;margin:0;padding:21px 26px 0;color:#a7a7af;font-size:12px;line-height:1.8;text-align:center}
+.cinema-v21 .film-caption a{color:#b8d6ff;text-decoration:none;text-underline-offset:4px}.cinema-v21 .film-caption a:hover{text-decoration:underline}
+.cinema-v21 .film-caption details{max-width:650px}.cinema-v21 .film-caption summary{cursor:pointer;list-style:none}.cinema-v21 .film-caption p{font-size:11px;margin:9px 0 0;color:#a7a7af;word-break:keep-all}
+.cinema-v21 .priority-header{padding:0 4px 28px;gap:22px;align-items:flex-end}
+.cinema-v21 .priority-header h1{font-size:38px;font-weight:650;letter-spacing:-.055em;line-height:1.2}
+.cinema-v21 .priority-header p{color:#77777e;font-size:13px;line-height:1.9;margin-top:12px}
+.cinema-v21 .priority-header-actions{gap:14px;flex-wrap:wrap}
+.cinema-v21 .priority-header-actions .badge{border:0;background:#eaeaec;font-weight:500;color:#65656d}
+.cinema-v21 .priority-home{color:#626269;font-size:12px}
+.cinema-v21 .priority-tabs{gap:5px;border-bottom:0;padding:7px;width:fit-content;max-width:100%;background:#e9e9ec;border-radius:99px;margin:0 0 32px;overflow-x:auto;scrollbar-width:none}
+.cinema-v21 .priority-tabs button{flex:none;border:0;border-radius:99px;padding:12px 24px;min-height:43px;font-size:13px;font-weight:500;color:#616169;white-space:nowrap;transition:background .18s,color .18s,box-shadow .18s}
+.cinema-v21 .priority-tabs button[aria-selected=true]{background:#fff;color:#19191b;box-shadow:0 2px 8px #00000009}
+.cinema-v21 .priority-tabs button:hover{color:#19191b;background:#ffffff85}
+.cinema-v21 .priority-overview{gap:16px;margin:0 0 30px}
+.cinema-v21 .priority-overview button{padding:27px 28px;border:0;border-radius:24px;background:white;box-shadow:0 3px 18px #11111b03;min-height:124px}
+.cinema-v21 .priority-overview button>span{font-size:13px;color:#77777e;font-weight:500}
+.cinema-v21 .priority-overview button>strong{font-size:35px;letter-spacing:-.05em;font-weight:600;margin-top:13px;color:#19191b}
+.cinema-v21 .priority-overview button>strong small{font-size:14px;font-weight:400;letter-spacing:0;color:#77777e}
+.cinema-v21 .priority-alert{border-radius:17px;padding:18px 22px;box-shadow:none}
+.cinema-v21 .current-section,.cinema-v21 #panel-resources>.openrouter,.cinema-v21 #panel-resources>.resources,.cinema-v21 #panel-resources>.bottlenecks,.cinema-v21 #panel-more>.hardware,.cinema-v21 #panel-more>.usage{padding:30px;border:0;border-radius:26px;background:#fff;box-shadow:0 3px 18px #11111b03}
+.cinema-v21 .current-heading{margin-bottom:23px;gap:12px}.cinema-v21 .current-heading h2,.cinema-v21 .section-title h2{font-size:22px;font-weight:600;letter-spacing:-.035em}
+.cinema-v21 .current-resource-tabs{margin-bottom:24px}.cinema-v21 .current-gpu-table{font-size:13px}.cinema-v21 .current-gpu-table thead th{font-size:11px;color:#8a8a91;font-weight:500}
+.cinema-v21 .current-gpu-table tbody td,.cinema-v21 .current-gpu-table tbody th{padding-top:24px;padding-bottom:24px}
+.cinema-v21 .current-state{border-radius:99px;padding:5px 10px;font-size:11px}.cinema-v21 .current-job{font-weight:600;font-size:14px}
+.cinema-v21 .current-meter{height:4px;border-radius:99px}.cinema-v21 .current-meter>span{border-radius:99px;background:#0071e3}
+.cinema-v21 .current-footnote{font-size:11px;line-height:1.9;margin-top:22px;color:#898990}
+.cinema-v21 .resource-heading,.cinema-v21 .openrouter-heading,.cinema-v21 .hardware-heading,.cinema-v21 .usage-heading{padding:0;gap:24px;margin-bottom:26px}
+.cinema-v21 .resource-heading h2,.cinema-v21 .hardware-heading h2,.cinema-v21 .usage-heading h2,.cinema-v21 .openrouter-heading h2{font-size:24px;letter-spacing:-.04em;font-weight:600}
+.cinema-v21 .resource-heading p,.cinema-v21 .hardware-heading p,.cinema-v21 .usage-heading p,.cinema-v21 .openrouter-heading p{font-size:13px;line-height:1.85;color:#77777e;margin-top:9px}
+.cinema-v21 #panel-resources>section+section,.cinema-v21 #panel-more>section+section{margin-top:28px}
+.cinema-v21 .resource-card,.cinema-v21 .usage-card,.cinema-v21 .hardware-card{border-color:#ededf0;border-radius:18px;box-shadow:none;padding:24px}
+.cinema-v21 .server-grid{gap:20px}.cinema-v21 .server-card{border:0;border-radius:25px;padding:28px;box-shadow:0 3px 18px #11111b03;background:#fff;min-width:0}
+.cinema-v21 .server-card>header h3{font-size:22px;letter-spacing:-.04em;font-weight:600}.cinema-v21 .server-card .gpu{border-radius:15px}
+.cinema-v21 .monitor-card{border:0;border-top:1px solid #ededf0;border-radius:0;background:transparent;padding:22px 0 0;margin-top:26px}
+.cinema-v21 .monitor-card-top{gap:10px}.cinema-v21 .monitor-card-top>strong{font-weight:550;font-size:13px}.cinema-v21 .monitor-settings-button{border:0;background:#f0f5ff;color:#0066cc;border-radius:12px;min-height:44px;font-size:13px;margin-top:14px}
+.cinema-v21 .monitor-settings-button:hover{background:#e4eeff}
+.cinema-v21 .monitor-release{position:relative;display:grid;grid-template-columns:1fr auto;align-items:center;gap:28px;padding:34px 38px;margin-bottom:34px;min-height:182px;background:#fff;border:0;border-radius:26px;overflow:hidden}
+.cinema-v21 .monitor-release .monitor-release-copy{position:relative;z-index:1;min-width:0}.cinema-v21 .monitor-release h2{font-size:29px;line-height:1.35;font-weight:600;letter-spacing:-.045em;margin:10px 0 13px;word-break:keep-all}
+.cinema-v21 .monitor-release p{font-size:13px;line-height:1.9;max-width:660px;color:#77777e;word-break:keep-all}.cinema-v21 .monitor-release-copy>span{font-size:11px;font-weight:550;letter-spacing:.08em;color:#0066cc}
+.cinema-v21 .monitor-release-number{font-size:112px;line-height:1;font-weight:650;letter-spacing:-.08em;padding-right:5px;color:#c7ccd6;background:linear-gradient(135deg,#25282e 10%,#b5bccc 54%,#3889f0);background-clip:text;-webkit-background-clip:text;-webkit-text-fill-color:transparent;user-select:none}
+.cinema-v21 .section-title{padding:0 4px;margin-bottom:20px}.cinema-v21 .section-title>span{font-size:12px;color:#8a8a91}
+.cinema-v21 .monitor-dialog{box-shadow:0 35px 100px #00000038}.cinema-v21 .monitor-dialog::backdrop{background:#10101455;backdrop-filter:blur(10px)}
+.cinema-v21 .monitor-eyebrow{font-size:10px;letter-spacing:.1em;color:#83838b}.cinema-v21 .monitor-dialog-header{padding:27px 30px 22px}.cinema-v21 .monitor-dialog-content{padding:27px 30px}
+.cinema-v21 .monitor-editor{background:#fafbfe;border-color:#e0e5ee;border-radius:20px}.cinema-v21 .monitor-editor legend{font-weight:550;color:#404047;font-size:15px}
+.cinema-v21 .monitor-check{padding:17px;border-color:#e6e6eb;border-radius:14px}.cinema-v21 .monitor-check:has(input:checked){border-color:#b4d1f3;background:#f3f8ff}
+.cinema-v21 .monitor-primary{border-radius:12px}.cinema-v21 .monitor-secondary{border-radius:12px}.cinema-v21 .monitor-schedule-row{padding:22px;border-radius:18px}.cinema-v21 .monitor-connection{border-radius:15px}
+.cinema-v21 .parcel-shell{border:0;border-radius:26px;background:#fff;padding:32px;box-shadow:0 3px 18px #11111b03}.cinema-v21 .parcel-heading h2{font-size:26px;font-weight:600;letter-spacing:-.04em}.cinema-v21 .parcel-heading p{line-height:1.85;margin-top:9px}
+.cinema-v21 .parcel-board{padding:25px 0 0;border:0;border-top:1px solid #ededf0;border-radius:0;background:#fff}.cinema-v21 .parcel-order{border-color:#e8e8ed;border-radius:19px;padding:24px;box-shadow:none}
+.cinema-v21 .site-credit{margin-top:55px;padding:34px 0 42px;color:#8e8e94;font-size:11px;letter-spacing:.02em}.cinema-v21 .dashboard-version{margin-top:36px;color:#96969d}
+.cinema-v21 [hidden]{display:none!important}
+@media(max-width:900px){.cinema-v21 main{padding:24px 26px 0}.cinema-v21 .priority-header h1{font-size:32px}.cinema-v21 .priority-tabs button{padding:11px 19px}.cinema-v21 .monitor-release{padding:30px;gap:22px}.cinema-v21 .monitor-release h2{font-size:25px}.cinema-v21 .monitor-release-number{font-size:90px}}
+@media(max-width:640px){.cinema-v21 main{padding:14px 14px 0}.cinema-v21 .release-video{border-radius:21px;margin-bottom:34px}.cinema-v21 .release-video-toggle{padding:18px 20px;gap:10px;min-height:60px}.cinema-v21 .release-video-summary{font-size:11px;gap:9px}.cinema-v21 .release-video-toggle-label{font-size:11px}.cinema-v21 .release-video-badge{font-size:10px;padding:3px 7px}.cinema-v21 .film-caption{padding:17px 18px 0;gap:8px 20px;font-size:11px}.cinema-v21 .film-caption p{font-size:10px}.cinema-v21 .release-video-body{padding-bottom:20px}
+.cinema-v21 .priority-header{padding:0 5px 23px;gap:19px;align-items:flex-start}.cinema-v21 .priority-header h1{font-size:29px}.cinema-v21 .priority-header p{font-size:12px;margin-top:9px}.cinema-v21 .priority-header-actions{gap:11px;justify-content:flex-start;flex-wrap:wrap}.cinema-v21 .priority-tabs{width:100%;box-sizing:border-box;gap:2px;padding:5px;border-radius:17px;margin-bottom:24px}.cinema-v21 .priority-tabs button{padding:10px 14px;font-size:12px;min-height:40px}
+.cinema-v21 .priority-overview{gap:10px;margin-bottom:23px}.cinema-v21 .priority-overview button{padding:21px 19px;min-height:112px;border-radius:19px}.cinema-v21 .priority-overview button>span{font-size:12px}.cinema-v21 .priority-overview button>strong{font-size:31px}.cinema-v21 .priority-overview button>strong small{font-size:11px}
+.cinema-v21 .current-section,.cinema-v21 #panel-resources>.openrouter,.cinema-v21 #panel-resources>.resources,.cinema-v21 #panel-resources>.bottlenecks,.cinema-v21 #panel-more>.hardware,.cinema-v21 #panel-more>.usage{padding:23px 20px;border-radius:21px}.cinema-v21 .current-heading{flex-wrap:wrap;gap:10px}.cinema-v21 .current-heading h2{font-size:20px}.cinema-v21 .resource-heading,.cinema-v21 .openrouter-heading,.cinema-v21 .hardware-heading,.cinema-v21 .usage-heading{gap:17px;margin-bottom:24px}.cinema-v21 .resource-heading h2,.cinema-v21 .hardware-heading h2,.cinema-v21 .usage-heading h2{font-size:22px}.cinema-v21 .resource-card,.cinema-v21 .usage-card,.cinema-v21 .hardware-card{padding:20px}.cinema-v21 .resource-controls{width:100%;gap:10px;flex-wrap:wrap}
+.cinema-v21 .monitor-release{padding:26px 24px;grid-template-columns:1fr;min-height:0;gap:0;border-radius:21px;margin-bottom:26px}.cinema-v21 .monitor-release h2{font-size:24px;max-width:250px;margin-top:12px}.cinema-v21 .monitor-release p{font-size:12px;max-width:270px;position:relative;z-index:1}.cinema-v21 .monitor-release-number{position:absolute;right:17px;top:13px;font-size:75px;opacity:.13}.cinema-v21 .server-grid{gap:16px}.cinema-v21 .server-card{padding:24px;border-radius:21px}
+.cinema-v21 .monitor-dialog-header{padding:21px 20px}.cinema-v21 .monitor-dialog-content{padding:22px 20px}.cinema-v21 .monitor-schedule-row{padding:17px}.cinema-v21 .monitor-check{padding:14px}.cinema-v21 .monitor-dialog-footer .monitor-primary,.cinema-v21 .monitor-dialog-footer .monitor-secondary{border-radius:12px}
+.cinema-v21 .parcel-shell{padding:24px 20px;border-radius:21px}.cinema-v21 .parcel-heading h2{font-size:23px}.cinema-v21 .parcel-order{padding:21px}.cinema-v21 .site-credit{margin-top:36px;padding-bottom:32px}}
+@media(prefers-reduced-motion:reduce){.cinema-v21 *{scroll-behavior:auto!important;transition:none!important}}

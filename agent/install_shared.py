@@ -130,8 +130,10 @@ def install(args):
     if args.server_id:
         config["server_id"] = args.server_id
     config["state_dir"] = str(STATE)
-    if getattr(args, "enable_monitoring_test", False):
-        config["monitoring_test_enabled"] = True
+    if getattr(args, "enable_monitoring", False):
+        config.update(monitoring_enabled=True, monitoring_profile="production", monitoring_test_enabled=False)
+    elif getattr(args, "enable_monitoring_test", False):
+        config.update(monitoring_enabled=True, monitoring_profile="test", monitoring_test_enabled=True)
     if not re.fullmatch(r"[a-z0-9]+(?:-[a-z0-9]+)*", config.get("server_id", "")):
         raise ValueError("올바른 server_id가 필요합니다.")
     if not isinstance(config.get("name"), str) or not config["name"].strip():
@@ -199,7 +201,9 @@ def main():
     parser.add_argument("--config", help="기존 설정 파일 절대경로")
     parser.add_argument("--env-file", help="기존 토큰 환경 파일 절대경로")
     parser.add_argument("--server-id", help="이 서버의 ID. 예: server-b")
-    parser.add_argument("--enable-monitoring-test", action="store_true", help="v2.1 테스트 모니터링 일정 동기화 활성화")
+    monitoring = parser.add_mutually_exclusive_group()
+    monitoring.add_argument("--enable-monitoring", action="store_true", help="v2.1 정식 모니터링 일정 동기화 활성화")
+    monitoring.add_argument("--enable-monitoring-test", action="store_true", help="v2.1 테스트 모니터링 일정 동기화 활성화")
     try:
         install(parser.parse_args())
     except (OSError, ValueError, RuntimeError, subprocess.CalledProcessError, KeyError) as error:

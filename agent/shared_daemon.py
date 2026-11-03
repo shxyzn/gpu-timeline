@@ -79,7 +79,7 @@ class Broker:
         self.status_lock = threading.Lock()
         self.upload = {"last_upload_at": None, "last_attempt_at": None, "error": None}
         self.resources = ResourceSampler(config)
-        self.monitoring = HealthMonitor(config, self.monitoring_upload_status) if config.get("monitoring_test_enabled") is True else None
+        self.monitoring = HealthMonitor(config, self.monitoring_upload_status) if config.get("monitoring_enabled") is True or config.get("monitoring_test_enabled") is True else None
 
     def monitoring_upload_status(self):
         with self.status_lock:
