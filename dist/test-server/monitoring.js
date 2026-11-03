@@ -1,6 +1,7 @@
 import {dashboardView,monitoringAccess,openDashboardLogin,saveTestMonitoringConfig} from '../app.js?v=2.1-test-monitor';
 import {CHECKS,DAYS,monitoringID,defaultConfig,emptyMonitoring,makeSchedule,validateConfig,validateSchedule,scheduleLabel,nextRun} from './monitoring-model.js?v=2.1';
 import {MonitoringStore} from './monitoring-store.js?v=2.1';
+import {isUnavailable} from './availability-model.js?v=2.1-as';
 import {health} from '../model.js';
 
 const $=id=>document.getElementById(id);
@@ -59,6 +60,7 @@ function renderCards(){
   document.querySelectorAll('#servers .server-card').forEach((card,index)=>{
     const s=view.servers[index];if(!s)return;const c=savedConfig(s.server_id),st=state(s,c);
     card.querySelector('.monitor-card')?.remove();
+    if(isUnavailable(s.server_id))return;
     const box=document.createElement('div');box.className='monitor-card';
     const run=s.monitoring?.last_run;
     box.innerHTML=`<div class="monitor-card-top"><strong>상태 모니터링</strong><span class="monitor-badge ${st.tone}">${esc(st.label)}</span></div><p>${c?`${c.schedules.filter(x=>x.enabled).length}개 활성 일정 · 설정 v${c.revision}`:'일반·정밀 점검 일정을 추가해 주세요.'}</p>${run?`<p>마지막 점검 ${esc(stamp(run.finished_at))} · ${esc(resultLabel(run.status))}</p>`:''}<button type="button" class="monitor-settings-button" data-monitor-server="${esc(s.server_id)}">모니터링 설정</button>`;
@@ -96,7 +98,7 @@ function fillDraft(){
   $('monitor-config-error').textContent=loadError;$('monitor-feedback').textContent='';hideEditor();renderSchedules();updateConnection();updateAuth();
 }
 async function openSettings(id){
-  if(saving)return;serverID=id;if(!server())return;fillDraft();dialog.showModal();
+  if(saving||isUnavailable(id))return;serverID=id;if(!server())return;fillDraft();dialog.showModal();
   if(!loaded){await refreshPublic();if(dialog.open&&serverID===id)fillDraft();}
 }
 function renderSchedules(){
@@ -137,7 +139,7 @@ function addSchedule(){
   }catch(error){$('monitor-schedule-error').textContent=error.message;}
 }
 async function save(event){
-  event.preventDefault();if(saving)return;$('monitor-config-error').textContent='';
+  event.preventDefault();if(saving||isUnavailable(serverID))return;$('monitor-config-error').textContent='';
   if(!monitoringAccess().unlocked){openDashboardLogin();return;}
   if(!$('monitor-editor').hidden){$('monitor-config-error').textContent='작성 중인 일정을 추가하거나 취소한 후 서버 설정을 저장해 주세요.';return;}
   try{

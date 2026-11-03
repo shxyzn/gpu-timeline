@@ -51,7 +51,7 @@ try {
   let monitoringData=emptyMonitoring(),monitoringWrites=0,monitoringForbidden=false,monitoringApplied=false;
   const telemetry = id => ({server_id: id, name: `Server ${id.slice(-1).toUpperCase()}`, updated_at: iso(id === 'server-c' && serverCStale ? -2 : 0), collector_ok: true,
     resources: resourceEnabled && id !== 'server-c' ? resourceFixture(Date.now(),resourceFailed) : undefined,
-    monitoring: monitoringApplied&&id==='server-a'?{profile:'test',enabled:true,applied_revision:monitoringData.servers.find(c=>c.server_id===id)?.revision||0,applied_at:iso(0),config_error:null,schedules:[],history:[{name:'일반 점검',finished_at:iso(0),status:'warning',checks:[{id:'gpu_count',status:'warning',summary:'인식 1 / 설정 2 GPU'}]}]}:undefined,
+    monitoring: monitoringApplied&&id==='server-b'?{profile:'test',enabled:true,applied_revision:monitoringData.servers.find(c=>c.server_id===id)?.revision||0,applied_at:iso(0),config_error:null,schedules:[],history:[{name:'일반 점검',finished_at:iso(0),status:'warning',checks:[{id:'gpu_count',status:'warning',summary:'인식 1 / 설정 2 GPU'}]}]}:undefined,
     agent_version: id === 'server-b' ? {version: '1.1.2', revision: 'b'.repeat(40)} : id === 'server-a' && serverUpgraded ? {version: '1.1.5', revision: 'a'.repeat(40)} : null,
     gpus: [{uuid: `${id}-gpu`, index: 0, name: 'NVIDIA GeForce RTX 4090', process_count: 0, utilization: previewMode && id === 'server-a' ? 86 : 0,
       memory_used_mib: previewMode && id === 'server-a' ? 21000 : 0, memory_total_mib: 24564},
@@ -631,12 +631,16 @@ try {
   assert.equal(await preview.locator('#panel-timeline').isVisible(),false);
   assert.equal(await preview.locator('.current-gpu-table tbody tr').count(),4);
   assert.equal(await preview.locator('[data-gpu-state=idle]').count(),2);
-  assert.equal(await preview.locator('[data-gpu-state=busy]').count(),1);
+  assert.equal(await preview.locator('[data-gpu-state=busy]').count(),0);
+  assert.equal(await preview.locator('[data-gpu-state=maintenance]').count(),1);
+  assert.equal(await preview.locator('#current-gpu-count').innerText(),'3');
+  assert.match(await preview.locator('#as-capacity-note').innerText(),/Server A.*A\/S 중/);
   assert.equal(await preview.locator('[data-gpu-state=unknown]').count(),1);
   assert.match(await preview.locator('#priority-alerts').innerText(),/Server C/);
   assert.equal(await preview.locator('.current-server-label').count(),3);
   assert.equal(await preview.locator('.current-server-label').nth(1).getAttribute('rowspan'),'2');
-  assert.match(await preview.locator('[data-current-server=server-a] .current-gpu-percent').innerText(),/86%/);
+  assert.match(await preview.locator('[data-current-server=server-a]').innerText(),/사용 일시 중단/);
+  assert.equal(await preview.locator('[data-current-server=server-a] .current-gpu-percent').count(),0);
   assert.equal(await preview.locator('#current-api-panel').isVisible(),false);
   await preview.locator('#priority-overview [data-resource-view=api]').click();
   assert.equal(await preview.locator('#current-api-panel').isVisible(),true);
@@ -650,23 +654,36 @@ try {
   await preview.locator('#close-detail').click();
   await preview.screenshot({path:path.join(output,'test-server-api-desktop.png'),fullPage:true});
   await preview.locator('#current-gpu-tab').click();
-  assert.equal(await preview.locator('#current-gpus [data-job="job-original"]').innerText(),'exp46 · AIME / 8B');
-  assert.match(await preview.locator('#current-gpus .current-job-meta').first().innerText(),/GEPA · seed 0 · 상현/);
-  await preview.locator('#current-gpus [data-job="job-original"]').click();
-  assert.match(await preview.locator('#job-detail').innerText(),/server-a\/job-original/);
-  assert.match(await preview.locator('#job-detail').innerText(),/정답 2회 연속 시 진짜 AIME 문제로 교체/);
-  await preview.locator('#close-detail').click();
+  assert.equal(await preview.locator('#current-gpus [data-job="job-original"]').count(),0);
+  await preview.locator('#current-gpus [data-as-history="server-a"]').click();
+  assert.match(await preview.locator('#as-history-dialog').innerText(),/server-a\/job-original/);
+  assert.match(await preview.locator('#as-history-dialog').innerText(),/정답 2회 연속 시 진짜 AIME 문제로 교체/);
+  assert.match(await preview.locator('#as-history-dialog').innerText(),/수집 당시 실행 중/);
+  await preview.locator('[data-as-close]').click();
   await preview.screenshot({path:path.join(output,'test-server-desktop.png'),fullPage:true});
   await preview.locator('#tab-resources').click();
   await preview.locator('.resource-card').first().waitFor({state:'visible'});
   assert.equal(await preview.locator('.resource-card').count(),4);
   assert.match(await preview.locator('#openrouter-grid').innerText(),/연구실 공용/);
+  assert.equal(await preview.locator('#resource-server').inputValue(),'server-b');
+  await preview.locator('#resource-server').selectOption('server-a');
+  await preview.locator('#as-resource-body > .as-cover').waitFor({state:'visible'});
+  assert.match(await preview.locator('#resource-state').innerText(),/A\/S 중/);
+  await preview.locator('[data-as-stats="resource"]').click();
+  assert.match(await preview.locator('#as-resource-body > .as-past-note').innerText(),/수리 전 수집 기록/);
+  assert.equal(await preview.locator('.resource-card').first().isVisible(),true);
+  await preview.locator('#resource-server').selectOption('server-b');
   await preview.locator('#tab-timeline').click();
   assert.equal(await preview.locator('#timeline').isVisible(),true);
+  assert.ok(await preview.locator('#timeline .as-lane').count()>0);
+  assert.equal(await preview.locator('#timeline .as-lane [data-job="job-original"]').evaluateAll(els=>els.every(e=>e.closest('[inert]')!==null)),true);
   await preview.locator('#tab-servers').click();
   assert.equal(await preview.locator('.server-card').count(),3);
-  await preview.locator('[data-monitor-server="server-a"]').waitFor();
-  assert.equal(await preview.locator('[data-monitor-server]').count(),3);
+  await preview.locator('[data-monitor-server="server-b"]').waitFor();
+  assert.equal(await preview.locator('[data-monitor-server="server-a"]').count(),0);
+  assert.equal(await preview.locator('[data-monitor-server]').count(),2);
+  assert.match(await preview.locator('[data-as-server="server-a"]').innerText(),/A\/S 중/);
+  assert.equal(await preview.locator('[data-as-server="server-a"] .server-heading .state').innerText(),'A/S 중');
   assert.equal(monitoringWrites,0);
   await preview.locator('#tab-more').click();
   assert.equal(await preview.locator('#usage').isVisible(),true);
@@ -827,10 +844,14 @@ try {
   assert.equal(await viewer.locator('[data-parcel-card]').count(),3);
   assert.equal(await viewer.locator('#parcel-count-active').innerText(),'3');
   await viewer.close();
+  await preview.locator('#manual-add').click();
+  await preview.waitForFunction(()=>document.querySelector('#manual-server option[value="server-a"]')?.disabled);
+  assert.equal(await preview.locator('#manual-server').inputValue(),'server-b');
+  await preview.locator('[data-close-dialog="manual-dialog"]').first().click();
   // v2.1: independently stored per-server schedules and honest collector acknowledgement.
   const experimentWritesBeforeMonitoring=writes,ordersBeforeMonitoring=structuredClone(data.parcels);
   await preview.locator('#tab-servers').click();
-  await preview.locator('[data-monitor-server="server-a"]').click();
+  await preview.locator('[data-monitor-server="server-b"]').click();
   await preview.locator('#monitor-dialog').waitFor();
   await preview.locator('#monitor-add').click();
   await preview.locator('#monitor-check-none').click();
@@ -854,7 +875,7 @@ try {
   await preview.locator('#monitor-save').click();
   await preview.waitForFunction(()=>document.getElementById('monitor-feedback').textContent.includes('공용 설정을 저장'));
   assert.equal(monitoringWrites,1);
-  assert.equal(monitoringData.servers[0].server_id,'server-a');
+  assert.equal(monitoringData.servers[0].server_id,'server-b');
   assert.equal(monitoringData.servers[0].schedules.length,2);
   assert.equal(monitoringData.servers[0].schedules[0].interval_minutes,15);
   assert.deepEqual(monitoringData.servers[0].schedules[1].times,['09:00','21:00']);
@@ -862,8 +883,8 @@ try {
   assert.match(await preview.locator('#monitor-connection').innerText(),/수집기 연결 필요/);
   await preview.locator('#monitor-dialog').screenshot({path:path.join(output,'monitoring-settings-desktop.png')});
   await preview.locator('#monitor-close').click();
-  const aConfig=structuredClone(monitoringData.servers[0]);
-  await preview.locator('[data-monitor-server="server-b"]').click();
+  const bConfig=structuredClone(monitoringData.servers[0]);
+  await preview.locator('[data-monitor-server="server-c"]').click();
   assert.equal(await preview.locator('.monitor-schedule-row').count(),0);
   await preview.locator('#monitor-add').click();await preview.locator('#monitor-editor-add').click();
   monitoringForbidden=true;await preview.locator('#monitor-save').click();
@@ -871,17 +892,17 @@ try {
   assert.equal(monitoringWrites,1);assert.equal(monitoringData.servers.length,1);
   monitoringForbidden=false;await preview.locator('#monitor-save').click();
   await preview.waitForFunction(()=>document.getElementById('monitor-feedback').textContent.includes('공용 설정을 저장'));
-  assert.equal(monitoringWrites,2);assert.deepEqual(monitoringData.servers.find(c=>c.server_id==='server-a'),aConfig);
+  assert.equal(monitoringWrites,2);assert.deepEqual(monitoringData.servers.find(c=>c.server_id==='server-b'),bConfig);
   await preview.locator('#monitor-close').click();
   monitoringApplied=true;
   await preview.locator('#tab-now').click();await preview.locator('#current-refresh').click();await preview.locator('#tab-servers').click();
-  await preview.locator('[data-monitor-server="server-a"]').click();
+  await preview.locator('[data-monitor-server="server-b"]').click();
   assert.match(await preview.locator('#monitor-connection').innerText(),/서버 적용 완료/);
   assert.match(await preview.locator('#monitor-results').innerText(),/확인 필요/);
   await preview.locator('#monitor-close').click();
   assert.equal(writes,experimentWritesBeforeMonitoring);assert.deepEqual(data.parcels,ordersBeforeMonitoring);
   const monitoringViewer=await context.newPage();await monitoringViewer.goto(base+'/test-server/#servers');
-  await monitoringViewer.locator('[data-monitor-server="server-a"]').click();
+  await monitoringViewer.locator('[data-monitor-server="server-b"]').click();
   await monitoringViewer.waitForFunction(()=>document.querySelectorAll('.monitor-schedule-row').length===2);
   assert.match(await monitoringViewer.locator('#monitor-auth').innerText(),/로그인이 필요/);
   await monitoringViewer.locator('#monitor-close').click();await monitoringViewer.close();
@@ -907,9 +928,9 @@ try {
     await preview.locator('#tab-now').click();
     await preview.locator('#current-gpu-tab').click();
     await preview.screenshot({path:path.join(output,`test-server-mobile-${width}.png`),fullPage:true});
-    await preview.locator('#current-gpus [data-job="job-original"]').click();
-    assert.ok(await preview.locator('#detail-dialog').evaluate(e=>e.scrollWidth<=e.clientWidth+1));
-    await preview.locator('#close-detail').click();
+    await preview.locator('#current-gpus [data-as-history="server-a"]').click();
+    assert.ok(await preview.locator('#as-history-dialog').evaluate(e=>e.scrollWidth<=e.clientWidth+1));
+    await preview.locator('[data-as-close]').click();
     await preview.locator('#current-api-tab').click();
     assert.ok(await preview.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),`test-server API overflows at ${width}px`);
     await preview.screenshot({path:path.join(output,`test-server-api-mobile-${width}.png`),fullPage:true});
@@ -921,7 +942,7 @@ try {
     await preview.screenshot({path:path.join(output,`test-server-parcel-order-form-${width}.png`),fullPage:true});
     await preview.locator('#parcel-order-dialog [data-close-parcel]').first().click();
     await preview.locator('#tab-servers').click();
-    await preview.locator('[data-monitor-server="server-a"]').click();
+    await preview.locator('[data-monitor-server="server-b"]').click();
     await preview.locator('#monitor-add').click();await preview.locator('#monitor-kind').selectOption('daily');await preview.locator('#monitor-daily-count').selectOption('2');
     assert.ok(await preview.locator('#monitor-dialog').evaluate(e=>e.scrollWidth<=e.clientWidth+1),`monitoring dialog overflows at ${width}px`);
     assert.ok(await preview.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));

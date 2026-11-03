@@ -1,7 +1,9 @@
 import {dashboardView,openExperiment,refreshDashboard} from '../app.js?v=2.1-test-monitor';
-import {currentView,progressValue,experimentPresentation,humanDuration,gpuReadings} from './current-model.js?v=1.2.0';
+import {progressValue,experimentPresentation,humanDuration,gpuReadings} from './current-model.js?v=1.2.0';
 import {health,jobETA,timestamp,apiSlot} from '../model.js';
 import {budgetUsage,dollars,usageStatus} from '../openrouter-model.js?v=1.2.0';
+import {availableCurrentView,isUnavailable} from './availability-model.js?v=2.1-as';
+import {repairPanel} from './availability-ui.js?v=2.1-as';
 import './parcel.js?v=1.2.0';
 import './parcel-board.js?v=2.1';
 
@@ -47,6 +49,7 @@ function gpuTable(rows,now) {
     return `<tbody aria-label="${esc(server.name)}" data-server-label="${esc(server.name+' · '+groupModel)}">${group.map((row,index)=>{
     const {server,gpu,state,healthy,jobs,next}=row;
     const labels={idle:['여유','idle'],busy:['점유 중','busy'],unknown:['확인 필요','warning']};
+    if(row.repair)return `<tr data-current-server="${esc(server.server_id)}" data-gpu-state="maintenance">${index===0?`<th scope="rowgroup" rowspan="${group.length}" class="current-server-label"><strong>${esc(server.name)}</strong><small>${esc(groupModel)}</small><span class="as-tag">A/S 중</span></th>`:''}<td colspan="6" class="as-current-cell">${repairPanel(server.server_id,{compact:true})}</td></tr>`;
     const label=labels[state];
     const entries=jobs.length?jobs.map(job=>`<div class="current-job-entry">${jobButton(server,job)}${job.status==='unknown'||!healthy?`<small class="current-observation">${job.status==='unknown'?'실행 상태 확인 필요':'마지막 관측: 실행 중'}</small>`:''}</div>`).join(''):
       state==='busy'?'<span>GPU 점유 감지</span><small>등록된 실행 실험 없음</small>':next?jobButton(server,next,'예정 · ')+`<small>시작 ${timestamp(next.started_at)!==null?esc(date(timestamp(next.started_at),now)):'미등록'}</small>`:
@@ -56,24 +59,26 @@ function gpuTable(rows,now) {
   }).join('')}</table>`;
 }
 function apiList(rows,now) {
-  return rows.map(({server,job,healthy})=>`<article class="current-api-row"><div>${jobButton(server,job)}</div><div>${badge(!healthy||job.status==='unknown'?'확인 필요':'실행 중',!healthy||job.status==='unknown'?'warning':'busy')}<small>${esc(server.name)} · API ${apiSlot(job)}</small></div><div>${progress(job,healthy&&job.status==='running')}${job.progress?`<small>${esc(job.progress.completed)} / ${esc(job.progress.total)}</small>`:''}</div><div class="current-eta"><span class="current-api-eta-label">종료 예정</span>${eta(job,server,healthy,now)}</div></article>`).join('')||'<div class="current-empty">현재 등록된 API 실험이 없습니다.</div>';
+  return rows.map(({server,job,healthy,repair})=>repair?`<article class="current-api-row as-api-row" data-current-api-server="${esc(server.server_id)}"><div><strong>${esc(server.name)}</strong><small>API ${apiSlot(job)} · 보관된 실험</small></div>${repairPanel(server.server_id,{compact:true})}</article>`:`<article class="current-api-row"><div>${jobButton(server,job)}</div><div>${badge(!healthy||job.status==='unknown'?'확인 필요':'실행 중',!healthy||job.status==='unknown'?'warning':'busy')}<small>${esc(server.name)} · API ${apiSlot(job)}</small></div><div>${progress(job,healthy&&job.status==='running')}${job.progress?`<small>${esc(job.progress.completed)} / ${esc(job.progress.total)}</small>`:''}</div><div class="current-eta"><span class="current-api-eta-label">종료 예정</span>${eta(job,server,healthy,now)}</div></article>`).join('')||'<div class="current-empty">현재 등록된 API 실험이 없습니다.</div>';
 }
 function renderCurrent() {
   const view=dashboardView();document.title='test-server · '+(view.config?.title||'CVML GPU Timeline');
   if(!view.config||!['demo','live'].includes(view.config.mode)||(view.config.mode==='live'&&!Array.isArray(view.config.servers))){$('priority-alerts').textContent=$('notice').textContent||'설정과 서버 연결을 확인해 주세요.';return;}
   const now=Date.now(),stale=view.config.stale_after_seconds||1200;
-  const current=currentView(view.servers,view.telemetryServers,now,stale);
+  const current=availableCurrentView(view.servers,view.telemetryServers,now,stale);
   const alerts=current.alerts.map(({server,label})=>`<div class="priority-alert"><div><strong>${esc(server.name)} · ${esc(label)}</strong><span>마지막 수신 ${esc(age(server.updated_at))} · 현재 GPU 상태 확인 필요</span></div><button type="button" data-server-details="${esc(server.server_id)}">상태 보기</button></div>`);
-  const overdue=view.servers.flatMap(s=>health(s,now,stale).ok?s.jobs.filter(j=>j.status==='running'&&jobETA(j,s.updated_at).at!==null&&jobETA(j,s.updated_at).at<now):[]).length;
+  const overdue=view.servers.flatMap(s=>!isUnavailable(s.server_id)&&health(s,now,stale).ok?s.jobs.filter(j=>j.status==='running'&&jobETA(j,s.updated_at).at!==null&&jobETA(j,s.updated_at).at<now):[]).length;
   if(overdue)alerts.push(`<div class="priority-alert"><span><strong>종료 확인 필요 · ${overdue}개 실험</strong> 종료 예정이 지났습니다. 상세에서 실제 상태를 확인하세요.</span></div>`);
   if(view.config.mode==='demo')alerts.unshift('<div class="priority-alert neutral">예시 데이터 모드입니다.</div>');
   $('priority-alerts').innerHTML=alerts.join('');$('priority-alerts').hidden=!alerts.length;
   $('priority-overview').innerHTML=[['현재 여유',current.idle,`/ ${current.total} GPU`,'gpu'],['점유',current.busy,'GPU','gpu'],['확인 필요',current.unknown,'GPU','gpu'],['API 실행',current.apiRunning,`실험${current.apiUncertain?' · 확인 필요 '+current.apiUncertain:''}`,'api']].map(([label,count,unit,resource])=>`<button type="button" data-resource-view="${resource}" aria-label="${label} ${count} · ${resource==='api'?'API':'GPU'} 목록 보기"><span>${label}</span><strong>${count} <small>${unit}</small></strong></button>`).join('');
+  $('as-capacity-note').innerHTML=current.excluded.map(({server,gpuCount})=>`<span><strong>${esc(server.name)} · A/S 중</strong> ${gpuCount} GPU 집계 제외 · 복귀 일정 미정</span><button type="button" data-as-history="${esc(server.server_id)}">이전 실험 보기</button>`).join('');
+  $('as-capacity-note').hidden=!current.excluded.length;
   $('current-updated').textContent='화면 조회 '+(view.lastFetch?clock(view.lastFetch):'—')+' KST';
   $('current-gpus').innerHTML=gpuTable(current.gpuRows,now);
   $('current-api').innerHTML=apiList(current.apiRows,now);
   $('current-gpu-count').textContent=current.total;
-  $('current-api-total').textContent=current.apiRows.length;
+  $('current-api-total').textContent=current.apiTotal;
   $('current-api-count').textContent=`실행 ${current.apiRunning}개${current.apiUncertain?' · 확인 필요 '+current.apiUncertain+'개':''}`;
   $('current-budgets').innerHTML=view.tokens.map(token=>{
     const budget=budgetUsage(token.usage),old=usageStatus(token)!=='조회 완료';
@@ -128,4 +133,5 @@ document.querySelector('.priority-tabs').addEventListener('keydown',event=>{
 routeHash();
 renderCurrent();
 
-import './monitoring.js?v=2.1-film';
+import './monitoring.js?v=2.1-as';
+import './availability.js?v=2.1-as';
