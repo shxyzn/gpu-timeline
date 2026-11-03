@@ -1,6 +1,6 @@
 # GPU Timeline
 
-v1.2.0: 현재 GPU/API 현황을 먼저 보여주는 새 대시보드와 연구실 장비 주문·배송 목록을 정식 제공합니다. [대시보드 열기](https://shxyzn.github.io/gpu-timeline/) · [변경 이력](CHANGELOG.md)
+v2.1: 서버별 모니터링 일정, 새 디자인과 소개 영상, Kimi A/S 표시 및 이스터에그를 정식 제공합니다. [모니터링 연결 안내](MONITORING.md). [대시보드 열기](https://shxyzn.github.io/gpu-timeline/) · [변경 이력](CHANGELOG.md)
 
 SSH로 사용하는 여러 서버의 GPU 실험과 예상 종료시간을 조회하는 대시보드입니다. 현재 여유 GPU와 실행 중 GPU/API 실험을 먼저 보여주며, 타임라인·자원과 비용·서버 상태·연구실 장비 주문과 배송을 탭으로 확인합니다.
 

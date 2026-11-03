@@ -57,11 +57,13 @@ export async function saveParcelRecord(operation){
   }finally{editor.setBusy(false);editorChanged();}
 }
 export function monitoringAccess(){return {enabled:!!editor?.enabled,unlocked:!!editor?.unlocked,busy:!!editor?.busy};}
-export async function saveTestMonitoringConfig(draft,expectedRevision,requestID){
+export function saveTestMonitoringConfig(draft,expectedRevision,requestID){return saveMonitoring('test',draft,expectedRevision,requestID);}
+export function saveMonitoringConfig(draft,expectedRevision,requestID){return saveMonitoring('production',draft,expectedRevision,requestID);}
+async function saveMonitoring(profile,draft,expectedRevision,requestID){
   if(!editor?.enabled||!editor.unlocked)throw new Error('관리자 로그인 후 저장할 수 있어요.');
   if(!config.servers?.some(s=>s.id===draft.server_id))throw new Error('등록된 서버를 선택해 주세요.');
   if(editor.busy)throw new Error('앞선 저장이 끝난 뒤 다시 시도해 주세요.');
-  const {MonitoringStore}=await import('./test-server/monitoring-store.js?v=2.1');
+  const {MonitoringStore}=await import(profile==='test'?'./test-server/monitoring-store.js?v=2.1':'./release/monitoring-store.js?v=2.1');
   if(editor.busy||!editor.unlocked)throw new Error('관리자 로그인과 저장 상태를 다시 확인해 주세요.');
   const token=editor.token;editor.setBusy(true);editorChanged();
   try{return await new MonitoringStore(config.dashboard).saveServer(token,draft,expectedRevision,requestID);}
