@@ -24,8 +24,17 @@ jobs:
           python-version: '3.11'
       - name: Stamp dashboard version
         run: python3 agent/version_info.py --output dist/version.json
+      - name: Reuse unchanged release films
+        uses: actions/cache@v4
+        id: promo-cache
+        with:
+          path: |
+            dist/media
+            /tmp/gpu-timeline-promo
+          key: promo-v21-${{ runner.os }}-${{ hashFiles('scripts/*promo*') }}
       - name: Render and verify release media
-        timeout-minutes: 10
+        if: steps.promo-cache.outputs.cache-hit != 'true'
+        timeout-minutes: 15
         run: |
           sudo sed -i 's|http://azure.archive.ubuntu.com/ubuntu|https://archive.ubuntu.com/ubuntu|g' /etc/apt/apt-mirrors.txt
           sudo apt-get update

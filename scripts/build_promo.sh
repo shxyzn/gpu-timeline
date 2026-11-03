@@ -19,3 +19,7 @@ python3 scripts/verify_promo.py "$promo_output" 1.2.0
 cp "$promo_output/CVML-GPU-Timeline-v1.2.0-60s.mp4" "$promo_output/CVML-GPU-Timeline-v1.2.0-preview-60s.mp4"
 cp "$promo_output/CVML-GPU-Timeline-v1.2.0-60s.gif" "$promo_output/CVML-GPU-Timeline-v1.2.0-preview-60s.gif"
 cp "$promo_output/poster-v1.2.0.jpg" "$promo_output/poster-v1.2.0-preview.jpg"
+
+# The v2.1 film is linked only from the test dashboard.
+python3 scripts/render_promo_v21.py --regular "$promo_regular" --bold "$promo_bold" --output "$promo_output"
+python3 scripts/render_promo_v21.py --regular "$promo_regular" --bold "$promo_bold" --output "$promo_preview" --preview
