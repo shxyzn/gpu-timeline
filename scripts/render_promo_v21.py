@@ -1,4 +1,4 @@
-"""Original 50-second v2.1 product film. Illustrative UI, not live server results.
+"""Original 60-second v2.1 product film. Illustrative UI, not live server results.
 
 No persistent corner labels, captions, timecode or footer. All visual and audio
 assets are generated here; Apple footage, music, logos and fonts are not used.
@@ -14,11 +14,11 @@ import wave
 import numpy as np
 from PIL import Image, ImageDraw, ImageFilter, ImageFont
 
-W,H,FPS,DURATION=1920,1080,30,50
+W,H,FPS,DURATION=1920,1080,30,60
 NAME='CVML-GPU-Timeline-v2.1-film'
 BLUE='#087cff';INK='#202126';GRAY='#82858e';WHITE='#f5f5f7'
 REGULAR=BOLD=None
-CUTS=[0,3.125,6.25,13.75,20,26.25,32.5,38.75,43.75,50]
+CUTS=[0,3.125,6.25,13.75,20,26.25,32.5,38.75,48.75,53.75,60]
 
 def clamp(x):return max(0,min(1,x))
 def smooth(x):x=clamp(x);return x*x*(3-2*x)
@@ -149,6 +149,46 @@ def apply_card(done):
     return im
 
 @lru_cache(None)
+def gpu_incident(alarm):
+    im,d=texture(860,475)
+    txt(d,430,25,'예시 상황',20,GRAY,500,'mt');txt(d,38,73,'Leclerc',36,INK,650)
+    txt(d,820,82,'GPU 인식',22,GRAY,500,'rt')
+    for i in range(2):
+        x=36+i*403;missing=alarm and i==1
+        rr(d,(x,147,x+384,404),'#fff7e9' if missing else '#f3f7fe',24,'#eeb966' if missing else '#dce8fa',2)
+        txt(d,x+192,178,f'GPU {i}',30,INK,650,'mt')
+        for line in range(5):d.line((x+132,247+line*10,x+252,247+line*10),fill='#e5b36a' if missing else '#a6bfe2',width=4)
+        txt(d,x+192,350,'인식 확인 필요' if missing else '인식됨',24,'#a56316' if missing else BLUE,550,'mm')
+    return im
+
+@lru_cache(None)
+def incident_notice():
+    im,d=texture(890,345)
+    txt(d,445,23,'점검 결과 알림 · 예시 상황',20,GRAY,500,'mt')
+    d.ellipse((42,91,132,181),fill='#fff1d9')
+    d.polygon([(87,106),(115,159),(59,159)],fill='#ed9c26')
+    txt(d,87,138,'!',34,'white',650,'mm')
+    txt(d,163,90,'GPU 인식 개수 확인 필요',38,INK,650)
+    txt(d,164,157,'Leclerc · 인식 1 / 설정 2 GPU',28,'#9b6115',550)
+    txt(d,164,213,'점검 결과에서 상태를 확인하세요.',25,GRAY)
+    rr(d,(163,274,845,278),'#f4e4c8',2)
+    return im
+
+@lru_cache(None)
+def incident_results():
+    im,d=texture(1120,620)
+    txt(d,560,26,'예시 상황',20,GRAY,500,'mt')
+    txt(d,42,75,'최근 점검 결과',36,INK,650);badge(d,908,74,'확인 필요','#9b6115','#fff1d9')
+    txt(d,44,135,'Leclerc · 일반 점검',24,GRAY)
+    rows=[('GPU 응답','정상','GPU 응답 확인'),('GPU 인식 개수','확인 필요','인식 1 / 설정 2 GPU'),('NVIDIA 드라이버','정상','커널 드라이버 로드 확인'),('GPU 온도','정상','최고 64°C · 경고 기준 85°C')]
+    for i,(label,state,detail) in enumerate(rows):
+        y=196+i*96;warn=i==1
+        rr(d,(32,y,1088,y+83),'#fff6e7' if warn else '#f8f9fc',14,'#edbc73' if warn else None,2)
+        txt(d,54,y+15,label,25,INK,550);txt(d,54,y+49,detail,21,'#9b6115' if warn else GRAY)
+        txt(d,1060,y+29,state,23,'#9b6115' if warn else '#247648',550,'rt')
+    return im
+
+@lru_cache(None)
 def result_card(index):
     im,d=texture(580,400)
     if index==0:
@@ -231,6 +271,16 @@ def scene(index,u):
         project(im,apply_card(done),960+math.sin(u*.5)*50,545,scale,yaw=-.18+u*.045,pitch=.035,alpha=reveal,shadow=True)
         if u>3.0:headline(im,'수집기 연결 후, 자동으로.',center=(960,155),size=35,color='#aab5c9',alpha=smooth((u-3)/.7))
     elif index==7:
+        # Illustrative warning only: a missing GPU, a result alert, then its evidence.
+        if u<1.6:
+            project(im,gpu_incident(u>=.95),960,550+(1-entry)*120,1.22,yaw=-.07+u*.045,pitch=.035,alpha=entry*(1-smooth((u-1.15)/.45)),shadow=True)
+        if 1.25<=u<5.0:
+            show=ease((u-1.25)/.65);leave=smooth((u-4.15)/.65)
+            project(im,incident_notice(),960+(1-show)*730,520-leave*180,1.18,yaw=-.08*(1-show),alpha=show*(1-leave),shadow=True)
+        if u>=4.15:
+            show=ease((u-4.15)/.85);zoom=1.04+.20*smooth((u-5.2)/4.5)
+            project(im,incident_results(),960+18*math.sin(u*.35),554+(1-show)*230,zoom,yaw=-.065+.01*u,pitch=.025,alpha=show,shadow=True)
+    elif index==8:
         headline(im,'CVML GPU Timeline',center=(960,394),size=78,alpha=entry)
         project(im,version_asset(),960,660,.57,alpha=entry)
     else:
@@ -257,7 +307,7 @@ def soundtrack(path):
         mix[start:start+size,0]+=sound[:size]*math.sqrt((1-pan)/2);mix[start:start+size,1]+=sound[:size]*math.sqrt((1+pan)/2)
     beat=60/96
     # Restrained original pulse, soft harmonic bed and glasslike arpeggios.
-    for b in range(80):
+    for b in range(round(DURATION/beat)):
         tt=np.arange(round(rate*.32))/rate
         if b%2==0:
             kick=np.sin(2*math.pi*(48*tt+21*(1-np.exp(-tt*22))/22))*np.exp(-tt*16)*.24;add(b*beat,kick)
@@ -267,11 +317,15 @@ def soundtrack(path):
             tone=(np.sin(2*math.pi*freq*tt)+.24*np.sin(2*math.pi*freq*2*tt))*np.exp(-tt*3.7)*(1-np.exp(-tt*100))*.075
             add(b*beat,tone,math.sin(b*.8)*.65);add(b*beat+.31,tone*.22,-math.sin(b*.8)*.65)
     for section,notes in enumerate([[45,52,60,64],[41,48,57,60],[48,55,59,64],[43,50,57,62]]):
-        at=section*12.5;tt=np.arange(round(rate*12.5))/rate;env=np.sin(math.pi*np.minimum(tt/12.5,1))**.7
+        period=DURATION/4;at=section*period;tt=np.arange(round(rate*period))/rate;env=np.sin(math.pi*np.minimum(tt/period,1))**.7
         pad=sum(np.sin(2*math.pi*(440*2**((note-69)/12))*tt)*.017 for note in notes)*env
         add(at,pad,-.2);add(at+.02,pad*.85,.2)
     for at in CUTS[2:-1]:
         tt=np.arange(round(rate*.7))/rate;noise=rng.normal(0,1,len(tt));noise=np.convolve(noise,np.ones(50)/50,mode='same');add(at-.45,noise*np.sin(math.pi*tt/.7)**2*.13)
+    for offset,frequency in [(0,880),(.18,1174.66)]:
+        tt=np.arange(round(rate*.7))/rate
+        tone=np.sin(2*math.pi*frequency*tt)*(1-np.exp(-tt*160))*np.exp(-tt*7)*.10
+        add(CUTS[7]+1.3+offset,tone,0)
     envelope=np.minimum(1,np.arange(n)/rate/1.2)*np.minimum(1,(n-np.arange(n))/rate/1.6);mix*=envelope[:,None]
     mix=np.tanh(mix*2);peak=np.max(np.abs(mix));mix*=.77/max(peak,.001)
     with wave.open(str(path),'wb') as f:f.setnchannels(2);f.setsampwidth(2);f.setframerate(rate);f.writeframes((mix*32767).astype('<i2').tobytes())
@@ -284,7 +338,7 @@ def verify(directory):
     assert len(audio)==1 and audio[0]['codec_name']=='aac'
     with Image.open(directory/'poster-v2.1.jpg') as poster:assert poster.size==(W,H)
     subprocess.run(['ffmpeg','-v','error','-i',str(movie),'-f','null','-'],check=True)
-    print('v2.1 verified: 1920×1080, 30 fps, 50 seconds, original AAC stereo; full decode passed.',flush=True)
+    print(f'v2.1 verified: 1920×1080, 30 fps, {DURATION} seconds, original AAC stereo; full decode passed.',flush=True)
 
 def main():
     global REGULAR,BOLD
@@ -294,8 +348,8 @@ def main():
     if not args.regular or not args.bold:p.error('--regular and --bold are required for rendering')
     REGULAR=args.regular;BOLD=args.bold
     if args.preview:
-        samples=[1.8,4.7,10,17.2,23.8,29.5,36.1,41.2,47.6]
-        thumbw=640;thumbh=360;board=Image.new('RGB',(thumbw*3,thumbh*3),'black')
+        samples=[1.8,4.7,10,17.2,23.8,29.5,36.1,40.8,44.4,47.3,51.2,57.6]
+        thumbw=640;thumbh=360;board=Image.new('RGB',(thumbw*3,thumbh*math.ceil(len(samples)/3)),'black')
         for i,t in enumerate(samples):
             im=frame(t);im.save(out/f'v21-frame-{t:g}.jpg',quality=94);board.paste(im.resize((thumbw,thumbh),Image.Resampling.LANCZOS),(i%3*thumbw,i//3*thumbh))
         board.save(out/'v21-storyboard.jpg',quality=95);print(str(out/'v21-storyboard.jpg'),flush=True);return

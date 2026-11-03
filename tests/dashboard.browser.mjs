@@ -893,7 +893,7 @@ try {
   assert.equal(await preview.locator('#patch-notes').count(),0);
   await preview.locator('#release-video video').evaluate(video=>video.load());
   await preview.waitForFunction(()=>document.querySelector('#release-video video').readyState>=1);
-  assert.equal(await preview.locator('#release-video video').evaluate(v=>v.duration),50);
+  assert.equal(await preview.locator('#release-video video').evaluate(v=>v.duration),60);
   assert.equal(await preview.locator('#release-video video').evaluate(v=>v.videoWidth),1920);
   assert.equal(await preview.locator('#release-video video').getAttribute('poster'),'../media/poster-v2.1.jpg');
 
