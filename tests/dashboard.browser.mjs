@@ -887,7 +887,8 @@ try {
   await monitoringViewer.locator('#monitor-close').click();await monitoringViewer.close();
 
   await preview.locator('#tab-more').click();
-  await preview.locator('.promo-note-link').click();
+  if(!await preview.locator('#release-video').evaluate(e=>e.open))await preview.locator('#release-video-toggle').click();
+  await preview.locator('#release-video').scrollIntoViewIfNeeded();
   assert.match(await preview.locator('#release-video source').getAttribute('src'),/v2\.1-film/);
   assert.equal(await preview.locator('#patch-notes').count(),0);
   await preview.locator('#release-video video').evaluate(video=>video.load());
