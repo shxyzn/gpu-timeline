@@ -29,6 +29,7 @@ def font(size,weight=500):
     try:
         axes=f.get_variation_axes();f.set_variation_by_axes([weight if a['name']==b'Weight' else a['default'] for a in axes])
     except (OSError,AttributeError):pass
+    f._film_weight=weight
     return f
 
 def txt(draw,x,y,s,size=28,fill=INK,weight=500,anchor='lt'):
@@ -75,8 +76,24 @@ def version_asset():
     pixels=np.stack([185+shine*62,194+shine*52,209+shine*41],axis=-1)
     im=Image.fromarray(np.clip(pixels,0,255).astype('uint8'),'RGB').convert('RGBA');im.putalpha(mask);return im
 
+class RetinaDraw:
+    """Draw logical UI coordinates at 2x so macro shots keep crisp type."""
+    def __init__(self,im):self.draw=ImageDraw.Draw(im)
+    def __getattr__(self,name):
+        def operation(xy,*args,**kwargs):
+            if name=='rounded_rectangle' and args:args=(round(args[0]*2),)+args[1:]
+            if isinstance(xy,(tuple,list)):
+                xy=tuple(tuple(round(n*2) for n in v) if isinstance(v,(tuple,list)) else round(v*2) for v in xy)
+            for key in ('radius','width','stroke_width'):
+                if key in kwargs:kwargs[key]=round(kwargs[key]*2)
+            if 'font' in kwargs:
+                f=kwargs['font'];kwargs['font']=font(f.size*2,getattr(f,'_film_weight',500))
+            return getattr(self.draw,name)(xy,*args,**kwargs)
+        return operation
+
 def texture(w,h):
-    im=Image.new('RGBA',(w,h));d=ImageDraw.Draw(im);rr(d,(1,1,w-2,h-2),'#ffffff',34,'#e5e7ed',2);return im,d
+    im=Image.new('RGBA',(w*2,h*2));im.info['logical_size']=(w,h);d=RetinaDraw(im)
+    rr(d,(1,1,w-2,h-2),'#ffffff',34,'#e5e7ed',2);return im,d
 
 @lru_cache(None)
 def server_card(index):
@@ -156,16 +173,16 @@ def shadow_asset():
 
 def project(im,asset,cx,cy,scale=1,yaw=0,pitch=0,alpha=1,shadow=False):
     # A textured plane in perspective, with a continuous camera glide.
-    aw,ah=asset.size;corners=[]
-    for x,y in [(-aw/2,-ah/2),(aw/2,-ah/2),(aw/2,ah/2),(-aw/2,ah/2)]:
+    aw,ah=asset.size;lw,lh=asset.info.get('logical_size',(aw,ah));corners=[]
+    for x,y in [(-lw/2,-lh/2),(lw/2,-lh/2),(lw/2,lh/2),(-lw/2,lh/2)]:
         x*=scale;y*=scale;xx=x*math.cos(yaw);z=-x*math.sin(yaw);yy=y*math.cos(pitch)-z*math.sin(pitch);z=y*math.sin(pitch)+z*math.cos(pitch);persp=2600/(2600+z)
         corners.append((cx+xx*persp,cy+yy*persp))
     left=max(-800,math.floor(min(x for x,y in corners)));top=max(-800,math.floor(min(y for x,y in corners)))
     right=min(W+800,math.ceil(max(x for x,y in corners)));bottom=min(H+800,math.ceil(max(y for x,y in corners)))
     if right<=left or bottom<=top:return
     if shadow:
-        sh=shadow_asset().resize((max(1,round(aw*scale*1.15)),max(1,round(ah*scale*.18))),Image.Resampling.BILINEAR)
-        im.paste(sh,(round(cx-sh.width/2),round(cy+ah*scale*.50)),sh)
+        sh=shadow_asset().resize((max(1,round(lw*scale*1.15)),max(1,round(lh*scale*.18))),Image.Resampling.BILINEAR)
+        im.paste(sh,(round(cx-sh.width/2),round(cy+lh*scale*.50)),sh)
     dst=[(x-left,y-top) for x,y in corners];src=[(0,0),(aw,0),(aw,ah),(0,ah)];A=[];b=[]
     for (x,y),(u,v) in zip(dst,src):
         A.extend([[x,y,1,0,0,0,-u*x,-u*y],[0,0,0,x,y,1,-v*x,-v*y]]);b.extend([u,v])
@@ -192,7 +209,7 @@ def scene(index,u):
         # The camera pulls back from the interval dial to the operating window.
         reveal=smooth((u-.7)/1.8);scale=2.3-1.16*smooth((u-.7)/4.9)
         if u<1.6:headline(im,'원하는 때에.',center=(960,480),size=118,alpha=entry*(1-smooth((u-.6)/.7)))
-        card=interval_card().copy();cd=ImageDraw.Draw(card);p=(u/duration)%1
+        card=interval_card().copy();cd=RetinaDraw(card);p=(u/duration)%1
         cd.arc((117,117,443,443),start=-90,end=-90+p*340,fill=BLUE,width=7)
         project(im,card,960+100*math.sin(u*.5),575-80*(1-reveal),scale,yaw=-.24+u*.058,pitch=.065,alpha=reveal,shadow=True)
     elif index==4:
