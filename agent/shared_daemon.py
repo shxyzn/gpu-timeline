@@ -16,6 +16,7 @@ import time
 
 import gpu_agent as agent
 from resource_metrics import ResourceSampler
+from server_monitoring import HealthMonitor
 
 SOCKET_PATH = "/run/gpu-timeline/control.sock"
 MAX_REQUEST = 16384
@@ -78,6 +79,11 @@ class Broker:
         self.status_lock = threading.Lock()
         self.upload = {"last_upload_at": None, "last_attempt_at": None, "error": None}
         self.resources = ResourceSampler(config)
+        self.monitoring = HealthMonitor(config, self.monitoring_upload_status) if config.get("monitoring_test_enabled") is True else None
+
+    def monitoring_upload_status(self):
+        with self.status_lock:
+            return dict(self.upload)
 
     def dispatch(self, argv, uid):
         args = validate_request(argv, uid)
@@ -117,6 +123,8 @@ class Broker:
             with agent.locked(Path(self.config["state_dir"]) / "collect.lock", blocking=False):
                 snapshot = agent.make_snapshot(self.config)
                 snapshot["resources"] = self.resources.public()
+                if self.monitoring is not None:
+                    snapshot["monitoring"] = self.monitoring.public()
                 agent.publish(self.config, snapshot)
             with self.status_lock:
                 self.upload.update(last_upload_at=agent.now_iso(), error=None,
@@ -206,6 +214,9 @@ def main():
         with Server(str(path), broker) as server:
             sampler = threading.Thread(target=broker.sample_resources, daemon=True)
             sampler.start()
+            if broker.monitoring is not None:
+                monitor = threading.Thread(target=broker.monitoring.run, args=(broker.stopping, broker.pending), daemon=True)
+                monitor.start()
             worker = threading.Thread(target=broker.publisher, daemon=True)
             worker.start()
             try:

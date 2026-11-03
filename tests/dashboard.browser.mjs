@@ -6,6 +6,7 @@ import path from 'node:path';
 import {fileURLToPath, pathToFileURL} from 'node:url';
 import {emptyEdits, encodeJSON, decodeJSON} from '../dist/edits.js';
 import {resourceFixture} from './resources-fixture.mjs';
+import {emptyMonitoring} from '../dist/test-server/monitoring-model.js';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const runtime = process.env.CODEX_PRIMARY_RUNTIME_NODE_MODULES;
@@ -47,8 +48,10 @@ try {
   let data = emptyEdits(), staleRaw = false, failRaw = false, forbidden = false, writes = 0;
   let collectorFinished = false, progressCompleted = 25, serverUpgraded = false, serverCStale = false;
   let resourceEnabled = false, resourceFailed = false, testAPI = false, previewMode = false;
+  let monitoringData=emptyMonitoring(),monitoringWrites=0,monitoringForbidden=false,monitoringApplied=false;
   const telemetry = id => ({server_id: id, name: `Server ${id.slice(-1).toUpperCase()}`, updated_at: iso(id === 'server-c' && serverCStale ? -2 : 0), collector_ok: true,
     resources: resourceEnabled && id !== 'server-c' ? resourceFixture(Date.now(),resourceFailed) : undefined,
+    monitoring: monitoringApplied&&id==='server-a'?{profile:'test',enabled:true,applied_revision:monitoringData.servers.find(c=>c.server_id===id)?.revision||0,applied_at:iso(0),config_error:null,schedules:[],history:[{name:'일반 점검',finished_at:iso(0),status:'warning',checks:[{id:'gpu_count',status:'warning',summary:'인식 1 / 설정 2 GPU'}]}]}:undefined,
     agent_version: id === 'server-b' ? {version: '1.1.2', revision: 'b'.repeat(40)} : id === 'server-a' && serverUpgraded ? {version: '1.1.5', revision: 'a'.repeat(40)} : null,
     gpus: [{uuid: `${id}-gpu`, index: 0, name: 'NVIDIA GeForce RTX 4090', process_count: 0, utilization: previewMode && id === 'server-a' ? 86 : 0,
       memory_used_mib: previewMode && id === 'server-a' ? 21000 : 0, memory_total_mib: 24564},
@@ -70,6 +73,7 @@ try {
   await context.route('https://raw.githubusercontent.com/**', async route => {
     const url = new URL(route.request().url());
     if (url.pathname.endsWith('/hardware-prices/prices.json')) return fulfill(route, JSON.parse(await fs.readFile(path.join(root, 'dist/hardware-prices.json'), 'utf8')));
+    if(url.pathname.endsWith('/dashboard/monitoring-test.json'))return fulfill(route,monitoringData);
     if (url.pathname.endsWith('/dashboard/edits.json')) {
       assert.equal(route.request().headers().authorization, undefined);
       if (failRaw) return fulfill(route, {}, 503);
@@ -85,6 +89,14 @@ try {
     if (url.pathname === '/user') return fulfill(route, {login: 'cvml-admin'});
     if (url.pathname === '/repos/shxyzn/gpu-timeline') return fulfill(route, {permissions: {push: true}});
     if (url.pathname.endsWith('/git/ref/heads/status')) return fulfill(route, {ref: 'refs/heads/status'});
+    if(url.pathname.endsWith('/contents/dashboard/monitoring-test.json')){
+      if(request.method()==='PUT'){
+        if(monitoringForbidden)return fulfill(route,{},403);
+        const body=request.postDataJSON();assert.equal(body.branch,'status');assert.equal(body.sha,'monitor-'+monitoringData.revision);
+        monitoringData=decodeJSON(body.content);monitoringWrites++;return fulfill(route,{content:{sha:'monitor-'+monitoringData.revision}});
+      }
+      return fulfill(route,{type:'file',encoding:'base64',sha:'monitor-'+monitoringData.revision,content:encodeJSON(monitoringData)});
+    }
     assert.ok(url.pathname.endsWith('/contents/dashboard/edits.json'), url.pathname);
     if (request.method() === 'PUT') {
       if (forbidden) return fulfill(route, {}, 403);
@@ -653,6 +665,9 @@ try {
   assert.equal(await preview.locator('#timeline').isVisible(),true);
   await preview.locator('#tab-servers').click();
   assert.equal(await preview.locator('.server-card').count(),3);
+  await preview.locator('[data-monitor-server="server-a"]').waitFor();
+  assert.equal(await preview.locator('[data-monitor-server]').count(),3);
+  assert.equal(monitoringWrites,0);
   await preview.locator('#tab-more').click();
   assert.equal(await preview.locator('#usage').isVisible(),true);
   await preview.locator('#tab-parcel').click();
@@ -812,6 +827,65 @@ try {
   assert.equal(await viewer.locator('[data-parcel-card]').count(),3);
   assert.equal(await viewer.locator('#parcel-count-active').innerText(),'3');
   await viewer.close();
+  // v2.1: independently stored per-server schedules and honest collector acknowledgement.
+  const experimentWritesBeforeMonitoring=writes,ordersBeforeMonitoring=structuredClone(data.parcels);
+  await preview.locator('#tab-servers').click();
+  await preview.locator('[data-monitor-server="server-a"]').click();
+  await preview.locator('#monitor-dialog').waitFor();
+  await preview.locator('#monitor-add').click();
+  await preview.locator('#monitor-check-none').click();
+  await preview.locator('#monitor-editor-add').click();
+  assert.match(await preview.locator('#monitor-schedule-error').innerText(),/점검 항목/);
+  await preview.locator('[name=monitor-check][value=gpu_response]').check();
+  await preview.locator('[name=monitor-check][value=gpu_count]').check();
+  await preview.locator('#monitor-interval').fill('15');
+  await preview.locator('#monitor-editor-add').click();
+  await preview.locator('#monitor-add').click();
+  await preview.locator('#monitor-kind').selectOption('daily');
+  await preview.locator('#monitor-daily-count').selectOption('2');
+  await preview.locator('#monitor-time-one').fill('09:00');
+  await preview.locator('#monitor-time-two').fill('09:00');
+  await preview.locator('#monitor-editor-add').click();
+  assert.match(await preview.locator('#monitor-schedule-error').innerText(),/서로 다른/);
+  await preview.locator('#monitor-time-two').fill('21:00');
+  await preview.locator('[name=monitor-day][value="5"]').uncheck();
+  await preview.locator('[name=monitor-day][value="6"]').uncheck();
+  await preview.locator('#monitor-editor-add').click();
+  await preview.locator('#monitor-save').click();
+  await preview.waitForFunction(()=>document.getElementById('monitor-feedback').textContent.includes('공용 설정을 저장'));
+  assert.equal(monitoringWrites,1);
+  assert.equal(monitoringData.servers[0].server_id,'server-a');
+  assert.equal(monitoringData.servers[0].schedules.length,2);
+  assert.equal(monitoringData.servers[0].schedules[0].interval_minutes,15);
+  assert.deepEqual(monitoringData.servers[0].schedules[1].times,['09:00','21:00']);
+  assert.deepEqual(monitoringData.servers[0].schedules[1].days,[0,1,2,3,4]);
+  assert.match(await preview.locator('#monitor-connection').innerText(),/수집기 연결 필요/);
+  await preview.locator('#monitor-dialog').screenshot({path:path.join(output,'monitoring-settings-desktop.png')});
+  await preview.locator('#monitor-close').click();
+  const aConfig=structuredClone(monitoringData.servers[0]);
+  await preview.locator('[data-monitor-server="server-b"]').click();
+  assert.equal(await preview.locator('.monitor-schedule-row').count(),0);
+  await preview.locator('#monitor-add').click();await preview.locator('#monitor-editor-add').click();
+  monitoringForbidden=true;await preview.locator('#monitor-save').click();
+  await preview.waitForFunction(()=>document.getElementById('monitor-config-error').textContent.includes('권한'));
+  assert.equal(monitoringWrites,1);assert.equal(monitoringData.servers.length,1);
+  monitoringForbidden=false;await preview.locator('#monitor-save').click();
+  await preview.waitForFunction(()=>document.getElementById('monitor-feedback').textContent.includes('공용 설정을 저장'));
+  assert.equal(monitoringWrites,2);assert.deepEqual(monitoringData.servers.find(c=>c.server_id==='server-a'),aConfig);
+  await preview.locator('#monitor-close').click();
+  monitoringApplied=true;
+  await preview.locator('#tab-now').click();await preview.locator('#current-refresh').click();await preview.locator('#tab-servers').click();
+  await preview.locator('[data-monitor-server="server-a"]').click();
+  assert.match(await preview.locator('#monitor-connection').innerText(),/서버 적용 완료/);
+  assert.match(await preview.locator('#monitor-results').innerText(),/확인 필요/);
+  await preview.locator('#monitor-close').click();
+  assert.equal(writes,experimentWritesBeforeMonitoring);assert.deepEqual(data.parcels,ordersBeforeMonitoring);
+  const monitoringViewer=await context.newPage();await monitoringViewer.goto(base+'/test-server/#servers');
+  await monitoringViewer.locator('[data-monitor-server="server-a"]').click();
+  await monitoringViewer.waitForFunction(()=>document.querySelectorAll('.monitor-schedule-row').length===2);
+  assert.match(await monitoringViewer.locator('#monitor-auth').innerText(),/로그인이 필요/);
+  await monitoringViewer.locator('#monitor-close').click();await monitoringViewer.close();
+
   await preview.locator('#tab-more').click();
   await preview.locator('.promo-note-link').click();
   assert.match(await preview.locator('#release-video source').getAttribute('src'),/v1\.2\.0-60s/);
@@ -844,6 +918,14 @@ try {
     assert.ok(await preview.locator('#parcel-order-dialog').evaluate(e=>e.scrollWidth<=e.clientWidth+1));
     await preview.screenshot({path:path.join(output,`test-server-parcel-order-form-${width}.png`),fullPage:true});
     await preview.locator('#parcel-order-dialog [data-close-parcel]').first().click();
+    await preview.locator('#tab-servers').click();
+    await preview.locator('[data-monitor-server="server-a"]').click();
+    await preview.locator('#monitor-add').click();await preview.locator('#monitor-kind').selectOption('daily');await preview.locator('#monitor-daily-count').selectOption('2');
+    assert.ok(await preview.locator('#monitor-dialog').evaluate(e=>e.scrollWidth<=e.clientWidth+1),`monitoring dialog overflows at ${width}px`);
+    assert.ok(await preview.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
+    await preview.locator('#monitor-dialog').screenshot({path:path.join(output,`monitoring-schedule-mobile-${width}.png`)});
+    await preview.locator('#monitor-close').click();
+
   }
   await preview.locator('#tab-now').click();
   serverCStale=false;testAPI=false;

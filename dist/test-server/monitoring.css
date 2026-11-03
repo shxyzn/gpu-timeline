@@ -1,0 +1,98 @@
+.test-server .monitor-release{padding:25px 28px;margin:0 0 24px;border:1px solid #dce8f8;border-radius:20px;background:linear-gradient(115deg,#fff,#eef5ff)}
+.monitor-release>span,.monitor-eyebrow{font-size:11px;font-weight:650;letter-spacing:.07em;color:#0066cc}
+.test-server .monitor-release h2{font-size:24px;font-weight:650;letter-spacing:-.04em;margin:9px 0}
+.monitor-release p{margin:0;font-size:13px;line-height:1.8;color:#626268}
+.monitor-card{padding:18px;margin-top:22px;border:1px solid #e5e5e7;border-radius:15px;background:#fafafa}
+.monitor-card-top{display:flex;align-items:center;justify-content:space-between;gap:9px;flex-wrap:wrap}
+.monitor-card-top>strong{font-size:13px;font-weight:600}
+.monitor-card>p{font-size:12px;line-height:1.7;color:#626268;margin:9px 0}
+.monitor-badge{display:inline-flex;align-items:center;max-width:100%;padding:4px 8px;border-radius:99px;font-size:10px;line-height:1.6;color:#0066cc;background:#eaf3ff;overflow-wrap:anywhere}
+.monitor-badge.muted{color:#626268;background:#ededf0}.monitor-badge.warning{color:#82500a;background:#fff0cf}.monitor-badge.success{color:#187642;background:#eaf6ed}
+.test-server .monitor-settings-button{width:100%;min-height:40px;margin-top:9px;padding:9px 14px;border:1px solid #d1dfef;background:white;color:#0066cc;border-radius:99px;font-size:12px;font-weight:550}
+.test-server .monitor-settings-button:hover{background:#eaf3ff;border-color:#0071e3}
+body.test-server .monitor-dialog{width:min(960px,calc(100vw - 36px));max-width:calc(100vw - 36px);max-height:calc(100dvh - 36px);padding:0;border:0;border-radius:24px;color:#1d1d1f;background:#fff;overflow:hidden}
+body.test-server .monitor-dialog[open]{display:flex;flex-direction:column;height:min(900px,calc(100dvh - 36px))}
+.monitor-dialog #monitor-config-form{display:flex;flex-direction:column;flex:1;min-height:0;overflow:hidden}
+.monitor-dialog form{margin:0}
+.monitor-dialog-header{display:flex;justify-content:space-between;align-items:flex-start;gap:20px;padding:24px 28px 20px;border-bottom:1px solid #e5e5e7}
+.test-server .monitor-dialog-header h2{font-size:23px;letter-spacing:-.04em;line-height:1.5;margin:7px 0 4px;overflow-wrap:anywhere}
+.monitor-dialog-header p{font-size:12px;color:#626268;line-height:1.7;margin:0}
+.test-server #monitor-close{flex:none;border:0;background:#f0f0f2;color:#626268;width:34px;min-height:34px;height:34px;border-radius:50%;font-size:24px;line-height:1}
+.monitor-dialog-content{padding:24px 28px;flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;scrollbar-gutter:stable}
+.monitor-connection{padding:16px 18px;border:1px solid #e5e5e7;background:#f5f5f7;border-radius:14px;margin-bottom:16px;font-size:13px}
+.monitor-connection.warning{border-color:#f1dfb4;background:#fff8e9}.monitor-connection.success{background:#edf8f0;border-color:#cfe7d6}
+.monitor-connection p{font-size:12px;line-height:1.8;color:#626268;margin:5px 0 0;overflow-wrap:anywhere}
+.monitor-auth{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;padding:13px 16px;border-radius:12px;background:#edf5ff;margin-bottom:25px;color:#34577c;font-size:12px;line-height:1.8}
+.test-server .monitor-auth button{border:0;border-radius:99px;background:#fff;color:#0066cc;font-size:12px;padding:8px 12px}
+.monitor-section-heading{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:13px;margin:0 0 12px}
+.monitor-section-heading h3,.monitor-results h3{font-size:17px;font-weight:600;letter-spacing:-.025em;margin:0;line-height:1.7}
+.monitor-section-heading h3>span{font-size:12px;font-weight:400;color:#626268;margin-left:5px}
+.monitor-section-heading p,.monitor-help{font-size:12px;line-height:1.85;color:#626268;margin:5px 0 0}
+.monitor-enable{display:inline-flex;align-items:center;gap:8px;font-size:13px;color:#454549;cursor:pointer}
+.monitor-enable input,.monitor-days input,.monitor-check input{accent-color:#0071e3;width:17px;height:17px;flex:none;margin:0}
+.monitor-setting-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;margin:20px 0 30px}
+.monitor-field{display:flex;flex-direction:column;gap:7px;font-size:12px;font-weight:500;min-width:0;color:#454549}
+.test-server .monitor-field input,.test-server .monitor-field select{width:100%;min-width:0;height:43px;padding:9px 12px;border:1px solid #d2d2d7;border-radius:10px;background:#fff;color:#1d1d1f;font-size:14px;margin:0}
+.monitor-schedules{margin:0 0 25px}
+.test-server .monitor-primary,.test-server .monitor-secondary{min-height:40px;padding:10px 17px;font-size:12px;border-radius:99px;border:1px solid #d2d2d7;background:#fff;color:#454549;line-height:1.6;white-space:normal}
+.test-server .monitor-primary{border-color:#0071e3;color:#fff;background:#0071e3;font-weight:550}
+.test-server .monitor-secondary:hover{background:#f5f5f7}
+.test-server .monitor-primary:disabled{opacity:.5;cursor:wait}
+.monitor-empty-box{padding:24px;border-radius:15px;background:#f5f5f7;border:1px dashed #d2d2d7;font-size:13px;line-height:1.8}
+.monitor-empty-box strong{font-size:14px;font-weight:550}.monitor-empty-box p{font-size:12px;color:#626268;margin:7px 0 0}
+.monitor-schedule-row{display:flex;justify-content:space-between;gap:16px;align-items:flex-start;padding:19px;border:1px solid #e5e5e7;border-radius:15px;margin-top:12px;min-width:0}
+.monitor-schedule-row>div:first-child{min-width:0;flex:1}
+.monitor-schedule-title{display:flex;align-items:center;flex-wrap:wrap;gap:7px 10px;overflow-wrap:anywhere}
+.monitor-schedule-title>strong{font-size:15px;font-weight:550}
+.monitor-schedule-row p{font-size:12px;color:#626268;line-height:1.8;margin:9px 0}
+.monitor-schedule-row small{font-size:11px;color:#626268;line-height:1.8}
+.monitor-check-chips{display:flex;gap:5px;flex-wrap:wrap;margin:0 0 9px}
+.monitor-check-chips>span{font-size:10px;line-height:1.6;color:#545458;padding:3px 7px;background:#f3f3f5;border-radius:5px}
+.monitor-row-actions{display:flex;gap:6px;flex-wrap:wrap;flex:none;max-width:190px}
+.test-server .monitor-row-actions button{border:1px solid #e5e5e7;background:#fff;color:#626268;border-radius:99px;padding:7px 10px;font-size:11px;line-height:1.6}
+.test-server .monitor-editor{min-width:0;padding:23px;border:1px solid #c4d9f1;border-radius:17px;background:#f8fbff;margin:0 0 28px;scroll-margin-top:18px}
+.monitor-editor legend{padding:0 9px;font-size:16px;font-weight:600;color:#24537d}
+.monitor-editor-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:15px;margin-bottom:18px}
+.monitor-all-day{padding-top:26px;align-self:start;min-height:43px}
+.monitor-days{display:flex;gap:7px;flex-wrap:wrap}
+.monitor-days label{display:flex;align-items:center;justify-content:center;gap:5px;border:1px solid #dce4ef;border-radius:9px;background:white;padding:9px 10px;cursor:pointer;font-size:12px;font-weight:400}
+.monitor-days label:has(input:checked){background:#eaf3ff;color:#0066cc;border-color:#b2d0f0}
+.monitor-check-heading{margin-top:26px}.monitor-check-heading h4{font-size:15px;font-weight:600;margin:0}.monitor-check-heading>div:last-child{display:flex;gap:12px}
+.test-server .monitor-text-button{font-size:12px;background:transparent;border:0;padding:5px 0;color:#0066cc;min-height:30px}
+.monitor-check-group{min-width:0;padding:0;border:0;margin:20px 0 0}
+.monitor-check-group legend{padding:0;font-size:12px;font-weight:500;color:#626268;margin-bottom:9px}
+.monitor-check-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.monitor-check{display:flex;align-items:flex-start;gap:10px;padding:15px;border:1px solid #dde5ef;border-radius:12px;background:#fff;cursor:pointer;min-width:0}
+.monitor-check:has(input:checked){border-color:#8cbae9;background:#f2f8ff}
+.monitor-check input{margin-top:3px}.monitor-check>span{min-width:0}
+.monitor-check strong{display:block;font-size:13px;line-height:1.7;font-weight:550}
+.monitor-check strong>small{font-size:9px;font-weight:500;border-radius:4px;background:#e7eef8;color:#496380;padding:2px 4px;margin-left:5px}
+.monitor-check>span>span{display:block;font-size:11px;color:#626268;line-height:1.8;margin-top:3px;overflow-wrap:anywhere}
+.monitor-editor-actions{display:flex;justify-content:flex-end;gap:9px;margin-top:19px}
+.monitor-error{font-size:12px;line-height:1.8;color:#a53c2b;margin:13px 0 0;overflow-wrap:anywhere}
+.monitor-error:empty,.monitor-feedback:empty{display:none}
+.monitor-feedback{font-size:12px;line-height:1.8;color:#187642;margin:15px 0 0;overflow-wrap:anywhere}
+.monitor-results{padding-top:23px;border-top:1px solid #e5e5e7}
+.monitor-empty{font-size:12px;color:#626268;line-height:1.85;margin:10px 0 0}
+.monitor-result{border:1px solid #e5e5e7;border-radius:12px;margin-top:12px;padding:13px 15px}
+.monitor-result summary{display:flex;gap:6px 12px;flex-wrap:wrap;font-size:12px;line-height:1.8;cursor:pointer}.monitor-result summary>span{flex:1}.monitor-result summary strong{font-weight:550}.monitor-result summary small{color:#626268}
+.monitor-result ul{list-style:none;padding:0;margin:12px 0 0}.monitor-result li{display:flex;gap:8px;flex-wrap:wrap;padding:10px 0;border-top:1px solid #e5e5e7;font-size:12px}.monitor-result li>strong{margin-left:auto;font-weight:500}.monitor-result li p{width:100%;margin:0;font-size:11px;color:#626268;line-height:1.8;overflow-wrap:anywhere}
+.monitor-connect-help{margin-top:24px;font-size:12px;color:#626268;line-height:1.9}.monitor-connect-help summary{cursor:pointer;color:#0066cc}.monitor-connect-help a{color:#0066cc;text-underline-offset:3px}
+.monitor-dialog-footer{display:flex;justify-content:space-between;gap:12px;padding:16px 28px;border-top:1px solid #e5e5e7;background:#fafafa}
+.monitor-dialog-header,.monitor-dialog-footer{flex:none}
+.monitor-dialog [hidden]{display:none!important}
+@media(max-width:640px){
+  .test-server .monitor-release{padding:22px 20px}.test-server .monitor-release h2{font-size:21px}
+  body.test-server .monitor-dialog{width:calc(100vw - 20px);max-width:calc(100vw - 20px);max-height:calc(100dvh - 20px);border-radius:20px}
+  body.test-server .monitor-dialog[open]{height:calc(100dvh - 20px)}
+  .monitor-dialog-header{padding:20px;gap:12px}.test-server .monitor-dialog-header h2{font-size:20px}.monitor-dialog-header p{font-size:11px}
+  .monitor-dialog-content{padding:20px}
+  .monitor-setting-grid{grid-template-columns:1fr;gap:13px}.monitor-editor-grid,.monitor-check-grid{grid-template-columns:1fr}
+  .monitor-schedule-row{display:block;padding:16px}.monitor-row-actions{max-width:none;margin-top:13px}
+  .test-server .monitor-editor{padding:16px}.monitor-all-day{padding-top:0}
+  .monitor-dialog-footer{padding:14px 18px;gap:8px}.test-server .monitor-dialog-footer button{font-size:11px;padding:9px 12px;flex:1}
+  .monitor-days{gap:6px}.monitor-days label{padding:9px 8px}
+  .monitor-section-heading{gap:12px}.monitor-section-heading h3{font-size:16px}
+  .monitor-auth{padding:12px 14px}.monitor-check{padding:13px}
+}
+@media(pointer:coarse){.test-server .monitor-dialog button{min-height:44px}.monitor-days label{min-height:44px}}

@@ -130,6 +130,8 @@ def install(args):
     if args.server_id:
         config["server_id"] = args.server_id
     config["state_dir"] = str(STATE)
+    if getattr(args, "enable_monitoring_test", False):
+        config["monitoring_test_enabled"] = True
     if not re.fullmatch(r"[a-z0-9]+(?:-[a-z0-9]+)*", config.get("server_id", "")):
         raise ValueError("올바른 server_id가 필요합니다.")
     if not isinstance(config.get("name"), str) or not config["name"].strip():
@@ -165,7 +167,7 @@ def install(args):
     STATE.mkdir(parents=True, exist_ok=True)
     os.chmod(STATE, 0o700)
     os.chown(STATE, account.pw_uid, account.pw_gid)
-    for filename in ("gpu_agent.py", "shared_daemon.py", "shared_cli.py", "version_info.py", "resource_metrics.py"):
+    for filename in ("gpu_agent.py", "shared_daemon.py", "shared_cli.py", "version_info.py", "resource_metrics.py", "server_monitoring.py"):
         write_owned(ROOT / filename, (source_dir / filename).read_text())
     build_version["installed_at"] = agent.now_iso()
     write_owned(ROOT / "version.json", json.dumps(build_version, indent=2) + "\n")
@@ -197,6 +199,7 @@ def main():
     parser.add_argument("--config", help="기존 설정 파일 절대경로")
     parser.add_argument("--env-file", help="기존 토큰 환경 파일 절대경로")
     parser.add_argument("--server-id", help="이 서버의 ID. 예: server-b")
+    parser.add_argument("--enable-monitoring-test", action="store_true", help="v2.1 테스트 모니터링 일정 동기화 활성화")
     try:
         install(parser.parse_args())
     except (OSError, ValueError, RuntimeError, subprocess.CalledProcessError, KeyError) as error:
