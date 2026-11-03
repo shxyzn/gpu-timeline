@@ -487,7 +487,7 @@ try {
   // v1.2.0: grouped production panels, missing-history states, measured stats and evidence.
   const order=await page.locator('#panel-resources>section[id]').evaluateAll(elements=>elements.map(e=>e.id));
   assert.deepEqual(order,['openrouter','resources','bottlenecks']);
-  assert.equal(await page.locator('main').evaluate(e=>e.firstElementChild.id),'release-video');
+  assert.equal(await page.locator('main').evaluate(e=>e.querySelector(':scope > :not(#production-maintenance-notice)').id),'release-video');
   assert.equal(await page.locator('main').evaluate(e=>e.lastElementChild.textContent),'designed by psh in suwon');
   assert.match(await page.locator('#resource-grid').innerText(),/수집기 업데이트 필요/);
   resourceEnabled=true;

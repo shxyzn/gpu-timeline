@@ -6,7 +6,15 @@
 .patch-notes strong{color:#21613b;font-weight:600;white-space:nowrap}
 .patch-notes p{margin:0;word-break:keep-all;overflow-wrap:anywhere}
 @media(max-width:640px){.patch-notes{gap:10px;padding:14px 16px;margin-bottom:20px}.patch-notes-copy{display:block}.patch-notes p{margin-top:4px}}
-</style><link rel="stylesheet" href="./dashboard/styles.css?v=1.2.0"><link rel="stylesheet" href="./dashboard/parcel.css?v=1.2.0"><link rel="stylesheet" href="./dashboard/apple.css?v=1.2.0&amp;patch=spacing"></head><body class="test-server dashboard-v120"><main>
+</style><link rel="stylesheet" href="./dashboard/styles.css?v=1.2.0"><link rel="stylesheet" href="./dashboard/parcel.css?v=1.2.0"><link rel="stylesheet" href="./dashboard/apple.css?v=1.2.0&amp;patch=spacing"><link rel="stylesheet" href="./test-server/maintenance.css?patch=yellow-times"></head><body class="test-server dashboard-v120"><main>
+<aside id="production-maintenance-notice" class="maintenance-notice" role="status" aria-labelledby="production-maintenance-title" data-ends="2026-11-03T20:00:00+09:00">
+  <svg class="maintenance-notice-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M12 11v6m0-10h.01"></path></svg>
+  <div class="maintenance-notice-copy"><strong id="production-maintenance-title">사이트 점검 안내</strong><p>업데이트 준비를 위한 점검이 예정되어 있습니다. 점검 시간에는 일부 시스템에 일시적인 장애가 발생할 수 있습니다.</p>
+    <dl class="maintenance-times"><div><dt>점검 시작</dt><dd><time datetime="2026-11-03T12:00:00+09:00">2026. 11. 03. 12:00</time></dd></div><div><dt>종료 예정</dt><dd><time datetime="2026-11-03T20:00:00+09:00">2026. 11. 03. 20:00</time></dd></div></dl>
+    <p class="maintenance-time-note">한국시간(KST) 기준</p>
+  </div>
+</aside>
+
 <details id="release-video" class="release-video" data-release="1.2.0" open>
   <summary id="release-video-toggle" class="release-video-toggle">
     <span class="release-video-summary"><span class="release-video-badge">v1.2.0</span><span>v1.2 업데이트 영상 <small>· 1분</small></span></span>
@@ -228,4 +236,4 @@ v1.1.0 이상 서버에서는 list의 reference가 사이트의 실험 ID와 같
   <h2 id="delete-title">대시보드에서 삭제할까요?</h2><p id="delete-name"></p><code id="delete-reference"></code><p class="admin-help">모든 사용자의 대시보드에서 이 기록을 숨깁니다. 실제 실험·서버 로그는 그대로 유지되며, 기록 관리에서 복구할 수 있어요.</p>
   <form id="delete-form"><p id="delete-error" class="admin-error" role="alert"></p><div class="dialog-actions"><button type="button" class="edit-button" data-close-dialog="delete-dialog">취소</button><button type="submit" class="edit-button danger">삭제</button></div></form>
 </dialog>
-<script type="module" src="./promo.js?v=1.2.0"></script><script type="module" src="./usage.js"></script><script type="module" src="./dashboard/app.js?v=1.2.0"></script></body></html>
+<script type="module" src="./promo.js?v=1.2.0"></script><script type="module" src="./usage.js"></script><script type="module" src="./dashboard/app.js?v=1.2.0"></script><script type="module" src="./maintenance-notice.js?date=20261103"></script></body></html>
