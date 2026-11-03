@@ -128,4 +128,4 @@ document.querySelector('.priority-tabs').addEventListener('keydown',event=>{
 routeHash();
 renderCurrent();
 
-import './monitoring.js?v=2.1';
+import './monitoring.js?v=2.1-film';

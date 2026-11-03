@@ -46,9 +46,18 @@ jobs:
           node --check dist/admin.js
           node --check dist/edits.js
           npm test
-      - name: Render and verify release media
+      - name: Reuse unchanged release films
         if: matrix.python == '3.11'
-        timeout-minutes: 10
+        uses: actions/cache@v4
+        id: promo-cache
+        with:
+          path: |
+            dist/media
+            /tmp/gpu-timeline-promo
+          key: promo-v21-${{ runner.os }}-${{ hashFiles('scripts/*promo*') }}
+      - name: Render and verify release media
+        if: matrix.python == '3.11' && steps.promo-cache.outputs.cache-hit != 'true'
+        timeout-minutes: 15
         run: |
           sudo sed -i 's|http://azure.archive.ubuntu.com/ubuntu|https://archive.ubuntu.com/ubuntu|g' /etc/apt/apt-mirrors.txt
           sudo apt-get update
@@ -76,5 +85,7 @@ jobs:
           path: |
             dist/media/*v1.1.8*
             dist/media/*v1.2.0*
+            dist/media/*v2.1*
             /tmp/gpu-timeline-promo/*.png
+            /tmp/gpu-timeline-promo/*.jpg
           retention-days: 7

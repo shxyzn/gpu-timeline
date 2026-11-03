@@ -888,12 +888,13 @@ try {
 
   await preview.locator('#tab-more').click();
   await preview.locator('.promo-note-link').click();
-  assert.match(await preview.locator('#release-video source').getAttribute('src'),/v1\.2\.0-60s/);
+  assert.match(await preview.locator('#release-video source').getAttribute('src'),/v2\.1-film/);
+  assert.equal(await preview.locator('#patch-notes').count(),0);
   await preview.locator('#release-video video').evaluate(video=>video.load());
   await preview.waitForFunction(()=>document.querySelector('#release-video video').readyState>=1);
-  assert.equal(await preview.locator('#release-video video').evaluate(v=>v.duration),60);
-  assert.equal(await preview.locator('#release-video video').evaluate(v=>v.videoWidth),1280);
-  assert.equal(await preview.locator('#release-video video').getAttribute('poster'),'../media/poster-v1.2.0.jpg');
+  assert.equal(await preview.locator('#release-video video').evaluate(v=>v.duration),50);
+  assert.equal(await preview.locator('#release-video video').evaluate(v=>v.videoWidth),1920);
+  assert.equal(await preview.locator('#release-video video').getAttribute('poster'),'../media/poster-v2.1.jpg');
 
   await preview.locator('#tab-now').click();
   for(const width of [390,320]) {

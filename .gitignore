@@ -9,4 +9,6 @@ agent/version.json
 dist/version.json
 dist/media/*v1.1.8*
 dist/media/*v1.2.0*
+dist/media/*v2.1*
+dist/media/v21-*
 node_modules/
