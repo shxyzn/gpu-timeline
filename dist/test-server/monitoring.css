@@ -15,7 +15,7 @@ body.test-server .monitor-dialog[open]{display:flex;flex-direction:column;height
 .monitor-dialog #monitor-config-form{display:flex;flex-direction:column;flex:1;min-height:0;overflow:hidden}
 .monitor-dialog form{margin:0}
 .monitor-dialog-header{display:flex;justify-content:space-between;align-items:flex-start;gap:20px;padding:24px 28px 20px;border-bottom:1px solid #e5e5e7}
-.test-server .monitor-dialog-header h2{font-size:23px;letter-spacing:-.04em;line-height:1.5;margin:7px 0 4px;overflow-wrap:anywhere}
+.test-server .monitor-dialog-header h2{font-size:23px;letter-spacing:-.04em;line-height:1.5;margin:7px 0 4px;word-break:keep-all;overflow-wrap:anywhere}
 .monitor-dialog-header p{font-size:12px;color:#626268;line-height:1.7;margin:0}
 .test-server #monitor-close{flex:none;border:0;background:#f0f0f2;color:#626268;width:34px;min-height:34px;height:34px;border-radius:50%;font-size:24px;line-height:1}
 .monitor-dialog-content{padding:24px 28px;flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;scrollbar-gutter:stable}

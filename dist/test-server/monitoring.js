@@ -29,7 +29,7 @@ dialog.innerHTML=`<div class="monitor-dialog-header"><div><span class="monitor-e
   <section class="monitor-results" aria-labelledby="monitor-results-title"><h3 id="monitor-results-title">최근 점검 결과</h3><div id="monitor-results"></div></section>
   <details class="monitor-connect-help"><summary>서버 연결 안내</summary><p>서버 관리자가 모니터링 수집기를 연결하면 저장한 일정이 적용돼요. 아직 연결하지 않은 서버는 적용 대기로 표시됩니다.</p><a href="https://github.com/shxyzn/gpu-timeline/blob/main/MONITORING.md" target="_blank" rel="noopener noreferrer">설치·연결 안내 ↗</a></details>
   <p id="monitor-config-error" class="monitor-error" role="alert"></p><p id="monitor-feedback" class="monitor-feedback" role="status"></p>
-</div><div class="monitor-dialog-footer"><button type="button" id="monitor-reload" class="monitor-secondary">저장된 설정 불러오기</button><button type="submit" id="monitor-save" class="monitor-primary">서버 설정 저장</button></div></form>`;
+</div><div class="monitor-dialog-footer"><button type="button" id="monitor-reload" class="monitor-secondary">설정 다시 불러오기</button><button type="submit" id="monitor-save" class="monitor-primary">서버 설정 저장</button></div></form>`;
 document.body.append(dialog);
 $('monitor-checks').innerHTML=[...new Set(CHECKS.map(c=>c.group))].map(group=>`<fieldset class="monitor-check-group"><legend>${group}</legend><div class="monitor-check-grid">${CHECKS.filter(c=>c.group===group).map(c=>`<label class="monitor-check"><input type="checkbox" name="monitor-check" value="${c.id}"><span><strong>${c.name}${c.deep?'<small>정밀</small>':''}</strong><span>${c.detail}</span></span></label>`).join('')}</div></fieldset>`).join('');
 
