@@ -6,6 +6,7 @@ on:
   workflow_dispatch:
 permissions:
   contents: read
+  actions: read
   pages: write
   id-token: write
 concurrency:
@@ -14,6 +15,8 @@ concurrency:
 jobs:
   deploy:
     runs-on: ubuntu-22.04
+    env:
+      PAGES_ARTIFACT: github-pages-${{ github.run_id }}-${{ github.run_attempt }}
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
@@ -45,6 +48,21 @@ jobs:
       - uses: actions/upload-pages-artifact@v3
         with:
           path: dist
+          name: ${{ env.PAGES_ARTIFACT }}
+      - name: Wait for uploaded artifact metadata
+        uses: actions/github-script@v7
+        with:
+          script: |
+            for (let attempt = 0; attempt < 12; attempt++) {
+              const {data} = await github.rest.actions.listWorkflowRunArtifacts({
+                ...context.repo, run_id: context.runId, name: process.env.PAGES_ARTIFACT
+              });
+              if (data.artifacts.filter(a => a.name === process.env.PAGES_ARTIFACT && !a.expired).length === 1) return;
+              await new Promise(resolve => setTimeout(resolve, 5000));
+            }
+            core.setFailed('The uploaded Pages artifact is not visible in the API yet.');
       - name: Deploy
         id: deployment
         uses: actions/deploy-pages@v4
+        with:
+          artifact_name: ${{ env.PAGES_ARTIFACT }}
