@@ -7,6 +7,7 @@ import {fileURLToPath, pathToFileURL} from 'node:url';
 import {emptyEdits, encodeJSON, decodeJSON} from '../dist/edits.js';
 import {resourceFixture} from './resources-fixture.mjs';
 import {emptyMonitoring} from '../dist/test-server/monitoring-model.js';
+import {emptyHistory,mergeSamples,samplesFromTokens,DAY} from '../dist/test-server/api-usage-model.js';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const runtime = process.env.CODEX_PRIMARY_RUNTIME_NODE_MODULES;
@@ -51,6 +52,7 @@ try {
   let resourceEnabled = false, resourceFailed = false, testAPI = false, previewMode = false;
   let monitoringData=emptyMonitoring(),monitoringWrites=0,monitoringForbidden=false,monitoringApplied=false,monitoringProfile='test',monitoringReportProfile=null;
   const monitoringProfiles={test:emptyMonitoring(),production:emptyMonitoring()};
+  let usageHistory=emptyHistory(),usageHistoryWrites=0,usageHistoryReads=0,usageHistoryForbidden=false,usageHistoryUnavailable=false;
   const telemetry = id => ({server_id: id, name: `Server ${id.slice(-1).toUpperCase()}`, updated_at: iso(id === 'server-c' && serverCStale ? -2 : 0), collector_ok: true,
     resources: resourceEnabled && id !== 'server-c' ? resourceFixture(Date.now(),resourceFailed) : undefined,
     monitoring: monitoringApplied&&id==='server-b'?{profile:monitoringReportProfile||monitoringProfile,enabled:true,applied_revision:monitoringData.servers.find(c=>c.server_id===id)?.revision||0,applied_at:iso(0),config_error:null,schedules:[],history:[{name:'일반 점검',finished_at:iso(0),status:'warning',checks:[{id:'gpu_count',status:'warning',summary:'인식 1 / 설정 2 GPU'}]}]}:undefined,
@@ -74,6 +76,7 @@ try {
   });
   await context.route('https://raw.githubusercontent.com/**', async route => {
     const url = new URL(route.request().url());
+    if(url.pathname.endsWith('/dashboard/openrouter-usage-test.json')){usageHistoryReads++;assert.equal(route.request().headers().authorization,undefined);return fulfill(route,usageHistoryUnavailable?{}:usageHistory,usageHistoryUnavailable?503:200);}
     if (url.pathname.endsWith('/hardware-prices/prices.json')) return fulfill(route, JSON.parse(await fs.readFile(path.join(root, 'dist/hardware-prices.json'), 'utf8')));
     if(/\/dashboard\/monitoring(?:-test)?\.json$/.test(url.pathname))return fulfill(route,monitoringProfiles[url.pathname.endsWith('monitoring-test.json')?'test':'production']);
     if (url.pathname.endsWith('/dashboard/edits.json')) {
@@ -91,6 +94,15 @@ try {
     if (url.pathname === '/user') return fulfill(route, {login: 'cvml-admin'});
     if (url.pathname === '/repos/shxyzn/gpu-timeline') return fulfill(route, {permissions: {push: true}});
     if (url.pathname.endsWith('/git/ref/heads/status')) return fulfill(route, {ref: 'refs/heads/status'});
+    if(url.pathname.endsWith('/contents/dashboard/openrouter-usage-test.json')){
+      assert.equal(monitoringProfile,'test');
+      if(request.method()==='PUT'){
+        if(usageHistoryForbidden)return fulfill(route,{},403);
+        const body=request.postDataJSON();assert.equal(body.branch,'status');assert.equal(body.sha,'usage-'+usageHistory.revision);
+        const next=decodeJSON(body.content);assert.equal(JSON.stringify(next).includes(fakeKey),false);usageHistory=next;usageHistoryWrites++;return fulfill(route,{content:{sha:'usage-'+usageHistory.revision}});
+      }
+      return fulfill(route,{type:'file',encoding:'base64',sha:'usage-'+usageHistory.revision,content:encodeJSON(usageHistory)});
+    }
     if(/\/contents\/dashboard\/monitoring(?:-test)?\.json$/.test(url.pathname)){
       const profile=url.pathname.endsWith('monitoring-test.json')?'test':'production';
       assert.equal(profile,monitoringProfile,'each dashboard must save only its own monitoring profile');
@@ -571,7 +583,18 @@ try {
   // The retained test URL shares data and editor behavior without a production footer link.
   collectorFinished=false;progressCompleted=25;serverCStale=true;testAPI=true;previewMode=true;
   resourceEnabled=true;resourceFailed=false;failRaw=false;staleRaw=false;
-  data={...emptyEdits(),openrouter_tokens:[previewPublicToken]};
+  const comparisonToken={...structuredClone(previewPublicToken),id:'or-00000000-0000-4000-8000-000000000002',name:'대조 <script> 키',usage:{...previewPublicToken.usage,usage:5,usage_daily:0}};
+  const chartTokens=environment.profile==='test'?[previewPublicToken,comparisonToken]:[previewPublicToken];
+  data={...emptyEdits(),openrouter_tokens:chartTokens};
+  const historyReadsBefore=usageHistoryReads;
+  if(environment.profile==='test'){
+    const at=Date.now();usageHistory={...mergeSamples(emptyHistory(),[
+      {key_id:previewPublicToken.id,at:new Date(at-5*DAY).toISOString(),total:7,daily:2},
+      {key_id:previewPublicToken.id,at:new Date(at-3*DAY).toISOString(),total:9,daily:2},
+      {key_id:previewPublicToken.id,at:new Date(at-DAY).toISOString(),total:10,daily:3},
+      ...samplesFromTokens(chartTokens,at)
+    ],at),revision:1,updated_at:new Date(at).toISOString()};
+  }
   const writesBeforePreview=writes;
   let parcelCalls=0,parcelMode='success',releaseParcel=null,parcelHoldStarted=null;
   await context.route('https://apis.tracker.delivery/carriers/*/tracks/*',async route=>{
@@ -671,6 +694,30 @@ try {
   await preview.locator('.resource-card').first().waitFor({state:'visible'});
   assert.equal(await preview.locator('.resource-card').count(),4);
   assert.match(await preview.locator('#openrouter-grid').innerText(),/연구실 공용/);
+  if(environment.profile==='test'){
+    await preview.waitForFunction(()=>document.getElementById('api-usage-state').textContent.includes('개 키의 관측 기록'));
+    assert.match(await preview.locator('#dashboard-version').innerText(),/테스트 v2.1.1/);
+    assert.equal(await preview.locator('#api-usage-key option').count(),3);
+    assert.ok(await preview.locator('#api-usage-plot [data-usage-day]').count()>0);
+    assert.equal(await preview.locator('#api-usage-board script').count(),0);
+    await preview.locator('#api-usage-key').selectOption(comparisonToken.id);
+    assert.equal(await preview.locator('#api-usage-amount').innerText(),'$0.00');
+    await preview.locator('#api-usage-metric').selectOption('cumulative');
+    assert.equal(await preview.locator('#api-usage-amount').innerText(),'$5.00');
+    assert.equal(await preview.locator('#api-usage-plot circle').count(),1);
+    await preview.locator('#api-usage-key').selectOption('all');
+    await preview.locator('[data-usage-days="30"]').click();
+    assert.equal(await preview.locator('[data-usage-days="30"]').getAttribute('aria-pressed'),'true');
+    assert.ok(await preview.locator('#api-usage-plot path').count()>0);
+    await preview.locator('#api-usage-metric').selectOption('daily');
+    await preview.locator('[data-usage-days="7"]').click();
+    await preview.locator('.api-usage-records > summary').click();
+    assert.match(await preview.locator('#api-usage-table').innerText(),/대조 <script> 키/);
+    assert.match(await preview.locator('#api-usage-table').innerText(),/일부 키 미관측/);
+    await preview.locator('.api-usage-records > summary').click();
+    await preview.locator('#api-usage-board').screenshot({path:path.join(output,'api-usage-desktop.png')});
+    assert.equal(usageHistoryWrites,0);
+  }else{assert.equal(await preview.locator('#api-usage-board').count(),0);assert.equal(usageHistoryReads,historyReadsBefore);}
   assert.equal(await preview.locator('#resource-server').inputValue(),'server-b');
   await preview.locator('#resource-server').selectOption('server-a');
   await preview.locator('#as-resource-body > .as-cover').waitFor({state:'visible'});
@@ -920,6 +967,28 @@ try {
   await monitoringViewer.waitForFunction(()=>document.querySelectorAll('.monitor-schedule-row').length===2);
   assert.match(await monitoringViewer.locator('#monitor-auth').innerText(),/로그인이 필요/);
   await monitoringViewer.locator('#monitor-close').click();await monitoringViewer.close();
+  if(environment.profile==='test'){
+    const mainWritesBefore=writes,providerCallsBefore=openRouterCalls;
+    usageHistoryForbidden=true;
+    data.openrouter_tokens[0]={...data.openrouter_tokens[0],checked_at:new Date().toISOString(),attempted_at:new Date().toISOString(),usage:{...data.openrouter_tokens[0].usage,usage:40,usage_daily:5}};
+    await preview.locator('#tab-now').click();await preview.locator('#current-refresh').click();
+    await preview.locator('#tab-resources').click();
+    await preview.waitForFunction(()=>document.getElementById('api-usage-state').textContent.includes('저장하지 못했어요'));
+    assert.equal(usageHistoryWrites,0);assert.notEqual(await preview.locator('#api-usage-amount').innerText(),'$0.00');
+    usageHistoryForbidden=false;await preview.locator('#api-usage-reload').click();
+    await preview.waitForFunction(()=>!document.getElementById('api-usage-state').textContent.includes('저장 중')&&!document.getElementById('api-usage-state').textContent.includes('저장하지 못했어요'));
+    assert.equal(usageHistoryWrites,1);assert.equal(writes,mainWritesBefore);
+    usageHistoryUnavailable=true;await preview.locator('#api-usage-reload').click();
+    await preview.waitForFunction(()=>document.getElementById('api-usage-state').textContent.includes('불러오지 못했어요'));
+    assert.ok(await preview.locator('#api-usage-plot svg').count()>0);
+    usageHistoryUnavailable=false;await preview.locator('#api-usage-reload').click();
+    await preview.waitForFunction(()=>!document.getElementById('api-usage-state').textContent.includes('불러오지 못했어요'));
+    assert.equal(usageHistoryWrites,1);assert.equal(openRouterCalls,providerCallsBefore);
+    const historyViewer=await context.newPage();await historyViewer.goto(base+'/test-server/#resources');
+    await historyViewer.locator('#api-usage-plot svg').waitFor();
+    assert.match(await historyViewer.locator('#api-usage-table').textContent(),/UTC/);
+    await historyViewer.close();assert.equal(usageHistoryWrites,1);
+  }
 
   await preview.locator('#tab-more').click();
   if(!await preview.locator('#release-video').evaluate(e=>e.open))await preview.locator('#release-video-toggle').click();
@@ -938,6 +1007,12 @@ try {
     for(const name of ['now','timeline','resources','servers','parcel','more']) {
       await preview.locator('#tab-'+name).click();
       assert.ok(await preview.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),`test-server ${name} overflows at ${width}px`);
+      if(environment.profile==='test'&&name==='resources'){
+        await preview.locator('#api-usage-metric').selectOption('cumulative');
+        await preview.locator('[data-usage-days="90"]').click();
+        await preview.locator('#api-usage-board').screenshot({path:path.join(output,`api-usage-mobile-${width}.png`)});
+        assert.ok(await preview.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
+      }
     }
     await preview.locator('#tab-now').click();
     await preview.locator('#current-gpu-tab').click();

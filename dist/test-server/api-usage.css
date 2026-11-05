@@ -1,0 +1,47 @@
+.test-server .api-usage-board{border-top:1px solid #e5e5ea;margin-top:26px;padding-top:26px;min-width:0}
+.api-usage-heading{display:flex;align-items:flex-start;justify-content:space-between;gap:18px;margin-bottom:22px}
+.api-usage-title-line{display:flex;align-items:center;flex-wrap:wrap;gap:10px}
+.api-usage-title-line h3{margin:0;font-size:20px;font-weight:600;letter-spacing:-.04em;color:#202125}
+.api-usage-title-line>span{font-size:10px;background:#eaf3ff;color:#0071e3;border-radius:99px;padding:4px 8px}
+.api-usage-heading p{font-size:12px;line-height:1.8;margin:8px 0 0;color:#85858e}
+.api-usage-heading>button{flex-shrink:0;padding:8px 12px;min-height:34px;border:1px solid #e5e5ea;background:#f8f8fa;color:#64646d;border-radius:99px;font-size:11px;cursor:pointer}
+.api-usage-heading>button:disabled{opacity:.5;cursor:default}
+.api-usage-controls{display:flex;align-items:flex-end;flex-wrap:wrap;gap:14px 18px}
+.api-usage-controls>label{display:grid;gap:7px;font-size:10px;color:#888891;min-width:0}
+.api-usage-controls>label:first-child{flex:1;min-width:150px}
+.api-usage-controls select{box-sizing:border-box;width:100%;max-width:100%;padding:10px 30px 10px 12px;border:1px solid #e1e2e7;border-radius:10px;background:#fff;color:#3b3d43;font:12px -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;min-height:39px}
+.api-usage-period{display:flex;gap:3px;padding:3px;border-radius:11px;background:#efeff2;box-sizing:border-box;min-height:39px}
+.api-usage-period button{border:0;background:transparent;padding:7px 14px;border-radius:8px;font-size:11px;color:#797983;cursor:pointer}
+.api-usage-period button[aria-pressed=true]{background:#fff;color:#202126;box-shadow:0 1px 4px #0000000a}
+.api-usage-controls button:focus-visible,.api-usage-controls select:focus-visible,.api-usage-heading>button:focus-visible{outline:3px solid #a5c8fa;outline-offset:2px}
+.api-usage-summary{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:15px;margin:28px 0 18px;padding:23px 24px;background:#f7f9fc;border-radius:18px}
+.api-usage-summary>div>span{display:block;font-size:11px;color:#878b94;line-height:1.7}
+.api-usage-summary strong{display:block;margin-top:5px;font-size:32px;letter-spacing:-.045em;font-weight:600;font-variant-numeric:tabular-nums;color:#242b36;line-height:1.5}
+.api-usage-summary p{font-size:10px;color:#959aa3;line-height:1.8;margin:6px 0 0}
+.api-usage-coverage{text-align:right;flex-shrink:0}
+.api-usage-coverage small{display:block;font-size:10px;color:#9a9da5;margin-top:5px;line-height:1.7}
+.api-usage-legend{display:flex;flex-wrap:wrap;gap:8px 18px;margin:0 0 16px;min-width:0}
+.api-usage-legend>span{display:flex;align-items:center;gap:6px;font-size:10px;color:#7d818b;overflow-wrap:anywhere;max-width:100%}
+.api-usage-legend i{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+.api-usage-plot{width:100%;min-width:0;min-height:240px;overflow:hidden}
+.api-usage-plot svg{display:block;width:100%;height:240px;overflow:visible}
+.api-usage-plot text{font:10px -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;fill:#9198a4;font-variant-numeric:tabular-nums}
+.api-usage-missing{fill:#e4e8ee}
+.api-usage-plot rect[data-usage-day]:hover{opacity:.7}
+.api-usage-empty{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;box-sizing:border-box;min-height:240px;border:1px dashed #e5e8ee;border-radius:16px;background:#fcfcfd;text-align:center;padding:24px 18px;line-height:1.8}
+.api-usage-empty strong{font-size:13px;font-weight:500;color:#767d88}
+.api-usage-empty span{font-size:11px;color:#a0a6af;max-width:350px;word-break:keep-all}
+.api-usage-chart-note,.api-usage-state,.api-usage-help{font-size:10px!important;line-height:1.9!important;color:#999da6!important;margin:9px 0 0!important;word-break:keep-all;overflow-wrap:anywhere}
+.api-usage-state{min-height:19px;color:#7b8795!important}
+.api-usage-state.warning{color:#a26d21!important}
+.api-usage-records{margin-top:18px;border-top:1px solid #eeeef2;padding-top:17px}
+.api-usage-records>summary{font-size:11px;font-weight:500;color:#7c828d;cursor:pointer}
+.api-usage-table{max-width:100%;overflow:auto;overscroll-behavior-x:contain;margin-top:14px}
+.api-usage-table table{border-collapse:collapse;width:100%;font-size:11px;white-space:nowrap;color:#646d7a}
+.api-usage-table caption{text-align:left;font-size:10px;color:#929aa6;padding-bottom:11px}
+.api-usage-table th,.api-usage-table td{text-align:left;padding:10px 12px;border-bottom:1px solid #eceff4;font-variant-numeric:tabular-nums;font-weight:400}
+.api-usage-table thead th{font-size:10px;color:#939aa6;background:#f8f9fb}
+.api-usage-table td small{display:block;font-size:9px;color:#aa935e;margin-top:3px}
+.api-usage-empty-records{font-size:11px;color:#989ea8;line-height:1.8;margin:0}
+.api-usage-help{margin-top:16px!important}
+@media(max-width:640px){.test-server .api-usage-board{margin-top:23px;padding-top:23px}.api-usage-heading{gap:12px}.api-usage-title-line h3{font-size:17px}.api-usage-heading>button{padding:7px 10px;font-size:10px}.api-usage-controls{gap:13px 10px}.api-usage-controls>label:first-child{flex-basis:100%}.api-usage-controls>label:nth-child(2){flex:1;min-width:0}.api-usage-period button{padding:7px 11px}.api-usage-summary{margin-top:22px;padding:18px;border-radius:15px}.api-usage-summary strong{font-size:28px}.api-usage-coverage{text-align:left;width:100%}.api-usage-heading p{font-size:11px}}
