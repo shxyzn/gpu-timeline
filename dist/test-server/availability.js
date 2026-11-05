@@ -1,4 +1,4 @@
-import {dashboardView} from '../app.js?v=2.1-test-monitor';
+import {dashboardView} from '../app.js?v=2.1.1-test-usage';
 import {isUnavailable,repairState} from './availability-model.js?v=2.1-as';
 import {repairPanel,escapeAvailability as esc} from './availability-ui.js?v=2.1-as';
 

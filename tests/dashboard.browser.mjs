@@ -67,6 +67,14 @@ try {
   const fulfill = (route, body, status = 200) => route.fulfill({status, contentType: 'application/json', body: JSON.stringify(body)});
   await context.route('https://fonts.googleapis.com/**', route => route.fulfill({body: '', contentType: 'text/css'}));
   await context.route('https://fonts.gstatic.com/**', route => route.abort());
+  let staleControllerRequests=0;
+  // Model an immutable cached v2.1 controller that has no history-recorder export.
+  await context.route('**/app.js?v=2.1-test-monitor',async route=>{
+    staleControllerRequests++;
+    const source=await fs.readFile(path.join(root,'dist/app.js'),'utf8');
+    const previous=source.replace(/export async function saveTestAPIUsageHistory\(\)\{[\s\S]*?\n\}\n/,'');
+    return route.fulfill({body:previous,contentType:'text/javascript'});
+  });
   await context.route('**/version.json*', route => fulfill(route, {version: '1.1.5', revision: 'a'.repeat(40)}));
   await context.grantPermissions(['clipboard-read', 'clipboard-write']);
   await context.route('**/config.json*', async route => {
@@ -618,6 +626,9 @@ try {
   await preview.goto(base+environment.path);
   await preview.locator('.current-gpu-table tbody tr').first().waitFor();
   assert.equal(new URL(preview.url()).pathname,environment.path);
+  assert.equal(staleControllerRequests,0,'current dashboards must bypass cached pre-chart controllers');
+  const controllerURLs=await preview.evaluate(()=>performance.getEntriesByType('resource').filter(e=>new URL(e.name).pathname==='/app.js').map(e=>e.name));
+  assert.equal(new Set(controllerURLs).size,1,'all entry modules must share exactly one dashboard controller');
   assert.equal(await preview.getByRole('link',{name:'test-server',exact:true}).count(),0);
   assert.equal(await preview.locator('main>.design-credit').innerText(),'designed by psh in suwon');
   assert.equal(await preview.locator('#patch-notes').count(),0);
