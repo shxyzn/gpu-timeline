@@ -3,7 +3,7 @@
 .api-usage-title-line{display:flex;align-items:center;flex-wrap:wrap;gap:10px}
 .api-usage-title-line h3{margin:0;font-size:20px;font-weight:600;letter-spacing:-.04em;color:#202125}
 .api-usage-title-line>span{font-size:10px;background:#eaf3ff;color:#0071e3;border-radius:99px;padding:4px 8px}
-.api-usage-heading p{font-size:12px;line-height:1.8;margin:8px 0 0;color:#85858e}
+.api-usage-heading p{font-size:12px;line-height:1.8;margin:8px 0 0;color:#85858e;word-break:keep-all}
 .api-usage-heading>button{flex-shrink:0;padding:8px 12px;min-height:34px;border:1px solid #e5e5ea;background:#f8f8fa;color:#64646d;border-radius:99px;font-size:11px;cursor:pointer}
 .api-usage-heading>button:disabled{opacity:.5;cursor:default}
 .api-usage-controls{display:flex;align-items:flex-end;flex-wrap:wrap;gap:14px 18px}
@@ -45,3 +45,4 @@
 .api-usage-empty-records{font-size:11px;color:#989ea8;line-height:1.8;margin:0}
 .api-usage-help{margin-top:16px!important}
 @media(max-width:640px){.test-server .api-usage-board{margin-top:23px;padding-top:23px}.api-usage-heading{gap:12px}.api-usage-title-line h3{font-size:17px}.api-usage-heading>button{padding:7px 10px;font-size:10px}.api-usage-controls{gap:13px 10px}.api-usage-controls>label:first-child{flex-basis:100%}.api-usage-controls>label:nth-child(2){flex:1;min-width:0}.api-usage-period button{padding:7px 11px}.api-usage-summary{margin-top:22px;padding:18px;border-radius:15px}.api-usage-summary strong{font-size:28px}.api-usage-coverage{text-align:left;width:100%}.api-usage-heading p{font-size:11px}}
+@media(max-width:359px){.api-usage-controls>label:nth-child(2){flex-basis:100%}.api-usage-period{width:100%}.api-usage-period button{flex:1}}
