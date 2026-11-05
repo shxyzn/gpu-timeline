@@ -57,6 +57,19 @@ export async function saveParcelRecord(operation){
   }finally{editor.setBusy(false);editorChanged();}
 }
 export function monitoringAccess(){return {enabled:!!editor?.enabled,unlocked:!!editor?.unlocked,busy:!!editor?.busy};}
+// Used only by the staging usage charts; production does not import or call this recorder.
+export async function saveTestAPIUsageHistory(){
+  if(!editor?.enabled||!editor.unlocked)throw new Error('관리자 로그인이 필요합니다.');
+  if(editor.busy||editor.store.saving)throw new Error('앞선 저장이 끝난 뒤 다시 시도해 주세요.');
+  const [{APIUsageStore},{samplesFromTokens}]=await Promise.all([
+    import('./test-server/api-usage-store.js?v=2.1.1'),import('./test-server/api-usage-model.js?v=2.1.1')
+  ]);
+  if(!editor.unlocked||editor.busy||editor.store.saving)throw new Error('관리자 로그인과 저장 상태를 다시 확인해 주세요.');
+  const token=editor.token,samples=samplesFromTokens(editor.data.openrouter_tokens||[]);
+  editor.setBusy(true);editorChanged();
+  try{return await new APIUsageStore(config.dashboard).append(token,samples);}
+  finally{editor.setBusy(false);editorChanged();}
+}
 export function saveTestMonitoringConfig(draft,expectedRevision,requestID){return saveMonitoring('test',draft,expectedRevision,requestID);}
 export function saveMonitoringConfig(draft,expectedRevision,requestID){return saveMonitoring('production',draft,expectedRevision,requestID);}
 async function saveMonitoring(profile,draft,expectedRevision,requestID){
