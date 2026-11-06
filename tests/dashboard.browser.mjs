@@ -92,8 +92,10 @@ try {
       if (failRaw) return fulfill(route, {}, 503);
       return fulfill(route, staleRaw ? emptyEdits() : data);
     }
-    const match = url.pathname.match(/servers\/(server-[abc])\.json$/);
+    const match = url.pathname.match(/servers\/(server-[abcd])\.json$/);
     assert.ok(match, url.pathname);
+    // A newly registered server has no telemetry until its first real upload.
+    if (match[1] === 'server-d') return fulfill(route, {}, 404);
     return fulfill(route, telemetry(match[1]));
   });
   await context.route('https://api.github.com/**', route => {
@@ -213,7 +215,7 @@ try {
   assert.equal(storage.includes('cvml-test'), false);
 
   // Server management is visible only after login; viewing/copying writes nothing.
-  assert.equal(await page.locator('[data-manage-server]').count(), 3);
+  assert.equal(await page.locator('[data-manage-server]').count(), 4);
   assert.equal(await page.locator('#deployment-version').count(), 0);
   assert.match(await page.locator('#dashboard-version').innerText(), /v1\.1\.5\+aaaaaaa/);
   assert.match(await page.locator('.server-version').nth(0).innerText(), /v1\.0\.0/);
@@ -742,10 +744,15 @@ try {
   assert.ok(await preview.locator('#timeline .as-lane').count()>0);
   assert.equal(await preview.locator('#timeline .as-lane [data-job="job-original"]').evaluateAll(els=>els.every(e=>e.closest('[inert]')!==null)),true);
   await preview.locator('#tab-servers').click();
-  assert.equal(await preview.locator('.server-card').count(),3);
+  assert.equal(await preview.locator('.server-card').count(),4);
+  const pendingServer=preview.locator('.server-card').filter({has:preview.getByRole('heading',{name:'Alonso(194)',exact:true})});
+  assert.match(await pendingServer.innerText(),/GPU 정보 대기.*0 GPU/s);
+  assert.match(await pendingServer.innerText(),/마지막 수신 없음/);
+  assert.match(await pendingServer.innerText(),/설치 버전 확인 필요/);
+  assert.equal(await preview.locator('[data-monitor-server="server-d"]').count(),1);
   await preview.locator('[data-monitor-server="server-b"]').waitFor();
   assert.equal(await preview.locator('[data-monitor-server="server-a"]').count(),0);
-  assert.equal(await preview.locator('[data-monitor-server]').count(),2);
+  assert.equal(await preview.locator('[data-monitor-server]').count(),3);
   assert.match(await preview.locator('[data-as-server="server-a"]').innerText(),/A\/S 중/);
   assert.equal(await preview.locator('[data-as-server="server-a"] .server-heading .state').innerText(),'A/S 중');
   assert.equal(monitoringWrites,0);

@@ -25,6 +25,12 @@
       "file": "servers/server-c.json",
       "installed_version_baseline": "1.0.0",
       "actions": []
+    },
+    {
+      "id": "server-d",
+      "name": "Alonso(194)",
+      "file": "servers/server-d.json",
+      "actions": []
     }
   ],
   "dashboard": {
