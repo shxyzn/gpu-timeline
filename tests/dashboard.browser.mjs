@@ -21,7 +21,7 @@ const host = http.createServer(async (request, response) => {
     const filename = legacy ? path.join(root,'tests/fixtures/dashboard-v120.html') : path.resolve(root, 'dist', `.${pathname.endsWith('/') ? pathname+'index.html' : pathname}`);
     if (!legacy && !filename.startsWith(path.join(root, 'dist') + path.sep)) throw new Error('path');
     const bytes = await fs.readFile(filename);
-    const types = {'.html': 'text/html', '.js': 'text/javascript', '.json': 'application/json', '.css': 'text/css', '.mp4': 'video/mp4', '.gif': 'image/gif', '.jpg': 'image/jpeg', '.png': 'image/png'};
+    const types = {'.html': 'text/html', '.js': 'text/javascript', '.json': 'application/json', '.css': 'text/css', '.mp4': 'video/mp4', '.gif': 'image/gif', '.jpg': 'image/jpeg', '.png': 'image/png', '.webp': 'image/webp'};
     const headers = {'Content-Type': types[path.extname(filename)] || 'text/plain', 'Accept-Ranges': 'bytes'};
     // Match static hosting: media seeking requires byte ranges and known lengths.
     const range = request.headers.range?.match(/^bytes=(\d+)-(\d*)$/);
@@ -624,6 +624,8 @@ try {
     ]});
   });
   const preview=await context.newPage();
+  // A preference saved by the old page must not expand the new header on arrival.
+  await preview.addInitScript(()=>localStorage.setItem('cvml-release-video-v2.1-open','true'));
   preview.on('pageerror',error=>errors.push(error.message));
   await preview.goto(base+environment.path);
   await preview.locator('.current-gpu-table tbody tr').first().waitFor();
@@ -646,6 +648,25 @@ try {
   }
   // Kimi tribute: user gesture, keyboard guardrails, original asset, dismissal.
   assert.equal(await preview.locator('#kimi-service-notice').evaluate(e=>e.previousElementSibling.id),'release-video');
+  assert.equal(await preview.locator('#server-welcome').evaluate(e=>e.previousElementSibling.id),'kimi-service-notice');
+  assert.equal(await preview.locator('main>details[open]').count(),0);
+  assert.equal(await preview.locator('#server-welcome img').isVisible(),false);
+  await preview.locator('.server-welcome-toggle').press('Enter');
+  await preview.waitForFunction(()=>document.querySelector('#server-welcome img').naturalWidth===1122);
+  assert.equal(await preview.locator('#server-welcome img').evaluate(e=>e.naturalHeight),1402);
+  assert.match(await preview.locator('#server-welcome img').getAttribute('src'),/media\/alonso-welcome\.webp$/);
+  await preview.locator('#server-welcome').screenshot({path:path.join(output,environment.profile+'-alonso-welcome-desktop.png')});
+  for(const width of [390,320]){
+    await preview.setViewportSize({width,height:844});
+    assert.ok(await preview.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
+    await preview.locator('#server-welcome').screenshot({path:path.join(output,environment.profile+'-alonso-welcome-'+width+'.png')});
+  }
+  await preview.locator('.server-welcome-toggle').click();
+  assert.equal(await preview.locator('#server-welcome img').isVisible(),false);
+  await preview.setViewportSize({width:1440,height:1000});
+  await preview.keyboard.press('x');
+  assert.equal(await preview.locator('#kimi-tribute-dialog').isVisible(),false);
+  await preview.locator('.kimi-service-toggle').click();
   assert.match(await preview.locator('#kimi-service-notice').innerText(),/Kimi\(191\).*서버 장애로 A\/S 진행 중/s);
   await preview.locator('#kimi-tribute-open').click();
   await preview.locator('#kimi-tribute-dialog').waitFor({state:'visible'});

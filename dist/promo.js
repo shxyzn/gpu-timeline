@@ -1,15 +1,11 @@
 const panel = document.getElementById('release-video');
 
 if (panel) {
-  const storageKey = `cvml-release-video-v${panel.dataset.release || '1.1.8'}-open`;
-  try {
-    const saved = localStorage.getItem(storageKey);
-    if (saved !== null) panel.open = saved === 'true';
-  } catch { /* The native disclosure also works when storage is unavailable. */ }
+  // Start each visit folded, including browsers with an older saved open state.
+  panel.open = false;
 
   panel.addEventListener('toggle', () => {
     if (!panel.open) panel.querySelector('video')?.pause();
-    try { localStorage.setItem(storageKey, String(panel.open)); } catch {}
   });
 
   const reveal = () => { panel.open = true; };
