@@ -1,24 +1,24 @@
 {
   "schema_version": 1,
   "source": "danawa",
-  "attempted_at": "2026-11-06T06:48:38+00:00",
+  "attempted_at": "2026-11-07T05:59:12+00:00",
   "products": [
     {
       "id": "ryzen-9950x",
       "pcode": "63140417",
-      "price_krw": 903960,
+      "price_krw": 911390,
       "availability": "available",
-      "checked_at": "2026-11-05T06:47:46+00:00",
-      "attempted_at": "2026-11-06T06:48:38+00:00",
-      "fetch_error": "ValueError"
+      "checked_at": "2026-11-07T05:59:12+00:00",
+      "attempted_at": "2026-11-07T05:59:12+00:00",
+      "fetch_error": null
     },
     {
       "id": "core-ultra-285k",
       "pcode": "69059459",
-      "price_krw": 890860,
+      "price_krw": 880990,
       "availability": "available",
-      "checked_at": "2026-11-06T06:48:38+00:00",
-      "attempted_at": "2026-11-06T06:48:38+00:00",
+      "checked_at": "2026-11-07T05:59:12+00:00",
+      "attempted_at": "2026-11-07T05:59:12+00:00",
       "fetch_error": null
     },
     {
@@ -26,26 +26,26 @@
       "pcode": "94932554",
       "price_krw": 3944950,
       "availability": "available",
-      "checked_at": "2026-11-06T06:48:38+00:00",
-      "attempted_at": "2026-11-06T06:48:38+00:00",
+      "checked_at": "2026-11-07T05:59:12+00:00",
+      "attempted_at": "2026-11-07T05:59:12+00:00",
       "fetch_error": null
     },
     {
       "id": "ryzen-9900x",
       "pcode": "63140387",
-      "price_krw": 613470,
+      "price_krw": 612950,
       "availability": "available",
-      "checked_at": "2026-11-05T06:47:46+00:00",
-      "attempted_at": "2026-11-06T06:48:38+00:00",
-      "fetch_error": "ValueError"
+      "checked_at": "2026-11-07T05:59:12+00:00",
+      "attempted_at": "2026-11-07T05:59:12+00:00",
+      "fetch_error": null
     },
     {
       "id": "ryzen-9950x3d",
       "pcode": "77790914",
-      "price_krw": 919870,
+      "price_krw": 919750,
       "availability": "available",
-      "checked_at": "2026-11-06T06:48:38+00:00",
-      "attempted_at": "2026-11-06T06:48:38+00:00",
+      "checked_at": "2026-11-07T05:59:12+00:00",
+      "attempted_at": "2026-11-07T05:59:12+00:00",
       "fetch_error": null
     },
     {
@@ -54,16 +54,16 @@
       "price_krw": 1470000,
       "availability": "available",
       "checked_at": "2026-11-06T06:48:38+00:00",
-      "attempted_at": "2026-11-06T06:48:38+00:00",
-      "fetch_error": null
+      "attempted_at": "2026-11-07T05:59:12+00:00",
+      "fetch_error": "ValueError"
     },
     {
       "id": "ryzen-7900x",
       "pcode": "28402418",
       "price_krw": 415000,
       "availability": "available",
-      "checked_at": "2026-11-06T06:48:38+00:00",
-      "attempted_at": "2026-11-06T06:48:38+00:00",
+      "checked_at": "2026-11-07T05:59:12+00:00",
+      "attempted_at": "2026-11-07T05:59:12+00:00",
       "fetch_error": null
     },
     {
@@ -71,17 +71,17 @@
       "pcode": "69059687",
       "price_krw": 505910,
       "availability": "available",
-      "checked_at": "2026-11-06T06:48:38+00:00",
-      "attempted_at": "2026-11-06T06:48:38+00:00",
+      "checked_at": "2026-11-07T05:59:12+00:00",
+      "attempted_at": "2026-11-07T05:59:12+00:00",
       "fetch_error": null
     },
     {
       "id": "core-i9-14900k",
       "pcode": "28798964",
-      "price_krw": 767990,
+      "price_krw": 775280,
       "availability": "available",
-      "checked_at": "2026-11-06T06:48:38+00:00",
-      "attempted_at": "2026-11-06T06:48:38+00:00",
+      "checked_at": "2026-11-07T05:59:12+00:00",
+      "attempted_at": "2026-11-07T05:59:12+00:00",
       "fetch_error": null
     },
     {
@@ -89,17 +89,17 @@
       "pcode": "94932623",
       "price_krw": 3450000,
       "availability": "available",
-      "checked_at": "2026-11-06T06:48:38+00:00",
-      "attempted_at": "2026-11-06T06:48:38+00:00",
+      "checked_at": "2026-11-07T05:59:12+00:00",
+      "attempted_at": "2026-11-07T05:59:12+00:00",
       "fetch_error": null
     },
     {
       "id": "threadripper-9980x",
       "pcode": "94932239",
-      "price_krw": 7855560,
+      "price_krw": 7855540,
       "availability": "available",
-      "checked_at": "2026-11-06T06:48:38+00:00",
-      "attempted_at": "2026-11-06T06:48:38+00:00",
+      "checked_at": "2026-11-07T05:59:12+00:00",
+      "attempted_at": "2026-11-07T05:59:12+00:00",
       "fetch_error": null
     },
     {
@@ -107,8 +107,8 @@
       "pcode": "72593030",
       "price_krw": 1928960,
       "availability": "available",
-      "checked_at": "2026-11-06T06:48:38+00:00",
-      "attempted_at": "2026-11-06T06:48:38+00:00",
+      "checked_at": "2026-11-07T05:59:12+00:00",
+      "attempted_at": "2026-11-07T05:59:12+00:00",
       "fetch_error": null
     },
     {
@@ -117,8 +117,8 @@
       "price_krw": 3481280,
       "availability": "available",
       "checked_at": "2026-11-06T06:48:38+00:00",
-      "attempted_at": "2026-11-06T06:48:38+00:00",
-      "fetch_error": null
+      "attempted_at": "2026-11-07T05:59:12+00:00",
+      "fetch_error": "ValueError"
     },
     {
       "id": "threadripper-7980x",
@@ -126,16 +126,16 @@
       "price_krw": 6957410,
       "availability": "available",
       "checked_at": "2026-11-06T06:48:38+00:00",
-      "attempted_at": "2026-11-06T06:48:38+00:00",
-      "fetch_error": null
+      "attempted_at": "2026-11-07T05:59:12+00:00",
+      "fetch_error": "ValueError"
     },
     {
       "id": "threadripper-pro-7975wx",
       "pcode": "30143105",
       "price_krw": 6105900,
       "availability": "available",
-      "checked_at": "2026-11-06T06:48:38+00:00",
-      "attempted_at": "2026-11-06T06:48:38+00:00",
+      "checked_at": "2026-11-07T05:59:12+00:00",
+      "attempted_at": "2026-11-07T05:59:12+00:00",
       "fetch_error": null
     },
     {
@@ -143,8 +143,8 @@
       "pcode": "30142979",
       "price_krw": 14173910,
       "availability": "available",
-      "checked_at": "2026-11-06T06:48:38+00:00",
-      "attempted_at": "2026-11-06T06:48:38+00:00",
+      "checked_at": "2026-11-07T05:59:12+00:00",
+      "attempted_at": "2026-11-07T05:59:12+00:00",
       "fetch_error": null
     },
     {
@@ -153,8 +153,8 @@
       "price_krw": 11900000,
       "availability": "available",
       "checked_at": "2026-11-06T06:48:38+00:00",
-      "attempted_at": "2026-11-06T06:48:38+00:00",
-      "fetch_error": null
+      "attempted_at": "2026-11-07T05:59:12+00:00",
+      "fetch_error": "ValueError"
     },
     {
       "id": "rtx-pro-5000",
@@ -162,16 +162,16 @@
       "price_krw": 13649960,
       "availability": "available",
       "checked_at": "2026-11-06T06:48:38+00:00",
-      "attempted_at": "2026-11-06T06:48:38+00:00",
-      "fetch_error": null
+      "attempted_at": "2026-11-07T05:59:12+00:00",
+      "fetch_error": "ValueError"
     },
     {
       "id": "rtx-pro-6000",
       "pcode": "94640297",
-      "price_krw": 27498970,
+      "price_krw": 27498850,
       "availability": "available",
-      "checked_at": "2026-11-06T06:48:38+00:00",
-      "attempted_at": "2026-11-06T06:48:38+00:00",
+      "checked_at": "2026-11-07T05:59:12+00:00",
+      "attempted_at": "2026-11-07T05:59:12+00:00",
       "fetch_error": null
     },
     {
@@ -180,8 +180,8 @@
       "price_krw": 3479990,
       "availability": "available",
       "checked_at": "2026-11-06T06:48:38+00:00",
-      "attempted_at": "2026-11-06T06:48:38+00:00",
-      "fetch_error": null
+      "attempted_at": "2026-11-07T05:59:12+00:00",
+      "fetch_error": "ValueError"
     },
     {
       "id": "rtx-5070-ti",
@@ -189,25 +189,25 @@
       "price_krw": 2038170,
       "availability": "available",
       "checked_at": "2026-11-06T06:48:38+00:00",
-      "attempted_at": "2026-11-06T06:48:38+00:00",
-      "fetch_error": null
+      "attempted_at": "2026-11-07T05:59:12+00:00",
+      "fetch_error": "ValueError"
     },
     {
       "id": "rtx-5060-ti",
       "pcode": "81990338",
-      "price_krw": 1249000,
+      "price_krw": 1248990,
       "availability": "available",
-      "checked_at": "2026-11-06T06:48:38+00:00",
-      "attempted_at": "2026-11-06T06:48:38+00:00",
+      "checked_at": "2026-11-07T05:59:12+00:00",
+      "attempted_at": "2026-11-07T05:59:12+00:00",
       "fetch_error": null
     },
     {
       "id": "rtx-pro-4000",
       "pcode": "99914468",
-      "price_krw": 4790000,
+      "price_krw": 4990000,
       "availability": "available",
-      "checked_at": "2026-11-06T06:48:38+00:00",
-      "attempted_at": "2026-11-06T06:48:38+00:00",
+      "checked_at": "2026-11-07T05:59:12+00:00",
+      "attempted_at": "2026-11-07T05:59:12+00:00",
       "fetch_error": null
     },
     {
@@ -215,8 +215,8 @@
       "pcode": "99914681",
       "price_krw": 8419990,
       "availability": "available",
-      "checked_at": "2026-11-06T06:48:38+00:00",
-      "attempted_at": "2026-11-06T06:48:38+00:00",
+      "checked_at": "2026-11-07T05:59:12+00:00",
+      "attempted_at": "2026-11-07T05:59:12+00:00",
       "fetch_error": null
     },
     {
@@ -224,17 +224,17 @@
       "pcode": "19393388",
       "price_krw": 14940000,
       "availability": "available",
-      "checked_at": "2026-11-05T06:47:46+00:00",
-      "attempted_at": "2026-11-06T06:48:38+00:00",
-      "fetch_error": "ValueError"
+      "checked_at": "2026-11-07T05:59:12+00:00",
+      "attempted_at": "2026-11-07T05:59:12+00:00",
+      "fetch_error": null
     },
     {
       "id": "rtx-5000-ada",
       "pcode": "34816172",
       "price_krw": 8200000,
       "availability": "available",
-      "checked_at": "2026-11-06T06:48:38+00:00",
-      "attempted_at": "2026-11-06T06:48:38+00:00",
+      "checked_at": "2026-11-07T05:59:12+00:00",
+      "attempted_at": "2026-11-07T05:59:12+00:00",
       "fetch_error": null
     },
     {
@@ -242,8 +242,8 @@
       "pcode": "103335935",
       "price_krw": 5884460,
       "availability": "available",
-      "checked_at": "2026-11-06T06:48:38+00:00",
-      "attempted_at": "2026-11-06T06:48:38+00:00",
+      "checked_at": "2026-11-07T05:59:12+00:00",
+      "attempted_at": "2026-11-07T05:59:12+00:00",
       "fetch_error": null
     },
     {
@@ -252,8 +252,8 @@
       "price_krw": 12470990,
       "availability": "available",
       "checked_at": "2026-11-06T06:48:38+00:00",
-      "attempted_at": "2026-11-06T06:48:38+00:00",
-      "fetch_error": null
+      "attempted_at": "2026-11-07T05:59:12+00:00",
+      "fetch_error": "ValueError"
     },
     {
       "id": "rtx-pro-2000",
@@ -261,16 +261,16 @@
       "price_krw": 2806330,
       "availability": "available",
       "checked_at": "2026-11-06T06:48:38+00:00",
-      "attempted_at": "2026-11-06T06:48:38+00:00",
-      "fetch_error": null
+      "attempted_at": "2026-11-07T05:59:12+00:00",
+      "fetch_error": "ValueError"
     },
     {
       "id": "rtx-4090",
       "pcode": "17974766",
       "price_krw": null,
       "availability": "unavailable",
-      "checked_at": "2026-11-06T06:48:38+00:00",
-      "attempted_at": "2026-11-06T06:48:38+00:00",
+      "checked_at": "2026-11-07T05:59:12+00:00",
+      "attempted_at": "2026-11-07T05:59:12+00:00",
       "fetch_error": null
     },
     {
@@ -278,35 +278,35 @@
       "pcode": "94640462",
       "price_krw": 26449990,
       "availability": "available",
-      "checked_at": "2026-11-06T06:48:38+00:00",
-      "attempted_at": "2026-11-06T06:48:38+00:00",
+      "checked_at": "2026-11-07T05:59:12+00:00",
+      "attempted_at": "2026-11-07T05:59:12+00:00",
       "fetch_error": null
     },
     {
       "id": "rtx-4000-sff-ada",
       "pcode": "20807324",
-      "price_krw": 2930000,
+      "price_krw": 2990000,
       "availability": "available",
-      "checked_at": "2026-11-04T06:24:10+00:00",
-      "attempted_at": "2026-11-06T06:48:38+00:00",
-      "fetch_error": "ValueError"
+      "checked_at": "2026-11-07T05:59:12+00:00",
+      "attempted_at": "2026-11-07T05:59:12+00:00",
+      "fetch_error": null
     },
     {
       "id": "ddr5-32",
       "pcode": "20644043",
       "price_krw": 788020,
       "availability": "available",
-      "checked_at": "2026-11-06T06:48:38+00:00",
-      "attempted_at": "2026-11-06T06:48:38+00:00",
+      "checked_at": "2026-11-07T05:59:12+00:00",
+      "attempted_at": "2026-11-07T05:59:12+00:00",
       "fetch_error": null
     },
     {
       "id": "ddr5-ecc-64",
       "pcode": "79408823",
-      "price_krw": 4469990,
+      "price_krw": 4466990,
       "availability": "available",
-      "checked_at": "2026-11-06T06:48:38+00:00",
-      "attempted_at": "2026-11-06T06:48:38+00:00",
+      "checked_at": "2026-11-07T05:59:12+00:00",
+      "attempted_at": "2026-11-07T05:59:12+00:00",
       "fetch_error": null
     },
     {
@@ -315,16 +315,16 @@
       "price_krw": 800000,
       "availability": "available",
       "checked_at": "2026-11-06T06:48:38+00:00",
-      "attempted_at": "2026-11-06T06:48:38+00:00",
-      "fetch_error": null
+      "attempted_at": "2026-11-07T05:59:12+00:00",
+      "fetch_error": "ValueError"
     },
     {
       "id": "990-pro-4",
       "pcode": "28131875",
-      "price_krw": 1298010,
+      "price_krw": 1297880,
       "availability": "available",
-      "checked_at": "2026-11-06T06:48:38+00:00",
-      "attempted_at": "2026-11-06T06:48:38+00:00",
+      "checked_at": "2026-11-07T05:59:12+00:00",
+      "attempted_at": "2026-11-07T05:59:12+00:00",
       "fetch_error": null
     },
     {
@@ -332,8 +332,8 @@
       "pcode": "11028636",
       "price_krw": 479930,
       "availability": "available",
-      "checked_at": "2026-11-06T06:48:38+00:00",
-      "attempted_at": "2026-11-06T06:48:38+00:00",
+      "checked_at": "2026-11-07T05:59:12+00:00",
+      "attempted_at": "2026-11-07T05:59:12+00:00",
       "fetch_error": null
     },
     {
@@ -341,8 +341,8 @@
       "pcode": "28640552",
       "price_krw": 1799000,
       "availability": "available",
-      "checked_at": "2026-11-06T06:48:38+00:00",
-      "attempted_at": "2026-11-06T06:48:38+00:00",
+      "checked_at": "2026-11-07T05:59:12+00:00",
+      "attempted_at": "2026-11-07T05:59:12+00:00",
       "fetch_error": null
     },
     {
@@ -351,7 +351,7 @@
       "price_krw": 5409110,
       "availability": "available",
       "checked_at": "2026-10-13T07:26:59+00:00",
-      "attempted_at": "2026-11-06T06:48:38+00:00",
+      "attempted_at": "2026-11-07T05:59:12+00:00",
       "fetch_error": "ValueError"
     },
     {
@@ -360,16 +360,16 @@
       "price_krw": 2295000,
       "availability": "available",
       "checked_at": "2026-11-06T06:48:38+00:00",
-      "attempted_at": "2026-11-06T06:48:38+00:00",
-      "fetch_error": null
+      "attempted_at": "2026-11-07T05:59:12+00:00",
+      "fetch_error": "ValueError"
     },
     {
       "id": "ddr5-ecc-128",
       "pcode": "76509239",
-      "price_krw": 9789980,
+      "price_krw": 9789870,
       "availability": "available",
-      "checked_at": "2026-11-06T06:48:38+00:00",
-      "attempted_at": "2026-11-06T06:48:38+00:00",
+      "checked_at": "2026-11-07T05:59:12+00:00",
+      "attempted_at": "2026-11-07T05:59:12+00:00",
       "fetch_error": null
     },
     {
@@ -378,8 +378,8 @@
       "price_krw": 1549860,
       "availability": "available",
       "checked_at": "2026-11-06T06:48:38+00:00",
-      "attempted_at": "2026-11-06T06:48:38+00:00",
-      "fetch_error": null
+      "attempted_at": "2026-11-07T05:59:12+00:00",
+      "fetch_error": "ValueError"
     },
     {
       "id": "990-evo-plus-2",
@@ -387,16 +387,16 @@
       "price_krw": 698890,
       "availability": "available",
       "checked_at": "2026-11-06T06:48:38+00:00",
-      "attempted_at": "2026-11-06T06:48:38+00:00",
-      "fetch_error": null
+      "attempted_at": "2026-11-07T05:59:12+00:00",
+      "fetch_error": "ValueError"
     },
     {
       "id": "9100-pro-4",
       "pcode": "78716759",
-      "price_krw": 1653910,
+      "price_krw": 1653930,
       "availability": "available",
-      "checked_at": "2026-11-06T06:48:38+00:00",
-      "attempted_at": "2026-11-06T06:48:38+00:00",
+      "checked_at": "2026-11-07T05:59:12+00:00",
+      "attempted_at": "2026-11-07T05:59:12+00:00",
       "fetch_error": null
     }
   ]
