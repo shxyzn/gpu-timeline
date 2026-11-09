@@ -1,4 +1,4 @@
-import {dashboardView,monitoringAccess,openDashboardLogin,saveMonitoringConfig} from '../app.js?v=2.1-formal';
+import {dashboardView,monitoringAccess,openDashboardLogin,saveMonitoringConfig} from '../app.js?patch=production-api-usage';
 import {CHECKS,DAYS,monitoringID,defaultConfig,emptyMonitoring,makeSchedule,validateConfig,validateSchedule,scheduleLabel,nextRun} from './monitoring-model.js?v=2.1';
 import {MonitoringStore} from './monitoring-store.js?v=2.1';
 import {isUnavailable} from './availability-model.js?v=2.1-as';

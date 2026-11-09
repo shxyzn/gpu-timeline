@@ -1,11 +1,11 @@
-import {dashboardView,openExperiment,refreshDashboard} from '../app.js?v=2.1-formal';
+import {dashboardView,openExperiment,refreshDashboard} from '../app.js?patch=production-api-usage';
 import {progressValue,experimentPresentation,humanDuration,gpuReadings} from './current-model.js?v=1.2.0';
 import {health,jobETA,timestamp,apiSlot} from '../model.js';
 import {budgetUsage,dollars,usageStatus} from '../openrouter-model.js?v=1.2.0';
 import {availableCurrentView,isUnavailable} from './availability-model.js?v=2.1-as';
 import {repairPanel} from './availability-ui.js?v=2.1-as';
 import './parcel.js?v=1.2.0';
-import './parcel-board.js?v=2.1';
+import './parcel-board.js?patch=production-api-usage';
 
 const $=id=>document.getElementById(id);
 const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -112,7 +112,10 @@ $('current-refresh').onclick=async()=>{if($('refresh').disabled)return;$('curren
 document.addEventListener('dashboard:render',renderCurrent);
 function routeHash() {
   const anchor=location.hash.slice(1);
-  if(['release-video','patch-notes'].includes(anchor)) {
+  if(anchor==='api-usage-board'){
+    setPanel('resources',false);
+    requestAnimationFrame(()=>$(anchor)?.scrollIntoView({block:'start'}));
+  } else if(['release-video','patch-notes'].includes(anchor)) {
     setPanel(anchor==='patch-notes'?'more':'now',false);
     requestAnimationFrame(()=>$(anchor)?.scrollIntoView({block:'start'}));
   } else setPanel(anchor||'now');
@@ -133,5 +136,7 @@ document.querySelector('.priority-tabs').addEventListener('keydown',event=>{
 routeHash();
 renderCurrent();
 
-import './monitoring.js?v=2.1-profiles';
-import './availability.js?v=2.1-as';
+import './monitoring.js?patch=production-api-usage';
+import './availability.js?patch=production-api-usage';
+
+import './api-usage.js?v=2.1.1';

@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {emptyHistory,validateHistory,samplesFromTokens,mergeSamples,needsRecording,chartData,MAX_SAMPLES,DAY} from '../dist/test-server/api-usage-model.js';
 import {APIUsageStore} from '../dist/test-server/api-usage-store.js';
+import {APIUsageStore as ProductionAPIUsageStore} from '../dist/release/api-usage-store.js';
 import {encodeJSON,decodeJSON} from '../dist/edits.js';
 const now=Date.parse('2026-11-05T12:00:00Z');
 const id='or-00000000-0000-4000-8000-000000000001',other='or-00000000-0000-4000-8000-000000000002';
@@ -66,12 +67,12 @@ test('bounded history does not turn overflowing observed totals into zero',()=>{
   const data=chartData(document,[{...token(),error:'unavailable'},{...token(),id:other,error:'unavailable'}],{now});
   assert.equal(data.dailyTotal,null);assert.equal(data.cumulativeTotal,null);
 });
-test('store only writes the isolated staging history, is idempotent, and merges CAS conflicts',async()=>{
+for(const [profile,Store,suffix] of [['test',APIUsageStore,'-test'],['production',ProductionAPIUsageStore,'']])test(`${profile} history writes are isolated, idempotent and merge CAS conflicts`,async()=>{
   let data=emptyHistory(),puts=0,conflict=true;const requests=[];
   const fetcher=async(url,options={})=>{
     requests.push(String(url));
     assert.equal(String(url).includes('edits.json'),false);assert.equal(String(url).includes('monitoring'),false);
-    assert.match(String(url),/dashboard\/openrouter-usage-test\.json/);
+    assert.ok(new URL(url).pathname.endsWith(`/dashboard/openrouter-usage${suffix}.json`));
     if(String(url).includes('raw.githubusercontent.com'))return new Response(JSON.stringify(data),{status:200});
     if(options.method==='PUT'){
       puts++;const body=JSON.parse(options.body);assert.equal(body.branch,'status');
@@ -80,9 +81,30 @@ test('store only writes the isolated staging history, is idempotent, and merges 
     }
     return new Response(JSON.stringify({type:'file',encoding:'base64',sha:'sha-'+data.revision,content:encodeJSON(data)}),{status:200});
   };
-  const store=new APIUsageStore({repository:'shxyzn/gpu-timeline',branch:'status',path:'dashboard/edits.json'},fetcher);store.client.pause=async()=>{};
+  const store=new Store({repository:'shxyzn/gpu-timeline',branch:'status',path:'dashboard/edits.json'},fetcher);store.client.pause=async()=>{};
   await store.append('fake-admin-token',samplesFromTokens([token()],now),now);
   assert.equal(data.samples.length,2);assert.equal(data.revision,2);assert.equal(puts,2);
   await store.append('fake-admin-token',samplesFromTokens([token()],now),now);assert.equal(puts,2);
   assert.equal((await store.readPublic()).samples.length,2);
+});
+
+test('the first production observation creates its own history on the status branch',async()=>{
+  let stored=null,checkedBranch=false;
+  const fetcher=async(url,options={})=>{
+    const endpoint=new URL(url);
+    if(endpoint.pathname.endsWith('/git/ref/heads/status')){
+      checkedBranch=true;return new Response('{"ref":"refs/heads/status"}');
+    }
+    assert.ok(endpoint.pathname.endsWith('/dashboard/openrouter-usage.json'));
+    if(options.method!=='PUT')return new Response('{}',{status:404});
+    const body=JSON.parse(options.body);
+    assert.equal(checkedBranch,true);assert.equal(body.branch,'status');assert.equal('sha' in body,false);
+    stored=decodeJSON(body.content);
+    return new Response('{}',{status:201});
+  };
+  const store=new ProductionAPIUsageStore({repository:'shxyzn/gpu-timeline',branch:'status',path:'dashboard/edits.json'},fetcher);
+  assert.deepEqual(await store.readPublic(),emptyHistory());
+  const observed=samplesFromTokens([token()],now);
+  const saved=await store.append('fake-admin-token',observed,now);
+  assert.equal(saved.revision,1);assert.deepEqual(stored.samples,observed);
 });

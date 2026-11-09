@@ -1,4 +1,4 @@
-import {parcelBoardView,openDashboardLogin,saveParcelRecord,refreshDashboard} from '../app.js?v=2.1-formal';
+import {parcelBoardView,openDashboardLogin,saveParcelRecord,refreshDashboard} from '../app.js?patch=production-api-usage';
 import {makeParcel,parcelEdit} from '../parcel-records.js?v=1.2.0';
 import {carriers,trackingQuery,fetchTrack,deliveryTone} from './parcel-model.js?v=1.2.0';
 
