@@ -50,17 +50,22 @@ export class OpenRouterBoard {
   feedback(message) { $('openrouter-feedback').textContent = message; }
   render() {
     const tokens = this.records(), admin = this.editor.unlocked;
+    const percent = n => n.toLocaleString('ko-KR',{maximumFractionDigits:1});
+    const cards = tokens.map(token => {
+      const budget = budgetUsage(token.usage);
+      const exhausted = budget.remainingPercent !== undefined && percent(budget.remainingPercent) === '0';
+      return {token, budget, exhausted};
+    }).sort((a,b) => Number(a.exhausted) - Number(b.exhausted));
     $('openrouter-count').textContent = `${tokens.length} keys`;
     $('openrouter-add').textContent = '+ 추가';
     $('openrouter-add').disabled = this.busy;
-    $('openrouter-grid').innerHTML = tokens.map(token => {
+    $('openrouter-grid').innerHTML = cards.map(({token, budget, exhausted}) => {
       const usage = token.usage, connected = this.keys.has(token.id), stale = usageStatus(token) !== '조회 완료';
       const metric = (name, value) => `<div><dt>${name}</dt><dd>${dollars(value)}</dd></div>`;
-      const budget = budgetUsage(usage), percent = n => n.toLocaleString('ko-KR',{maximumFractionDigits:1});
       const budgetBar = ['limited','zero'].includes(budget.state)
         ? `<div class="openrouter-budget ${budget.remainingPercent<=10?'low':''}"><div class="openrouter-budget-label"><span>${budget.state==='zero'?'설정 한도 $0':`한도 사용 ${percent(budget.usedPercent)}%`}${stale?' · 마지막 조회':''}</span><strong>잔여 ${percent(budget.remainingPercent)}%</strong></div><div class="openrouter-budget-track" role="progressbar" aria-label="${esc(token.name)} 금액 한도 사용률" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${budget.usedPercent}" aria-valuetext="${budget.state==='zero'?'설정 한도 $0':`${dollars(budget.used)} 사용 · ${dollars(budget.remaining)} 남음`}"><span style="width:${budget.usedPercent}%"></span></div></div>`
         : `<p class="openrouter-note">${budget.state==='unlimited'?'한도 없음 · 사용 비율 미표시':'한도 사용률 확인 불가'}</p>`;
-      return `<article class="openrouter-card"><header><span class="openrouter-icon" aria-hidden="true">↗</span><div><h3>${esc(token.name)}</h3><span class="openrouter-state ${stale?'old':''}">${usageStatus(token)}</span></div></header>
+      return `<article class="openrouter-card${exhausted?' exhausted':''}"><header><span class="openrouter-icon" aria-hidden="true">↗</span><div><h3>${esc(token.name)}</h3><span class="openrouter-state ${stale?'old':''}">${usageStatus(token)}</span></div></header>
         <div class="openrouter-total"><span>누적 사용액</span><strong>${dollars(usage.usage)}</strong><small>USD · 이 API 키 기준</small></div>
         <dl class="openrouter-metrics">${metric('오늘 · UTC',usage.usage_daily)}${metric('이번 주 · UTC',usage.usage_weekly)}${metric('이번 달 · UTC',usage.usage_monthly)}</dl>
         <div class="openrouter-limit"><span>키 한도 ${usage.limit === null?'미설정':dollars(usage.limit)}</span><strong>남은 한도 ${dollars(usage.limit_remaining)}</strong></div>
