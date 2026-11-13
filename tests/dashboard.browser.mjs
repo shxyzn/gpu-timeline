@@ -1329,14 +1329,21 @@ try {
     await reader.locator('#tab-timeline').press('ArrowRight');
     assert.equal(await reader.locator('#tab-resources').getAttribute('aria-selected'),'true');
     assert.equal(await reader.locator('#workspace-gpu-link').getAttribute('href'),'#resources');
-    // Leaving the dashboard stops its film: a hidden player must not keep sounding.
-    await reader.evaluate(()=>{window.__filmPauses=0;document.querySelector('#gpu-workspace video').pause=()=>{window.__filmPauses++;};});
+    // Leaving the dashboard stops its film: a hidden player must not keep sounding. The notice's
+    // X shortcut also stays with the dashboard, even when the notice was left open.
+    await reader.evaluate(()=>{window.__filmPauses=0;document.querySelector('#gpu-workspace video').pause=()=>{window.__filmPauses++;};document.getElementById('kimi-service-notice').open=true;});
     await openView(reader,'home');
     assert.equal(await reader.evaluate(()=>window.__filmPauses),1);
+    await reader.keyboard.press('x');
+    assert.equal(await reader.locator('#kimi-tribute-dialog').isVisible(),false,'the X shortcut must not open the tribute outside the GPU dashboard');
     assert.equal(await reader.locator('#workspace-home .ws-card').nth(1).getAttribute('href'),'#resources');
     await reader.locator('#workspace-gpu-link').click();
     await reader.locator('#gpu-workspace').waitFor();
     assert.equal(await reader.locator('#tab-resources').getAttribute('aria-selected'),'true');
+    await reader.keyboard.press('x');
+    await reader.locator('#kimi-tribute-dialog').waitFor({state:'visible'});
+    await reader.locator('#kimi-tribute-close').click();
+    await reader.evaluate(()=>{document.getElementById('kimi-service-notice').open=false;});
     await reader.locator('#tab-timeline').click();
     await reader.reload();
     await reader.locator('body[data-workspace=ready]').waitFor();

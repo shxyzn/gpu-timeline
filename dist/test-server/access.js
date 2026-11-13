@@ -60,7 +60,7 @@ if(form){
     document.querySelector('main').hidden=false;
     try{
       await Promise.all([
-        import('./kimi-tribute.js?v=2.1-kimi'),
+        import('./kimi-tribute.js?v=workspace-3a'),
         import('../promo.js?patch=closed-panels'),
         import('../usage.js'),
         import('./app.js?patch=workspace-3'),
