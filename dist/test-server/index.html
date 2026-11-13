@@ -13,8 +13,18 @@
     .brand{margin:0 0 16px;color:#727278;font-size:11px;font-weight:650;letter-spacing:.17em}
     h1{margin:0;font-size:clamp(27px,6vw,42px);line-height:1.2;letter-spacing:-.055em;word-break:keep-all}
     .message{margin:17px 0 28px;color:#69696f;font-size:15px;line-height:1.7;word-break:keep-all}
-    a{display:inline-block;padding:12px 22px;border-radius:999px;background:#1d1d1f;color:#fff;font-size:14px;font-weight:550;text-decoration:none}
-    a:hover{background:#424247}a:focus-visible{outline:2px solid #0071e3;outline-offset:4px}
+    .home-link{display:inline-block;padding:12px 22px;border-radius:999px;background:#1d1d1f;color:#fff;font-size:14px;font-weight:550;text-decoration:none}
+    .home-link:hover{background:#424247}
+    a:focus-visible,button:focus-visible,input:focus-visible{outline:2px solid #0071e3;outline-offset:3px}
+    .preview-access{width:min(100%,320px);margin:30px auto 0;padding-top:22px;border-top:1px solid #e8e8ed;text-align:left}
+    .preview-access label{display:block;margin-bottom:9px;font-size:13px;font-weight:600}
+    .access-controls{display:flex;gap:8px}
+    .access-controls input{flex:1;min-width:0;padding:10px 13px;border:1px solid #d2d2d7;border-radius:12px;background:#fff;color:inherit;font:inherit}
+    .access-controls button{min-height:44px;flex-shrink:0;border:0;border-radius:12px;padding:0 15px;background:#0071e3;color:#fff;font:inherit;font-size:14px;font-weight:600;cursor:pointer}
+    .access-controls button:hover{background:#0067d0}
+    .access-controls button:disabled{opacity:.55;cursor:default}
+    .access-error{margin:9px 0 0;color:#a62020;font-size:13px;line-height:1.5}
+    .access-error:empty{display:none}
   </style>
 </head>
 <body>
@@ -23,8 +33,18 @@
       <p class="brand">CVML GPU TIMELINE</p>
       <h1 id="title">테스트 운영 종료</h1>
       <p class="message">테스트한 기능은 정식 대시보드에서 이용할 수 있어요.</p>
-      <a href="../">정식 화면 보기</a>
+      <a class="home-link" href="../">정식 화면 보기</a>
+      <form id="preview-access" class="preview-access" autocomplete="off">
+        <label for="preview-code">테스트 서버 비밀번호</label>
+        <div class="access-controls">
+          <input id="preview-code" type="password" inputmode="numeric" maxlength="4" required aria-describedby="preview-error" disabled>
+          <button type="submit" disabled>입장</button>
+        </div>
+        <p id="preview-error" class="access-error" role="status"></p>
+        <noscript><p>테스트 서버에 입장하려면 자바스크립트를 켜 주세요.</p></noscript>
+      </form>
     </section>
   </main>
+  <script type="module" src="./access.js?v=1"></script>
 </body>
 </html>

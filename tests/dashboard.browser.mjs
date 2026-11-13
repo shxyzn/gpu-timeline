@@ -590,17 +590,35 @@ try {
   }
   assert.deepEqual(errors,[]);
 
-  // The public test landing is an inert notice; the retained preview still works.
+  const stagingEntry=base+'/test-server/', stagingPreview=stagingEntry+'preview.html';
+  async function enterStaging(page,anchor=''){
+    await page.goto(stagingEntry+(anchor?'?panel='+anchor:''));
+    const field=page.getByLabel('테스트 서버 비밀번호');
+    await field.fill(String.fromCharCode(50,52,57,48));
+    await field.press('Enter');
+    await page.waitForURL(stagingPreview+'**');
+  }
+  async function openDashboard(page,environment,anchor=''){
+    if(environment.profile==='test')await enterStaging(page,anchor);
+    else await page.goto(base+environment.path+(anchor?'#'+anchor:''));
+  }
+
+  // The public entry stays closed until the preview code is accepted.
   const closed=await context.newPage(),closedRequests=[];
   closed.on('request',request=>closedRequests.push(new URL(request.url())));
   await closed.setViewportSize({width:320,height:844});
-  await closed.goto(base+'/test-server/');
+  await closed.goto(stagingPreview+'#resources');
+  await closed.waitForURL(stagingEntry+'?panel=resources');
   assert.equal(await closed.getByRole('heading',{name:'테스트 운영 종료'}).isVisible(),true);
   assert.equal(await closed.locator('#api-usage-board').count(),0);
-  assert.equal(await closed.locator('script').count(),0);
-  assert.equal(closedRequests.some(url=>url.origin!==base||url.pathname.endsWith('/config.json')),false);
+  assert.equal(closedRequests.some(url=>url.origin!==base||url.pathname.endsWith('/config.json')||url.pathname.endsWith('/app.js')),false);
   assert.equal(new URL(await closed.getByRole('link',{name:'정식 화면 보기'}).getAttribute('href'),closed.url()).href,base+'/');
   assert.ok(await closed.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
+  const entryCode=closed.getByLabel('테스트 서버 비밀번호');
+  await entryCode.fill('0000');
+  await entryCode.press('Enter');
+  await closed.getByRole('status').getByText('비밀번호가 맞지 않아요.').waitFor();
+  assert.equal(new URL(closed.url()).pathname,'/test-server/');
   await closed.close();
 
   // Run the v2.1 workflows on production and the retained staging preview.
@@ -648,17 +666,19 @@ try {
   // A preference saved by the old page must not expand the new header on arrival.
   await preview.addInitScript(()=>localStorage.setItem('cvml-release-video-v2.1-open','true'));
   preview.on('pageerror',error=>errors.push(error.message));
-  await preview.goto(base+environment.path);
+  await openDashboard(preview,environment);
   await preview.locator('.current-gpu-table tbody tr').first().waitFor();
   assert.equal(new URL(preview.url()).pathname,environment.path);
   assert.equal(staleControllerRequests,0,'current dashboards must bypass cached pre-chart controllers');
   const controllerURLs=await preview.evaluate(()=>performance.getEntriesByType('resource').filter(e=>new URL(e.name).pathname==='/app.js').map(e=>e.name));
   assert.equal(new Set(controllerURLs).size,1,'all entry modules must share exactly one dashboard controller');
-  assert.equal(await preview.getByRole('link',{name:'test-server',exact:true}).count(),0);
   assert.equal(await preview.locator('main>.design-credit').innerText(),'designed by psh in suwon');
   assert.equal(await preview.locator('#patch-notes').count(),0);
   if(environment.profile==='production'){
     assert.equal(await preview.title(),'CVML GPU Timeline');
+    assert.equal(await preview.locator('#mode').evaluate(e=>e.previousElementSibling.id),'test-server-link');
+    assert.equal(await preview.getByRole('link',{name:'테스트 서버',exact:true}).getAttribute('href'),'./test-server/');
+    assert.equal(await preview.locator('#kimi-service-notice,#server-welcome,#kimi-tribute-dialog').count(),0);
     assert.equal(await preview.locator('#maintenance-notice').count(),0);
     assert.equal(await preview.locator('#production-maintenance-notice').isVisible(),false);
     assert.equal(await preview.locator('.priority-home').count(),0);
@@ -667,48 +687,50 @@ try {
     assert.equal(await preview.locator('#maintenance-notice').count(),1);
     assert.match(await preview.locator('#maintenance-notice').textContent(),/사이트 점검 중/);
   }
-  // Kimi tribute: user gesture, keyboard guardrails, original asset, dismissal.
-  assert.equal(await preview.locator('#kimi-service-notice').evaluate(e=>e.previousElementSibling.id),'release-video');
-  assert.equal(await preview.locator('#server-welcome').evaluate(e=>e.previousElementSibling.id),'kimi-service-notice');
   assert.equal(await preview.locator('main>details[open]').count(),0);
-  assert.equal(await preview.locator('#server-welcome img').isVisible(),false);
-  await preview.locator('.server-welcome-toggle').press('Enter');
-  await preview.waitForFunction(()=>document.querySelector('#server-welcome img').naturalWidth===1122);
-  assert.equal(await preview.locator('#server-welcome img').evaluate(e=>e.naturalHeight),1402);
-  assert.match(await preview.locator('#server-welcome img').getAttribute('src'),/media\/alonso-welcome\.webp$/);
-  await preview.locator('#server-welcome').screenshot({path:path.join(output,environment.profile+'-alonso-welcome-desktop.png')});
-  for(const width of [390,320]){
-    await preview.setViewportSize({width,height:844});
-    assert.ok(await preview.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
-    await preview.locator('#server-welcome').screenshot({path:path.join(output,environment.profile+'-alonso-welcome-'+width+'.png')});
+  if(environment.profile==='test'){
+    // Kimi tribute: user gesture, keyboard guardrails, original asset, dismissal.
+    assert.equal(await preview.locator('#kimi-service-notice').evaluate(e=>e.previousElementSibling.id),'release-video');
+    assert.equal(await preview.locator('#server-welcome').evaluate(e=>e.previousElementSibling.id),'kimi-service-notice');
+    assert.equal(await preview.locator('#server-welcome img').isVisible(),false);
+    await preview.locator('.server-welcome-toggle').press('Enter');
+    await preview.waitForFunction(()=>document.querySelector('#server-welcome img').naturalWidth===1122);
+    assert.equal(await preview.locator('#server-welcome img').evaluate(e=>e.naturalHeight),1402);
+    assert.match(await preview.locator('#server-welcome img').getAttribute('src'),/media\/alonso-welcome\.webp$/);
+    await preview.locator('#server-welcome').screenshot({path:path.join(output,environment.profile+'-alonso-welcome-desktop.png')});
+    for(const width of [390,320]){
+      await preview.setViewportSize({width,height:844});
+      assert.ok(await preview.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
+      await preview.locator('#server-welcome').screenshot({path:path.join(output,environment.profile+'-alonso-welcome-'+width+'.png')});
+    }
+    await preview.locator('.server-welcome-toggle').click();
+    assert.equal(await preview.locator('#server-welcome img').isVisible(),false);
+    await preview.setViewportSize({width:1440,height:1000});
+    await preview.keyboard.press('x');
+    assert.equal(await preview.locator('#kimi-tribute-dialog').isVisible(),false);
+    await preview.locator('.kimi-service-toggle').click();
+    assert.match(await preview.locator('#kimi-service-notice').innerText(),/Kimi\(191\).*서버 장애로 A\/S 진행 중/s);
+    await preview.locator('#kimi-tribute-open').click();
+    await preview.locator('#kimi-tribute-dialog').waitFor({state:'visible'});
+    await preview.waitForFunction(()=>document.querySelector('#kimi-tribute-image').naturalWidth===401);
+    assert.equal(await preview.locator('#kimi-tribute-image').evaluate(e=>e.naturalHeight),498);
+    assert.match(await preview.locator('#kimi-tribute-caption').innerText(),/드라이버 챔피언을 확정 짓고 휴가를 떠났습니다/);
+    await preview.screenshot({path:path.join(output,environment.profile+'-kimi-tribute-desktop.png'),fullPage:false});
+    await preview.keyboard.press('Escape');
+    assert.equal(await preview.locator('#kimi-tribute-dialog').isVisible(),false);
+    assert.equal(await preview.locator('#kimi-tribute-open').evaluate(e=>e===document.activeElement),true);
+    await preview.keyboard.press('x');
+    assert.equal(await preview.locator('#kimi-tribute-dialog').isVisible(),true);
+    await preview.mouse.click(8,8);
+    assert.equal(await preview.locator('#kimi-tribute-dialog').isVisible(),false);
+    await preview.locator('.kimi-service-toggle').click();
+    await preview.keyboard.press('x');
+    assert.equal(await preview.locator('#kimi-tribute-dialog').isVisible(),false);
+    await preview.locator('.kimi-service-toggle').click();
+    await preview.keyboard.press('Shift+X');
+    assert.equal(await preview.locator('#kimi-tribute-dialog').isVisible(),true);
+    await preview.locator('#kimi-tribute-close').click();
   }
-  await preview.locator('.server-welcome-toggle').click();
-  assert.equal(await preview.locator('#server-welcome img').isVisible(),false);
-  await preview.setViewportSize({width:1440,height:1000});
-  await preview.keyboard.press('x');
-  assert.equal(await preview.locator('#kimi-tribute-dialog').isVisible(),false);
-  await preview.locator('.kimi-service-toggle').click();
-  assert.match(await preview.locator('#kimi-service-notice').innerText(),/Kimi\(191\).*서버 장애로 A\/S 진행 중/s);
-  await preview.locator('#kimi-tribute-open').click();
-  await preview.locator('#kimi-tribute-dialog').waitFor({state:'visible'});
-  await preview.waitForFunction(()=>document.querySelector('#kimi-tribute-image').naturalWidth===401);
-  assert.equal(await preview.locator('#kimi-tribute-image').evaluate(e=>e.naturalHeight),498);
-  assert.match(await preview.locator('#kimi-tribute-caption').innerText(),/드라이버 챔피언을 확정 짓고 휴가를 떠났습니다/);
-  await preview.screenshot({path:path.join(output,environment.profile+'-kimi-tribute-desktop.png'),fullPage:false});
-  await preview.keyboard.press('Escape');
-  assert.equal(await preview.locator('#kimi-tribute-dialog').isVisible(),false);
-  assert.equal(await preview.locator('#kimi-tribute-open').evaluate(e=>e===document.activeElement),true);
-  await preview.keyboard.press('x');
-  assert.equal(await preview.locator('#kimi-tribute-dialog').isVisible(),true);
-  await preview.mouse.click(8,8);
-  assert.equal(await preview.locator('#kimi-tribute-dialog').isVisible(),false);
-  await preview.locator('.kimi-service-toggle').click();
-  await preview.keyboard.press('x');
-  assert.equal(await preview.locator('#kimi-tribute-dialog').isVisible(),false);
-  await preview.locator('.kimi-service-toggle').click();
-  await preview.keyboard.press('Shift+X');
-  assert.equal(await preview.locator('#kimi-tribute-dialog').isVisible(),true);
-  await preview.locator('#kimi-tribute-close').click();
   assert.equal(await preview.locator('#panel-now').isVisible(),true);
   assert.equal(await preview.locator('#panel-timeline').isVisible(),false);
   assert.equal(await preview.locator('.current-gpu-table tbody tr').count(),4);
@@ -954,7 +976,7 @@ try {
   await preview.screenshot({path:path.join(output,environment.profile+'-test-server-parcel-orders-desktop.png'),fullPage:true});
   const viewer=await context.newPage();viewer.on('pageerror',error=>errors.push(error.message));
   const callsBeforeViewer=parcelCalls;
-  await viewer.goto(base+environment.path+'#parcel');await viewer.locator('[data-parcel-card]').first().waitFor();
+  await openDashboard(viewer,environment,'parcel');await viewer.locator('[data-parcel-card]').first().waitFor();
   assert.equal(await viewer.locator('[data-parcel-card]').count(),3);
   assert.equal(await viewer.locator('[data-parcel-action=edit]').count(),0);
   assert.equal(parcelCalls,callsBeforeViewer);assert.equal(writes,writesAfterOrders);
@@ -1024,7 +1046,7 @@ try {
   assert.match(await preview.locator('#monitor-results').innerText(),/확인 필요/);
   await preview.locator('#monitor-close').click();
   assert.equal(writes,experimentWritesBeforeMonitoring);assert.deepEqual(data.parcels,ordersBeforeMonitoring);
-  const monitoringViewer=await context.newPage();await monitoringViewer.goto(base+environment.path+'#servers');
+  const monitoringViewer=await context.newPage();await openDashboard(monitoringViewer,environment,'servers');
   await monitoringViewer.locator('[data-monitor-server="server-b"]').click();
   await monitoringViewer.waitForFunction(()=>document.querySelectorAll('.monitor-schedule-row').length===2);
   assert.match(await monitoringViewer.locator('#monitor-auth').innerText(),/로그인이 필요/);
@@ -1046,7 +1068,7 @@ try {
     usageHistoryUnavailable=false;await preview.locator('#api-usage-reload').click();
     await preview.waitForFunction(()=>!document.getElementById('api-usage-state').textContent.includes('불러오지 못했어요'));
     assert.equal(usageHistoryWrites,1);assert.equal(openRouterCalls,providerCallsBefore);
-    const historyViewer=await context.newPage();await historyViewer.goto(base+environment.path+'#resources');
+    const historyViewer=await context.newPage();await openDashboard(historyViewer,environment,'resources');
     await historyViewer.locator('#api-usage-plot svg').waitFor();
     assert.match(await historyViewer.locator('#api-usage-table').textContent(),/UTC/);
     await historyViewer.close();assert.equal(usageHistoryWrites,1);
@@ -1078,11 +1100,13 @@ try {
     }
     await preview.locator('#tab-now').click();
     await preview.locator('#current-gpu-tab').click();
-    await preview.locator('#kimi-tribute-open').click();
-    assert.ok(await preview.locator('#kimi-tribute-dialog').evaluate(e=>e.scrollWidth<=e.clientWidth+1));
-    assert.ok(await preview.locator('#kimi-tribute-dialog').evaluate(e=>e.getBoundingClientRect().height<=innerHeight));
-    await preview.locator('#kimi-tribute-dialog').screenshot({path:path.join(output,environment.profile+`-kimi-tribute-mobile-${width}.png`)});
-    await preview.locator('#kimi-tribute-close').click();
+    if(environment.profile==='test'){
+      await preview.locator('#kimi-tribute-open').click();
+      assert.ok(await preview.locator('#kimi-tribute-dialog').evaluate(e=>e.scrollWidth<=e.clientWidth+1));
+      assert.ok(await preview.locator('#kimi-tribute-dialog').evaluate(e=>e.getBoundingClientRect().height<=innerHeight));
+      await preview.locator('#kimi-tribute-dialog').screenshot({path:path.join(output,environment.profile+`-kimi-tribute-mobile-${width}.png`)});
+      await preview.locator('#kimi-tribute-close').click();
+    }
     await preview.screenshot({path:path.join(output,environment.profile+`-test-server-mobile-${width}.png`),fullPage:true});
     await preview.locator('#current-gpus [data-as-history="server-a"]').click();
     assert.ok(await preview.locator('#as-history-dialog').evaluate(e=>e.scrollWidth<=e.clientWidth+1));

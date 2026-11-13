@@ -1,7 +1,7 @@
 # Dashboard patch workflow
 
 - Keep the current release version unless the user explicitly requests a version increase. A patch must not bump `VERSION` or the displayed release number.
-- Keep `/test-server/` as the public staging entry with the end-of-testing notice. Use `/test-server/preview.html` for the ongoing staging dashboard. The production footer must not link to either test page unless the user asks to restore that button.
+- Keep `/test-server/` as the public staging entry with the end-of-testing notice and preview code form. Link to this entry from the production header. Use `/test-server/preview.html` for the ongoing staging dashboard; preserve its entry check and separate administrator login. The production footer must not link to either test page unless the user asks to restore that button.
 - Before implementing a future dashboard patch, show the information notice `#maintenance-notice` in `dist/test-server/preview.html` by removing its `hidden` attribute. Publish this state and verify the notice on the live preview page before continuing the patch.
 - When enabling the notice, update `#maintenance-start` and `#maintenance-end` in the test HTML with the current start and a reasonable completion estimate in Asia/Seoul. Keep their ISO `datetime` attributes and displayed KST times consistent. Do not reuse old dates; revise the estimate if work runs late. An estimated end time never replaces the checks required before hiding the notice.
 - Use the test page to validate changes. Run the relevant existing checks and verify the requested behavior and responsive layout. Do not modify real experiment or parcel records for testing.
