@@ -64,7 +64,8 @@ function renderHome(){
 
 if(session){
   $('workspace-user').textContent=session.name+'님';
-  $('workspace-logout').onclick=()=>{endSession();location.assign(new URL('./',location.href).href);};
+  // Hide the page before leaving: a browser may keep it for Back, and it must come back empty.
+  $('workspace-logout').onclick=()=>{document.querySelector('main').hidden=true;endSession();location.assign(new URL('./',location.href).href);};
   // GPU tabs rewrite the hash without a navigation; keep the bar's link on the last tab seen.
   document.addEventListener('click',event=>{const tab=event.target.closest?.('#gpu-workspace [data-panel]');if(tab)$('workspace-gpu-link').setAttribute('href','#'+tab.dataset.panel);});
   window.addEventListener('hashchange',show);

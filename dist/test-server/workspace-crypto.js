@@ -35,7 +35,10 @@ export function validGate(gate) {
   try {
     return !!gate && gate.version === 1 && gate.kdf === 'PBKDF2-SHA256' && typeof gate.key_id === 'string' && /^[a-z0-9-]{1,20}$/.test(gate.key_id) &&
       Number.isSafeInteger(gate.iterations) && gate.iterations >= MIN_ITERATIONS && gate.iterations <= 5000000 &&
-      fromBase64(gate.salt).length >= 16 && fromBase64(gate.iv).length === 12 && fromBase64(gate.wrapped).length === 48;
+      fromBase64(gate.salt).length >= 16 && fromBase64(gate.iv).length === 12 && fromBase64(gate.wrapped).length === 48 &&
+      (gate.retired === undefined || (Array.isArray(gate.retired) && gate.retired.length <= 20 && gate.retired.every(entry =>
+        entry && /^[a-z0-9-]{1,20}$/.test(entry.key_id || '') && entry.key_id !== gate.key_id &&
+        fromBase64(entry.iv).length === 12 && fromBase64(entry.wrapped).length === 48)));
   } catch { return false; }
 }
 
@@ -62,6 +65,28 @@ export async function openGate(gate, password) {
   } catch { return null; }
 }
 
+// When the document key is replaced, the old key is kept wrapped under the new one so that
+// documents sealed earlier stay readable until their next save re-seals them.
+const RETIRED_CONTEXT = 'cvml-workspace/retired/v1';
+export async function sealRetiredKey(currentKey, currentID, oldBytes, oldID) {
+  if (!(oldBytes instanceof Uint8Array) || oldBytes.length !== 32) throw new Error('key');
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const wrapped = await subtle().encrypt({name: 'AES-GCM', iv, additionalData: encoder.encode(`${RETIRED_CONTEXT}/${oldID}/${currentID}`)}, currentKey, oldBytes);
+  return {key_id: oldID, iv: toBase64(iv), wrapped: toBase64(new Uint8Array(wrapped))};
+}
+export async function openRetiredKey(currentKey, currentID, entry) {
+  const raw = await subtle().decrypt({name: 'AES-GCM', iv: fromBase64(entry.iv), additionalData: encoder.encode(`${RETIRED_CONTEXT}/${entry.key_id}/${currentID}`)}, currentKey, fromBase64(entry.wrapped));
+  return new Uint8Array(raw);
+}
+// The keys a signed-in browser can use: the current one, and every retired one it can unwrap.
+export async function documentKeys(gate, rawKey) {
+  const key = await importDocumentKey(rawKey), retired = new Map();
+  for (const entry of Array.isArray(gate.retired) ? gate.retired : []) {
+    try { retired.set(entry.key_id, await importDocumentKey(await openRetiredKey(key, gate.key_id, entry))); } catch { /* an unreadable entry only hides documents sealed with it */ }
+  }
+  return {key, keyID: gate.key_id, retired};
+}
+
 export function importDocumentKey(raw) {
   if (!(raw instanceof Uint8Array) || raw.length !== 32) throw new Error('key');
   return subtle().importKey('raw', raw, {name: 'AES-GCM'}, false, ['encrypt', 'decrypt']);
@@ -82,7 +107,7 @@ export class SealedDocumentError extends Error {
 }
 export async function openJSON(key, keyID, envelope, context) {
   if (!isEnvelope(envelope)) throw new SealedDocumentError('format', '저장된 문서 형식을 읽을 수 없어요.');
-  if (envelope.key_id !== keyID) throw new SealedDocumentError('key', '로그인 정보가 바뀌었어요. 로그아웃한 뒤 다시 로그인해 주세요.');
+  if (envelope.key_id !== keyID) throw new SealedDocumentError('key', '저장된 문서가 지금 로그인으로는 열 수 없는 열쇠로 잠겨 있어요. 새로고침한 뒤 다시 로그인해도 같으면 관리자에게 알려 주세요.');
   let bytes;
   try {
     bytes = await subtle().decrypt({name: 'AES-GCM', iv: fromBase64(envelope.iv), additionalData: encoder.encode(context + '/' + keyID)}, key, fromBase64(envelope.data));

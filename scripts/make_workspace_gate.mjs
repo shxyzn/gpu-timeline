@@ -1,51 +1,70 @@
 #!/usr/bin/env node
 // Builds dist/test-server/gate.js: the document key of the test-server workspace, wrapped under
-// the shared login password. The password is read from the environment and never written.
+// the shared sign-in password. Passwords are read from the environment and never written.
 //
-//   New key (first setup, or when everything should be re-encrypted):
-//     WORKSPACE_PASSWORD='...' node scripts/make_workspace_gate.mjs --new-key
-//   Change the password but keep the key, so stored documents stay readable:
+//   Change the password (normal case). A new document key is made; the old one is kept wrapped
+//   under it, so stored documents stay readable and are re-sealed on their next save:
+//     WORKSPACE_OLD_PASSWORD='...' WORKSPACE_PASSWORD='...' node scripts/make_workspace_gate.mjs --new-key
+//   First setup, or deliberately abandoning everything stored so far:
+//     WORKSPACE_PASSWORD='...' node scripts/make_workspace_gate.mjs --new-key --discard-documents
+//   Change only the password and keep the key (anyone who knew the old password keeps access):
 //     WORKSPACE_OLD_PASSWORD='...' WORKSPACE_PASSWORD='...' node scripts/make_workspace_gate.mjs --rewrap
 //
-// See WORKSPACE.md before changing the password.
+// --file <path> writes somewhere else (used by checks). See WORKSPACE.md before changing anything.
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import {fileURLToPath, pathToFileURL} from 'node:url';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const target = path.join(root, 'dist/test-server/gate.js');
-const {sealGate, openGate, validGate} = await import(pathToFileURL(path.join(root, 'dist/test-server/workspace-crypto.js')).href);
-const mode = process.argv[2];
-const password = process.env.WORKSPACE_PASSWORD || '';
+const args = process.argv.slice(2);
+const fileAt = args.indexOf('--file');
+const target = fileAt < 0 ? path.join(root, 'dist/test-server/gate.js') : path.resolve(args[fileAt + 1] || '');
+const crypt = await import(pathToFileURL(path.join(root, 'dist/test-server/workspace-crypto.js')).href);
+const {sealGate, openGate, validGate, importDocumentKey, sealRetiredKey, openRetiredKey, documentKeys} = crypt;
+const mode = args.find(arg => arg === '--new-key' || arg === '--rewrap');
+const discard = args.includes('--discard-documents');
+const password = process.env.WORKSPACE_PASSWORD || '', oldPassword = process.env.WORKSPACE_OLD_PASSWORD || '';
 const fail = message => { console.error(message); process.exit(1); };
-if (!['--new-key', '--rewrap'].includes(mode)) fail('Usage: make_workspace_gate.mjs --new-key | --rewrap (see the header of this file)');
+if (!mode) fail('Usage: make_workspace_gate.mjs --new-key [--discard-documents] | --rewrap   (see the header of this file)');
 if (!password) fail('Set WORKSPACE_PASSWORD.');
 
-let keyBytes, keyID = 'k1';
+let existing = null;
+try { existing = (await import(pathToFileURL(target).href + '?t=' + Date.now())).GATE; } catch { /* no gate yet */ }
+const usable = validGate(existing);
+let oldKey = null;
+if (usable && !(mode === '--new-key' && discard)) {
+  oldKey = await openGate(existing, oldPassword);
+  if (!oldKey) fail('WORKSPACE_OLD_PASSWORD does not open the current gate.\n(To abandon the stored documents on purpose, use --new-key --discard-documents.)');
+}
+
+let keyBytes, keyID, retired = [];
 if (mode === '--rewrap') {
-  const {GATE} = await import(pathToFileURL(target).href + '?t=' + Date.now());
-  if (!validGate(GATE)) fail('The current gate.js is not usable; use --new-key.');
-  keyBytes = await openGate(GATE, process.env.WORKSPACE_OLD_PASSWORD || '');
-  if (!keyBytes) fail('WORKSPACE_OLD_PASSWORD does not open the current gate.');
-  keyID = GATE.key_id;
+  if (!usable) fail('There is no usable gate to rewrap; use --new-key --discard-documents for a first setup.');
+  keyBytes = oldKey; keyID = existing.key_id; retired = existing.retired || [];
+  console.warn('Note: --rewrap keeps the document key. Anyone who knew the old password, or can read an older\n' +
+    'gate.js in the Git history, can still open everything stored from now on. Use --new-key instead\n' +
+    'whenever the old password was weak or may have leaked.');
 } else {
   keyBytes = crypto.getRandomValues(new Uint8Array(32));
-  let existing = null;
-  try { existing = (await import(pathToFileURL(target).href + '?t=' + Date.now())).GATE; } catch { /* first setup */ }
-  if (validGate(existing)) {
-    // Documents sealed with the old key cannot be opened with a new one.
-    if (process.argv[3] !== '--discard-documents') {
-      fail('gate.js already holds a key. A new key makes every stored workspace document unreadable.\n' +
-        'Use --rewrap to change only the password, or pass --new-key --discard-documents on purpose.');
-    }
-    keyID = 'k' + (Number(/^k(\d+)$/.exec(existing.key_id)?.[1] || 0) + 1);
+  keyID = 'k' + (usable ? Number(/^k(\d+)$/.exec(existing.key_id)?.[1] || 0) + 1 : 1);
+  if (oldKey) {
+    // Carry every older key forward under the new one, then retire the key in use until now.
+    const oldCurrent = await importDocumentKey(oldKey), next = await importDocumentKey(keyBytes);
+    for (const entry of existing.retired || []) retired.push(await sealRetiredKey(next, keyID, await openRetiredKey(oldCurrent, existing.key_id, entry), entry.key_id));
+    retired.push(await sealRetiredKey(next, keyID, oldKey, existing.key_id));
   }
 }
-const gate = await sealGate(password, keyBytes, {keyID});
-if (!(await openGate(gate, password))) fail('Self-check failed.');
-const text = `// Generated by scripts/make_workspace_gate.mjs. Holds no password: only a document key wrapped
-// under the shared login password. Regenerate with that script; do not edit by hand.
+const gate = {...await sealGate(password, keyBytes, {keyID}), ...(retired.length ? {retired} : {})};
+const opened = await openGate(gate, password);
+if (!validGate(gate) || !opened) fail('Self-check failed; nothing was written.');
+const keys = await documentKeys(gate, opened);
+if (keys.retired.size !== retired.length) fail('Self-check failed: an older key could not be carried forward; nothing was written.');
+const text = `// Generated by scripts/make_workspace_gate.mjs. Holds no password: only the document key wrapped
+// under the shared sign-in password, and older keys wrapped under the current one. Regenerate with
+// that script; do not edit by hand.
 export const GATE = Object.freeze(${JSON.stringify(gate, null, 2)});
 `;
 await fs.writeFile(target, text);
-console.log(`Wrote ${path.relative(root, target)} (key ${gate.key_id}, ${gate.iterations} PBKDF2 iterations).`);
+console.log(`Wrote ${path.relative(root, target)}: key ${gate.key_id}, ${gate.iterations} PBKDF2 iterations` +
+  (retired.length ? `, ${retired.length} older key(s) still readable (${retired.map(entry => entry.key_id).join(', ')}).` : '.') +
+  (mode === '--new-key' && usable && discard ? '\nDocuments sealed with the previous key can no longer be opened.' : ''));

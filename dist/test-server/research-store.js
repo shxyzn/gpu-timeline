@@ -9,7 +9,8 @@ export const RESEARCH_PATH='dashboard/research-test.json';
 const CONTEXT='cvml-workspace/research/v1';
 
 export class ResearchStore{
-  // session: {key: CryptoKey, keyID: string} from the workspace login.
+  // session: {key: CryptoKey, keyID: string, retired?: Map<keyID, CryptoKey>} from the workspace
+  // login. A file sealed with a retired key is still read, and the next save re-seals it.
   constructor(dashboard,session,fetcher=(...args)=>fetch(...args)){
     this.client=new GitHubEditsStore(dashboard,fetcher);this.fetcher=fetcher;this.session=session;
     this.root=this.client.root;this.path=RESEARCH_PATH;this.url=`${this.root}/contents/${this.path}`;
@@ -18,7 +19,8 @@ export class ResearchStore{
   }
   async open(stored){
     if(!isEnvelope(stored))throw new Error('연구과제 문서 형식을 읽을 수 없어요. 원본을 확인해 주세요.');
-    return validateResearch(await openJSON(this.session.key,this.session.keyID,stored,CONTEXT));
+    const retired=this.session.retired?.get(stored.key_id);
+    return validateResearch(retired?await openJSON(retired,stored.key_id,stored,CONTEXT):await openJSON(this.session.key,this.session.keyID,stored,CONTEXT));
   }
   async readPublic(){
     let response;

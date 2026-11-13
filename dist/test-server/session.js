@@ -24,7 +24,12 @@ function parse(text, gate, now) {
 export function currentSession(gate, now = Date.now()) {
   for (const name of ['sessionStorage', 'localStorage']) {
     let session = null;
-    try { session = parse(storage(name)?.getItem(SESSION), gate, now); } catch { /* unreadable storage */ }
+    try {
+      const text = storage(name)?.getItem(SESSION);
+      session = parse(text, gate, now);
+      // An entry that no longer counts must not keep holding the document key.
+      if (text != null && !session) storage(name).removeItem(SESSION);
+    } catch { /* unreadable storage */ }
     if (session) return {name: session.name, key: session.key, key_id: session.key_id, remembered: name === 'localStorage'};
   }
   return null;

@@ -82,7 +82,7 @@ function checkProject(p) {
   for (const t of p.targets) {
     if (!t || !id(t.id, 't') || seen.has(t.id) || !Object.hasOwn(METRICS, t.metric)) fail('목표 형식이 올바르지 않아요.');
     seen.add(t.id);
-    if (!text(t.label, 60) || !text(t.unit, 8) || !text(t.note, 200)) fail('목표 이름이 너무 길어요.');
+    if (!text(t.label, 60) || !text(t.unit, 8) || /[\s<>&"'`=]/.test(t.unit) || !text(t.note, 200)) fail('목표 이름과 단위를 확인해 주세요.');
     if (t.metric === 'custom' && !t.label.trim()) fail('직접 입력한 목표에는 이름이 필요해요.');
     if (!Number.isSafeInteger(t.count) || t.count < 1 || t.count > 999) fail('목표 수는 1 이상 999 이하의 숫자로 입력해 주세요.');
     if (!optionalDate(t.due_on)) fail('목표 기한의 날짜를 확인해 주세요.');
@@ -96,8 +96,8 @@ function checkProject(p) {
 }
 
 function checkOutput(o, projects) {
-  const kind = o && OUTPUT_KINDS[o.kind];
-  if (!o || typeof o !== 'object' || !id(o.id, 'o') || !kind) fail('실적 기록 형식이 올바르지 않아요.');
+  const kind = o && typeof o === 'object' && Object.hasOwn(OUTPUT_KINDS, o.kind) ? OUTPUT_KINDS[o.kind] : null;
+  if (!kind || !id(o.id, 'o')) fail('실적 기록 형식이 올바르지 않아요.');
   if (!text(o.title, 300, 1) || o.title.trim() !== o.title) fail('실적 제목을 입력해 주세요. (300자 이내)');
   if (Object.keys(kind.grades).length ? !Object.hasOwn(kind.grades, o.grade) : o.grade !== '') fail('실적 구분을 선택해 주세요.');
   if (!kind.statuses.includes(o.status)) fail('실적 상태를 선택해 주세요.');
@@ -162,7 +162,7 @@ export function makeProject(input, {by, at = new Date().toISOString(), previous 
 }
 
 export function makeOutput(input, projects, {by, at = new Date().toISOString(), previous = null} = {}) {
-  const kind = OUTPUT_KINDS[input.kind];
+  const kind = Object.hasOwn(OUTPUT_KINDS, input.kind) ? OUTPUT_KINDS[input.kind] : null;
   if (!kind) fail('실적 종류를 선택해 주세요.');
   const output = {
     id: previous?.id || newID('o'), kind: input.kind, grade: Object.keys(kind.grades).length ? String(input.grade || '') : '',
@@ -187,20 +187,25 @@ export function applyResearchOperation(original, operation) {
   if (operation.type === 'project_save' || operation.type === 'output_save') {
     const record = operation.type === 'project_save' ? operation.project : operation.output;
     const index = collection.findIndex(item => item.id === record.id);
-    if (index < 0) {
+    const stored = index < 0 ? null : collection[index];
+    if (!stored) {
       if (operation.base !== null) fail('수정하려던 기록이 삭제됐어요. 목록을 새로고침해 주세요.');
       collection.push(record);
     } else {
-      // A retried request whose first response was lost must not fail or duplicate.
-      if (same(collection[index], record)) return doc;
-      if (collection[index].updated_at !== operation.base) fail(stale);
+      // A retried request whose first response was lost must not fail or duplicate. `prior`
+      // lists the times of this editor's own earlier attempts at the same new record, so a retry
+      // with a corrected field replaces that attempt instead of being taken for someone else's.
+      if (same(stored, record)) return doc;
+      const own = operation.base === null && Array.isArray(operation.prior) && operation.prior.includes(stored.updated_at);
+      if (stored.updated_at !== operation.base && !own) fail(stale);
       collection[index] = record;
     }
     if (operation.type === 'project_save') {
-      // A removed target can no longer be chosen explicitly; fall back to automatic matching.
-      const targets = new Set(record.targets.map(t => t.id));
+      // An explicit choice of a target that was removed, or whose indicator was changed, no
+      // longer means what the editor chose; fall back to automatic matching.
+      const kept = new Set(record.targets.filter(t => !stored || !stored.targets.some(old => old.id === t.id && old.metric !== t.metric)).map(t => t.id));
       for (const output of doc.outputs) for (const ack of output.acks) {
-        if (ack.project_id === record.id && ack.target_id && ack.target_id !== 'none' && !targets.has(ack.target_id)) ack.target_id = null;
+        if (ack.project_id === record.id && ack.target_id && ack.target_id !== 'none' && !kept.has(ack.target_id)) ack.target_id = null;
       }
     }
   } else if (operation.type === 'project_delete' || operation.type === 'output_delete') {
@@ -238,61 +243,94 @@ function achievedBy(output, target) {
 }
 const byDate = (a, b) => (a.date || '9999-12-31').localeCompare(b.date || '9999-12-31') || a.created_at.localeCompare(b.created_at);
 
+// Indicators that count the same outputs: a journal paper fills its own grade and the "all
+// papers" target, a patent fills application and registration. `wide` marks the broader side.
+const FAMILIES = Object.freeze({paper_sci: ['paper', false], paper_scopus: ['paper', false], paper_kci: ['paper', false], paper_any: ['paper', true],
+  patent_app: ['patent', true], patent_reg: ['patent', false]});
+const PLANNED = 'preparing';
+
+// How many more distinct outputs a set of rows still needs. Rows of one family overlap, so the
+// larger side decides; everything else simply adds up. Work that is under way (submitted,
+// accepted, filed) is counted once however many rows it sits in.
+function distinctNeed(rows) {
+  const groups = new Map();
+  for (const row of rows) {
+    const [name, wide] = FAMILIES[row.target.metric] || ['row:' + row.target.id, true];
+    if (!groups.has(name)) groups.set(name, {wide: 0, narrow: 0, underway: new Set()});
+    const group = groups.get(name);
+    group[wide ? 'wide' : 'narrow'] += row.remaining;
+    if (row.remaining > 0) for (const item of row.outputs) if (item.stage === 'pending') group.underway.add(item.output.id);
+  }
+  let remaining = 0, pending = 0;
+  for (const group of groups.values()) {
+    const need = Math.max(group.wide, group.narrow);
+    remaining += need;
+    pending += Math.min(need, group.underway.size);
+  }
+  return {remaining, pending, gap: remaining - pending};
+}
+
 // Rows of one project with the outputs that fill them.
 // - An output counts for a project only through an acknowledgement (사사) link to it.
 // - Without an explicit choice it fills every indicator it matches (a patent is both an
-//   application and, later, a registration). Among several targets of the same indicator
-//   (yearly targets) the earliest deadline is filled first; anything beyond the last target's
-//   number stays on that last row as over-achievement.
-// - An explicit choice ties the output to that one row only; 'none' keeps it out of the count.
+//   application and, later, a registration).
+// - Among several targets of one indicator (yearly targets) an achieved output goes to the first
+//   target that still has room and whose deadline it met; work not yet achieved goes to the first
+//   target with room whose deadline has not passed. Whatever fits nowhere stays on the last
+//   target, where a surplus shows as over-achievement.
+// - An explicit choice among the targets of an indicator the output already belongs to (picking
+//   the year) changes only that; its other indicators are still filled automatically. Choosing a
+//   target of a different indicator re-classifies the output: it counts there and nowhere else.
+// - 'none' keeps the output out of the count. '준비 중' work is listed but is not "in progress".
 export function projectProgress(project, outputs, on = today()) {
-  const rows = project.targets.map((target, index) => ({target, index, due_on: target.due_on || project.ends_on,
-    done: [], pending: [], explicit: 0}));
+  const rows = project.targets.map((target, index) => ({target, index, due_on: target.due_on || project.ends_on, done: [], pending: [], planned: []}));
   const byID = new Map(rows.map(row => [row.target.id, row]));
-  const linked = [], extra = [], excluded = [];
-  const auto = new Map();
+  const stageFor = (output, target) => achievedBy(output, target) ? 'done' : output.status === PLANNED ? 'planned' : 'pending';
+  const linked = [], extra = [], excluded = [], auto = new Map();
   for (const output of [...outputs].sort(byDate)) {
     const ack = output.acks.find(a => a.project_id === project.id);
     if (!ack) continue;
     linked.push(output);
     if (ack.target_id === 'none') { excluded.push(output); continue; }
-    const row = ack.target_id ? byID.get(ack.target_id) : null;
-    if (row) { (achievedBy(output, row.target) ? row.done : row.pending).push(output); row.explicit++; continue; }
-    const metrics = [...new Set(rows.filter(r => METRICS[r.target.metric].accepts(output)).map(r => r.target.metric))];
-    if (!metrics.length) { extra.push(output); continue; }
+    const chosen = ack.target_id ? byID.get(ack.target_id) : null;
+    let metrics = [...new Set(rows.filter(row => METRICS[row.target.metric].accepts(output)).map(row => row.target.metric))];
+    if (chosen) {
+      chosen[stageFor(output, chosen.target)].push(output);
+      if (!METRICS[chosen.target.metric].accepts(output)) continue;
+      metrics = metrics.filter(metric => metric !== chosen.target.metric);
+    } else if (!metrics.length) { extra.push(output); continue; }
     for (const metric of metrics) { if (!auto.has(metric)) auto.set(metric, []); auto.get(metric).push(output); }
   }
   for (const [metric, list] of auto) {
-    const group = rows.filter(r => r.target.metric === metric).sort((a, b) => a.due_on.localeCompare(b.due_on) || a.index - b.index);
-    const place = (output, key) => {
-      const row = group.find(r => r.done.length + (key === 'pending' ? r.pending.length : 0) < r.target.count) || group[group.length - 1];
-      row[key].push(output);
-    };
-    const sample = group[0].target;
-    for (const output of list.filter(o => achievedBy(o, sample))) place(output, 'done');
-    for (const output of list.filter(o => !achievedBy(o, sample))) place(output, 'pending');
+    const group = rows.filter(row => row.target.metric === metric).sort((a, b) => a.due_on.localeCompare(b.due_on) || a.index - b.index);
+    const last = group[group.length - 1];
+    for (const stage of ['done', 'pending', 'planned']) {
+      for (const output of list.filter(item => stageFor(item, last.target) === stage)) {
+        const taken = row => row.done.length + (stage === 'done' ? 0 : row.pending.length) + (stage === 'planned' ? row.planned.length : 0);
+        const inTime = row => stage === 'done' ? !output.date || output.date <= row.due_on : row.due_on >= on;
+        (group.find(row => taken(row) < row.target.count && inTime(row)) || last)[stage].push(output);
+      }
+    }
   }
   const result = rows.map(row => {
     const done = row.done.length, pending = row.pending.length, remaining = Math.max(0, row.target.count - done);
     const days = daysUntil(row.due_on, on);
-    // "게재 확정 1 · 투고·심사 중 1": what is on the way, the most advanced stage first.
+    // "게재 확정 1 · 투고·심사 중 1 · 준비 중 1": what is on the way, the most advanced stage first.
     const stages = new Map();
-    for (const output of [...row.pending].sort((a, b) => OUTPUT_KINDS[b.kind].statuses.indexOf(b.status) - OUTPUT_KINDS[a.kind].statuses.indexOf(a.status))) {
+    for (const output of [...row.pending, ...row.planned].sort((a, b) => OUTPUT_KINDS[b.kind].statuses.indexOf(b.status) - OUTPUT_KINDS[a.kind].statuses.indexOf(a.status))) {
       stages.set(statusLabel(output), (stages.get(statusLabel(output)) || 0) + 1);
     }
     return {target: row.target, label: targetLabel(row.target), unit: targetUnit(row.target), count: row.target.count,
-      done, pending, remaining, over: Math.max(0, done - row.target.count), due_on: row.due_on, days,
+      done, pending, planned: row.planned.length, remaining, over: Math.max(0, done - row.target.count), due_on: row.due_on, days,
       gap: Math.max(0, remaining - pending), pipeline: [...stages].map(([label, count]) => ({label, count})),
       state: remaining === 0 ? 'met' : days < 0 ? 'missed' : remaining <= pending ? 'covered' : 'short',
-      outputs: [...row.done.map(output => ({output, achieved: true})), ...row.pending.map(output => ({output, achieved: false}))]};
+      outputs: [...row.done.map(output => ({output, achieved: true, stage: 'done'})), ...row.pending.map(output => ({output, achieved: false, stage: 'pending'})),
+        ...row.planned.map(output => ({output, achieved: false, stage: 'planned'}))]};
   });
   const open = result.filter(row => row.remaining > 0);
   const ended = daysUntil(project.ends_on, on) < 0;
   const next = open.length ? open.reduce((a, b) => a.due_on <= b.due_on ? a : b) : null;
-  return {project, rows: result, linked, extra, excluded,
-    remaining: open.reduce((sum, row) => sum + row.remaining, 0),
-    pending: result.reduce((sum, row) => sum + Math.min(row.pending, row.remaining), 0),
-    gap: result.reduce((sum, row) => sum + row.gap, 0),
+  return {project, rows: result, linked, extra, excluded, ...distinctNeed(result),
     next_due_on: next?.due_on || null, next_days: next ? next.days : null,
     days: daysUntil(project.ends_on, on), ended,
     phase: project.starts_on && project.starts_on > on ? 'upcoming' : ended ? 'ended' : 'active',

@@ -47,8 +47,9 @@ if(form){
   const leave=()=>{const anchor=location.hash.slice(1);if(anchors.has(anchor))entryURL.searchParams.set('panel',anchor);location.replace(entryURL.href);};
   if(!currentSession(GATE))leave();
   else{
-    // A page restored from the back/forward cache after signing out must not show the workspace.
-    window.addEventListener('pageshow',event=>{if(event.persisted&&!currentSession(GATE))leave();});
+    // A page restored from the back/forward cache still holds the earlier visitor's records and
+    // name in memory. Start over so the gate decides again from nothing.
+    window.addEventListener('pageshow',event=>{if(event.persisted){document.querySelector('main').hidden=true;if(currentSession(GATE))location.reload();else leave();}});
     window.addEventListener('storage',()=>{if(!currentSession(GATE))leave();});
     document.querySelector('main').hidden=false;
     try{

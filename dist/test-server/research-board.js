@@ -1,7 +1,7 @@
 import {dashboardView,monitoringAccess,openDashboardLogin,runAdminTask} from '../app.js?patch=workspace-3';
 import {GATE} from './gate.js?v=workspace-3';
 import {currentSession} from './session.js?v=workspace-3';
-import {importDocumentKey,fromBase64} from './workspace-crypto.js?v=workspace-3';
+import {documentKeys,fromBase64} from './workspace-crypto.js?v=workspace-3';
 import {ResearchStore} from './research-store.js?v=workspace-3';
 import {OUTPUT_KINDS,METRICS,emptyResearch,makeProject,makeOutput,projectProgress,researchOverview,remainingText,outputWarnings,ackText,ACK_LABELS,statusLabel,targetLabel,today,daysUntil,ddayLabel,newID} from './research-model.js?v=workspace-3';
 
@@ -60,7 +60,7 @@ if(root&&session){
       <div class="field-grid"><label class="field">상태<select id="rs-o-status"></select></label><label class="field"><span id="rs-o-date-label">날짜 · 선택</span><input id="rs-o-date" type="date"></label></div>
       <div class="field-grid"><label class="field">저자·발명자 · 선택<input id="rs-o-authors" maxlength="300" placeholder="예: 홍길동, 김철수"></label><label class="field"><span id="rs-o-venue-label">학술지 · 선택</span><input id="rs-o-venue" maxlength="160"></label></div>
       <div class="field-grid"><label class="field"><span id="rs-o-identifier-label">DOI · 선택</span><input id="rs-o-identifier" maxlength="120" spellcheck="false"></label><label class="field">링크 · 선택<input id="rs-o-link" type="url" maxlength="500" placeholder="https://" spellcheck="false"></label></div>
-      <fieldset class="rs-fieldset"><legend>사사한 과제</legend><p class="admin-help">이 실적에 사사를 표기한 과제를 모두 골라 주세요. 고른 과제의 목표에 자동으로 반영돼요.</p><div id="rs-o-acks" class="rs-ack-options"></div></fieldset>
+      <fieldset class="rs-fieldset"><legend>사사한 과제</legend><p class="admin-help">이 실적에 사사를 표기한 과제를 모두 골라 주세요. 고른 과제의 목표에 자동으로 반영돼요. 반영할 목표를 직접 고르면 같은 지표 안에서는 그 줄(연차)에 놓고, 다른 지표를 고르면 그 지표로만 세요.</p><div id="rs-o-acks" class="rs-ack-options"></div></fieldset>
       <label class="field">메모 · 선택<textarea id="rs-o-note" maxlength="1000" rows="2"></textarea></label>
       <p id="rs-output-error" class="admin-error" role="alert"></p>
       <div class="dialog-actions"><button type="button" id="rs-output-delete" class="edit-button danger" hidden>실적 삭제</button><button type="button" class="edit-button" data-rs-close>취소</button><button type="submit" id="rs-output-save" class="edit-button primary">실적 저장</button></div>
@@ -86,8 +86,7 @@ function onDashboard(){
     store={pending:true};
     void (async()=>{
       try{
-        const key=await importDocumentKey(fromBase64(session.key));
-        store=new ResearchStore(view.config.dashboard,{key,keyID:session.key_id});
+        store=new ResearchStore(view.config.dashboard,await documentKeys(GATE,fromBase64(session.key)));
         await read();
       }catch{store=null;loadError='로그인 정보를 확인할 수 없어요. 로그아웃한 뒤 다시 로그인해 주세요.';render();notify();}
     })();
@@ -125,9 +124,10 @@ function outputLine(output,project,achieved){
 }
 function targetRow(row){
   const ratio=Math.min(100,row.done/row.count*100),planned=Math.min(100-ratio,row.pending/row.count*100);
-  const need=row.remaining===0?`<span class="rs-need met">달성${row.over?` · ${row.over}${row.unit} 초과`:''}</span>`:`<span class="rs-need ${row.state}">${row.remaining}${row.unit} 더 필요</span>`;
+  const unit=esc(row.unit);
+  const need=row.remaining===0?`<span class="rs-need met">달성${row.over?` · ${row.over}${unit} 초과`:''}</span>`:`<span class="rs-need ${row.state}">${row.remaining}${unit} 더 필요</span>`;
   return `<tr data-rs-target="${row.target.id}" data-state="${row.state}"><th scope="row"><span class="rs-target-name">${esc(row.label)}</span>${row.target.note?`<small>${esc(row.target.note)}</small>`:''}</th>
-    <td class="rs-target-progress"><div class="rs-count"><strong>${row.done}</strong><span>/ ${row.count}${row.unit}</span>${row.pipeline.length?`<small>${esc(row.pipeline.map(stage=>`${stage.label} ${stage.count}`).join(' · '))}</small>`:''}</div><div class="rs-bar" role="progressbar" aria-label="${esc(row.label)} 달성" aria-valuemin="0" aria-valuemax="${row.count}" aria-valuenow="${Math.min(row.done,row.count)}"><span style="width:${ratio}%"></span><i style="width:${planned}%"></i></div></td>
+    <td class="rs-target-progress"><div class="rs-count"><strong>${row.done}</strong><span>/ ${row.count}${unit}</span>${row.pipeline.length?`<small>${esc(row.pipeline.map(stage=>`${stage.label} ${stage.count}`).join(' · '))}</small>`:''}</div><div class="rs-bar" role="progressbar" aria-label="${esc(row.label)} 달성" aria-valuemin="0" aria-valuemax="${row.count}" aria-valuenow="${Math.min(row.done,row.count)}"><span style="width:${ratio}%"></span><i style="width:${planned}%"></i></div></td>
     <td class="rs-target-need">${need}</td><td class="rs-target-due">${dueBadge(row.due_on,row.days,row.remaining===0)}</td></tr>`;
 }
 function projectCard(p,view){
@@ -142,7 +142,7 @@ function projectCard(p,view){
     ${p.rows.length?`<table class="rs-targets"><caption>목표 실적</caption><thead><tr><th scope="col">목표</th><th scope="col">달성 / 목표</th><th scope="col">남은 실적</th><th scope="col">기한</th></tr></thead><tbody>${p.rows.map(targetRow).join('')}</tbody></table>`:`<p class="rs-muted">목표 실적이 아직 없어요.${view.unlocked?' 과제 수정에서 지표와 목표 수를 추가해 주세요.':''}</p>`}
     <details class="rs-fold" data-rs-open="${key}"${open.has(key)?' open':''}><summary>사사한 실적 ${p.linked.length}건</summary>
       ${p.linked.length?'':'<p class="rs-muted">이 과제를 사사한 실적이 아직 없어요.</p>'}
-      ${rows.map(row=>`<h4>${esc(row.label)} <span>${row.done} / ${row.count}${row.unit}</span></h4><ul class="rs-lines">${row.outputs.map(item=>outputLine(item.output,project,item.achieved)).join('')}</ul>`).join('')}
+      ${rows.map(row=>`<h4>${esc(row.label)} <span>${row.done} / ${row.count}${esc(row.unit)}</span></h4><ul class="rs-lines">${row.outputs.map(item=>outputLine(item.output,project,item.achieved)).join('')}</ul>`).join('')}
       ${p.extra.length?`<h4>목표 외 실적 <span>맞는 목표가 없어 집계하지 않았어요</span></h4><ul class="rs-lines">${p.extra.map(o=>outputLine(o,project,false)).join('')}</ul>`:''}
       ${p.excluded.length?`<h4>집계 제외 <span>집계하지 않도록 지정한 실적</span></h4><ul class="rs-lines">${p.excluded.map(o=>outputLine(o,project,false)).join('')}</ul>`:''}
     </details>
@@ -321,15 +321,19 @@ async function saveRecord(event,type){
   if(!access().unlocked){openDashboardLogin();return;}
   try{
     const input=type==='project'?readProject():readOutput(),signature=JSON.stringify(input),previous=editing?.record||null;
-    // Reuse the same record for a retry so a save whose reply was lost is not duplicated.
+    // An unchanged retry resends the very same record. A new record also keeps its identity for
+    // as long as the dialog is open, and names its own earlier attempts, so a save whose reply
+    // was lost is replaced by the corrected retry instead of being stored twice.
     if(pending?.signature!==signature){
-      const at=new Date().toISOString(),options={by:session.name,at,previous};
+      const at=new Date().toISOString(),options={by:session.name,at,previous:previous||editing?.draft||null};
       const record=type==='project'?makeProject(input,options):makeOutput(input,doc.projects,options);
-      pending={signature,operation:{type:type+'_save',[type]:record,base:previous?.updated_at??null,at}};
+      if(!previous)editing.draft={id:record.id,created_at:record.created_at};
+      pending={signature,operation:{type:type+'_save',[type]:record,base:previous?.updated_at??null,...(previous?{}:{prior:[...(editing.attempts||[])]}),at}};
     }
-    const created=!previous;
-    const savedID=pending.operation[type].id;
-    await commit(pending.operation,errorID,()=>{
+    const created=!previous,attempt=pending.operation;
+    const savedID=attempt[type].id;
+    if(created)editing.attempts=[...(editing.attempts||[]),attempt.at];
+    await commit(attempt,errorID,()=>{
       $(`rs-${type}-dialog`).close();pending=null;editing=null;refocus=[type+'-edit',savedID];
       feedback(type==='project'?(created?'과제를 추가했어요.':'과제를 수정했어요.'):(created?'실적을 추가했어요.':'실적을 수정했어요.'));
       // Show the list the saved record now lives in.
