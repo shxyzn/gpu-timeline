@@ -986,7 +986,9 @@ try {
   assert.equal(await viewer.locator('[data-parcel-card]').count(),3);
   assert.equal(await viewer.locator('[data-parcel-action=edit]').count(),0);
   assert.equal(parcelCalls,callsBeforeViewer);assert.equal(writes,writesAfterOrders);
-  await viewer.reload();await viewer.locator('[data-parcel-card]').first().waitFor();
+  await viewer.reload();
+  if(environment.profile==='test'){await viewer.getByRole('button',{name:/GPU 사용량 관리/}).click();await viewer.locator('#tab-parcel').click();}
+  await viewer.locator('[data-parcel-card]').first().waitFor();
   assert.equal(await viewer.locator('[data-parcel-card]').count(),3);
   assert.equal(await viewer.locator('#parcel-count-active').innerText(),'3');
   await viewer.close();
