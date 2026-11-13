@@ -10,7 +10,7 @@ $('snapshot-logout').onclick=()=>{sessionStorage.removeItem('cvml.test.username'
 function showHome(){$('gpu-workspace').hidden=true;$('research-board').hidden=true;$('snapshot-home').hidden=false;window.scrollTo({top:0});}
 $('snapshot-back').onclick=showHome;
 $('research-back').onclick=showHome;
-document.querySelectorAll('[data-workspace]').forEach(b=>b.onclick=()=>{const research=b.dataset.workspace==='research';$('research-board').hidden=!research;$('snapshot-home').hidden=true;$('gpu-workspace').hidden=research;window.scrollTo({top:0});if(research)load();});
+document.querySelectorAll('[data-workspace]').forEach(b=>{b.onclick=()=>{const research=b.dataset.workspace==='research';$('research-board').hidden=!research;$('snapshot-home').hidden=true;$('gpu-workspace').hidden=research;window.scrollTo({top:0});if(research)load();};b.disabled=false;});
 $('research-admin').onclick=()=>{$('research-board').hidden=true;$('gpu-workspace').hidden=false;openDashboardLogin();};
 $('research-add').onclick=()=>{if(!monitoringAccess().unlocked){$('research-status').textContent='기록을 저장하려면 관리자 연결이 필요해요.';return;} $('research-error').textContent='';$('research-form').reset();$('research-project').innerHTML='<option value="">선택 안 함</option>'+records.filter(r=>r.kind==='project').map(r=>'<option value="'+esc(r.title)+'">'+esc(r.title)+'</option>').join('');$('research-dialog').showModal();};
 $('research-cancel').onclick=()=>$('research-dialog').close();
