@@ -8,6 +8,7 @@ const anchors = new Set(['now','timeline','resources','servers','parcel','more',
 
 if (form) {
   const field = document.getElementById('preview-code');
+  const username = document.getElementById('preview-name');
   const error = document.getElementById('preview-error');
   const submit = form.querySelector('button');
   form.addEventListener('submit', async event => {
@@ -15,6 +16,8 @@ if (form) {
     submit.disabled = true;
     try {
       const input = field.value;
+      const name = username.value.trim();
+      if (!name) { username.focus(); return; }
       const bytes = new TextEncoder().encode(input);
       const digest = Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256', bytes)),
         byte => byte.toString(16).padStart(2, '0')).join('');
@@ -26,6 +29,8 @@ if (form) {
         return;
       }
       sessionStorage.setItem(sessionKey, 'entered');
+      sessionStorage.setItem('cvml.test.username', name);
+      try { const history = JSON.parse(localStorage.getItem('cvml.test.login-log') || '[]'); history.push({name, at:new Date().toISOString()}); localStorage.setItem('cvml.test.login-log', JSON.stringify(history.slice(-100))); } catch {}
       field.value = '';
       const anchor = new URLSearchParams(location.search).get('panel');
       if (anchors.has(anchor)) previewURL.hash = anchor;
@@ -55,7 +60,8 @@ if (form) {
       import('./kimi-tribute.js?v=2.1-kimi'),
       import('../promo.js?patch=closed-panels'),
       import('../usage.js'),
-      import('./app.js?patch=zero-balance-v211'),
+      import('./app.js?patch=snapshot3-1'),
+      import('./research.js?v=3.0-snapshot1'),
     ]);
   }
 }

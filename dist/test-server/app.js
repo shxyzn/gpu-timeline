@@ -1,11 +1,11 @@
-import {dashboardView,openExperiment,refreshDashboard} from '../app.js?patch=zero-balance-v211';
+import {dashboardView,openExperiment,refreshDashboard} from '../app.js?patch=snapshot3-1';
 import {progressValue,experimentPresentation,humanDuration,gpuReadings} from './current-model.js?v=1.2.0';
 import {health,jobETA,timestamp,apiSlot} from '../model.js';
 import {budgetUsage,dollars,usageStatus} from '../openrouter-model.js?v=1.2.0';
 import {availableCurrentView,isUnavailable} from './availability-model.js?v=2.1-as';
 import {repairPanel} from './availability-ui.js?v=2.1-as';
 import './parcel.js?v=1.2.0';
-import './parcel-board.js?patch=zero-balance-v211';
+import './parcel-board.js?patch=snapshot3-1';
 
 const $=id=>document.getElementById(id);
 const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -133,7 +133,7 @@ document.querySelector('.priority-tabs').addEventListener('keydown',event=>{
 routeHash();
 renderCurrent();
 
-import './monitoring.js?patch=zero-balance-v211';
-import './availability.js?patch=zero-balance-v211';
+import './monitoring.js?patch=snapshot3-1';
+import './availability.js?patch=snapshot3-1';
 
-import './api-usage.js?patch=zero-balance-v211';
+import './api-usage.js?patch=snapshot3-1';

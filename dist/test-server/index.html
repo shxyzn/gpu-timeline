@@ -31,11 +31,11 @@
   <main>
     <section class="notice" aria-labelledby="title">
       <p class="brand">CVML GPU TIMELINE</p>
-      <h1 id="title">테스트 운영 종료</h1>
-      <p class="message">테스트한 기능은 정식 대시보드에서 이용할 수 있어요.</p>
+      <h1 id="title">연구실의 모든 것, 한곳에.</h1>
+      <p class="message">v3.0 snapshot 1 · 테스트 서버</p>
       <a class="home-link" href="../">정식 화면 보기</a>
       <form id="preview-access" class="preview-access" autocomplete="off">
-        <label for="preview-code">테스트 서버 비밀번호</label>
+        <label for="preview-name">사용자 이름</label><input id="preview-name" required maxlength="40" autocomplete="username" placeholder="이름을 입력하세요" style="width:100%;padding:12px;border:1px solid #d2d2d7;border-radius:12px;margin-bottom:16px;font:inherit"><label for="preview-code">비밀번호</label>
         <div class="access-controls">
           <input id="preview-code" type="password" inputmode="numeric" maxlength="4" required aria-describedby="preview-error" disabled>
           <button type="submit" disabled>입장</button>
@@ -45,6 +45,6 @@
       </form>
     </section>
   </main>
-  <script type="module" src="./access.js?v=1"></script>
+  <script type="module" src="./access.js?v=3.0-snapshot1"></script>
 </body>
 </html>
