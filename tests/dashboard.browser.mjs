@@ -680,7 +680,7 @@ try {
   assert.equal(staleControllerRequests,0,'current dashboards must bypass cached pre-chart controllers');
   const controllerURLs=await preview.evaluate(()=>performance.getEntriesByType('resource').filter(e=>new URL(e.name).pathname==='/app.js').map(e=>e.name));
   assert.equal(new Set(controllerURLs).size,1,'all entry modules must share exactly one dashboard controller');
-  assert.equal(await preview.locator('main>.design-credit').innerText(),'designed by psh in suwon');
+  assert.equal(await preview.locator('.design-credit').innerText(),'designed by psh in suwon');
   assert.equal(await preview.locator('#patch-notes').count(),0);
   if(environment.profile==='production'){
     assert.equal(await preview.title(),'CVML GPU Timeline');
@@ -695,7 +695,7 @@ try {
     assert.equal(await preview.locator('#maintenance-notice').count(),1);
     assert.match(await preview.locator('#maintenance-notice').textContent(),/사이트 점검 중/);
   }
-  assert.equal(await preview.locator('main>details[open]').count(),0);
+  assert.equal(await preview.locator(environment.profile==='test'?'#gpu-workspace>details[open]':'main>details[open]').count(),0);
   if(environment.profile==='test'){
     // Kimi tribute: user gesture, keyboard guardrails, original asset, dismissal.
     assert.equal(await preview.locator('#kimi-service-notice').evaluate(e=>e.previousElementSibling.id),'release-video');
