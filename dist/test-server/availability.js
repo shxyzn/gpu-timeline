@@ -1,4 +1,4 @@
-import {dashboardView} from '../app.js?patch=snapshot3-1';
+import {dashboardView} from '../app.js?patch=workspace-3';
 import {isUnavailable,repairState} from './availability-model.js?v=2.1-as';
 import {repairPanel,escapeAvailability as esc} from './availability-ui.js?v=2.1-as';
 

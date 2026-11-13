@@ -56,24 +56,14 @@ export async function saveParcelRecord(operation){
     editor.loadError='';
   }finally{editor.setBusy(false);editorChanged();}
 }
-export async function saveResearchDraft(record, username){
-  if(!editor?.enabled||!editor.unlocked)throw new Error('관리자 로그인이 필요합니다.');
-  if(editor.busy||editor.store.saving)throw new Error('다른 저장이 진행 중입니다.');
-  if(!record || !['project','schedule','achievement','acknowledgement','paper'].includes(record.kind) || typeof record.title!=='string' || !record.title.trim() || record.title.length>200 || typeof record.detail!=='string' || record.detail.length>4000 || typeof record.date!=='string' || typeof record.project!=='string' || record.project.length>200 || typeof username!=='string' || !username.trim())throw new Error('입력 내용을 확인해 주세요.');
-  const client=editor.store,token=editor.token,path=client.root+'/contents/dashboard/research-snapshot1.json';
-  editor.setBusy(true);editorChanged();
-  try{
-    for(let i=0;i<3;i++){
-      let file=null,data={schema_version:1,records:[]};
-      try{file=await client.request(path+'?ref=status&_='+Date.now(),token);data=JSON.parse(new TextDecoder().decode(Uint8Array.from(atob(file.content.replace(/\s/g,'')),c=>c.charCodeAt(0))));}
-      catch(e){if(e.status!==404)throw e;await client.request(client.root+'/git/ref/heads/status',token);}
-      if(data.schema_version!==1||!Array.isArray(data.records)||data.records.length>=2000)throw new Error('과제 기록을 확인해 주세요.');
-      data.records.push({id:crypto.randomUUID(),...record,username:username.trim().slice(0,40),created_at:new Date().toISOString()});
-      const bytes=new TextEncoder().encode(JSON.stringify(data,null,2)),content=btoa(Array.from(bytes,b=>String.fromCharCode(b)).join(''));
-      try{await client.request(path,token,{method:'PUT',body:JSON.stringify({message:'research snapshot: add '+record.kind,branch:'status',content,...(file?{sha:file.sha}:{})})});return data;}
-      catch(e){if(![409,422].includes(e.status)||i===2)throw e;}
-    }
-  }finally{editor.setBusy(false);editorChanged();}
+// Runs one administrator write for a layer module while holding the editor lock, the same way
+// the saves above do. The token is handed only to the task and is not kept anywhere else.
+export async function runAdminTask(task){
+  if(!editor?.enabled||!editor.unlocked)throw new Error('관리자 로그인 후 저장할 수 있어요.');
+  if(editor.busy||editor.store.saving)throw new Error('앞선 저장이 끝난 뒤 다시 시도해 주세요.');
+  const token=editor.token;editor.setBusy(true);editorChanged();
+  try{return await task(token,config.dashboard);}
+  finally{editor.setBusy(false);editorChanged();}
 }
 export function monitoringAccess(){return {enabled:!!editor?.enabled,unlocked:!!editor?.unlocked,busy:!!editor?.busy};}
 // Used only by the staging usage charts; production does not import or call this recorder.

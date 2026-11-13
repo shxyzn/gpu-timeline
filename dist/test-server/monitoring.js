@@ -1,4 +1,4 @@
-import {dashboardView,monitoringAccess,openDashboardLogin,saveTestMonitoringConfig} from '../app.js?patch=snapshot3-1';
+import {dashboardView,monitoringAccess,openDashboardLogin,saveTestMonitoringConfig} from '../app.js?patch=workspace-3';
 import {CHECKS,DAYS,monitoringID,defaultConfig,emptyMonitoring,makeSchedule,validateConfig,validateSchedule,scheduleLabel,nextRun} from './monitoring-model.js?v=2.1';
 import {MonitoringStore} from './monitoring-store.js?v=2.1';
 import {isUnavailable} from './availability-model.js?v=2.1-as';
@@ -52,7 +52,8 @@ function renderCards(){
   const view=dashboardView();if(!view.config)return;
   if(!store&&view.config.dashboard){store=new MonitoringStore(view.config.dashboard);void refreshPublic();}
   const patch=document.body.dataset.stagingVersion||'2.1';
-  const note=document.querySelector('.priority-header p');if(note)note.textContent='test-server · v'+patch+' · 연구실의 모든 흐름을, 한눈에.';
+  // The workspace bar already names the test server and its version.
+  const note=document.querySelector('.priority-header p');if(note)note.textContent='GPU·API 실험과 서버 상태를 한눈에 확인해요.';
   if(view.build&&$('dashboard-version'))$('dashboard-version').textContent='테스트 v'+patch+(/^[a-f0-9]{40}$/.test(view.build.revision||'')?'+'+view.build.revision.slice(0,7):'');
   if(!$('monitor-release')){
     const intro=document.createElement('div');intro.id='monitor-release';intro.className='monitor-release';

@@ -4,46 +4,54 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="robots" content="noindex">
-  <title>CVML Workspace · v3.0 snapshot 2</title>
+  <title>로그인 · CVML Workspace</title>
   <style>
     *{box-sizing:border-box}
-    body{margin:0;background:#f5f5f7;color:#1d1d1f;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans KR",sans-serif;-webkit-font-smoothing:antialiased}
-    main{min-height:100vh;min-height:100svh;display:grid;grid-template-columns:minmax(0,1fr);place-items:center;padding:28px 20px}
-    .notice{width:min(100%,560px);padding:clamp(32px,8vw,56px) 24px;text-align:center;background:#fff;border:1px solid #e8e8ed;border-radius:26px;box-shadow:0 10px 40px #20203208}
-    .brand{margin:0 0 16px;color:#727278;font-size:11px;font-weight:650;letter-spacing:.17em}
-    h1{margin:0;font-size:clamp(27px,6vw,42px);line-height:1.2;letter-spacing:-.055em;word-break:keep-all}
-    .message{margin:17px 0 28px;color:#69696f;font-size:15px;line-height:1.7;word-break:keep-all}
-    .home-link{display:inline-block;padding:12px 22px;border-radius:999px;background:#1d1d1f;color:#fff;font-size:14px;font-weight:550;text-decoration:none}
-    .home-link:hover{background:#424247}
+    html{-webkit-text-size-adjust:100%}
+    body{margin:0;background:#f5f5f7;color:#1d1d1f;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Apple SD Gothic Neo","Noto Sans KR",sans-serif;-webkit-font-smoothing:antialiased}
+    main{min-height:100vh;min-height:100svh;display:grid;grid-template-columns:minmax(0,1fr);place-items:center;padding:28px 16px}
+    .entry{width:min(100%,420px);padding:clamp(28px,7vw,44px) clamp(20px,6vw,36px);background:#fff;border:1px solid #e8e8ed;border-radius:26px;box-shadow:0 10px 40px #20203208}
+    .entry-brand{margin:0 0 14px;color:#6e6e73;font-size:11px;font-weight:650;letter-spacing:.16em}
+    h1{margin:0;font-size:clamp(28px,7vw,36px);line-height:1.15;letter-spacing:-.05em}
+    .entry-version{margin:8px 0 26px;color:#6e6e73;font-size:14px}
+    .entry-form{display:grid;gap:8px}
+    .entry-form label{font-size:13px;font-weight:600}
+    .entry-form input[type=text],.entry-form input[type=password]{width:100%;min-height:46px;margin-bottom:10px;padding:11px 13px;border:1px solid #d2d2d7;border-radius:12px;background:#fff;color:inherit;font:inherit;font-size:16px}
+    .entry-form input[aria-invalid=true]{border-color:#c9342b}
+    .entry-form input:disabled{background:#f5f5f7}
+    .entry-remember{display:flex;align-items:center;gap:9px;min-height:40px;margin:-2px 0 6px;color:#48484d;font-weight:500!important;cursor:pointer}
+    .entry-remember input{width:18px;height:18px;margin:0;accent-color:#0071e3}
+    .entry-form button{min-height:48px;border:0;border-radius:999px;background:#0071e3;color:#fff;font:inherit;font-size:15px;font-weight:600;cursor:pointer}
+    .entry-form button:hover{background:#0067d0}
+    .entry-form button:disabled{opacity:.55;cursor:default}
+    .entry-error{min-height:20px;margin:4px 0 0;color:#b3261e;font-size:13px;line-height:1.5}
+    .entry-help{margin:18px 0 0;padding-top:18px;border-top:1px solid #e8e8ed;color:#6e6e73;font-size:13px;line-height:1.65;word-break:keep-all}
+    .entry-home{display:inline-block;margin-top:14px;padding:6px 0;color:#0066cc;font-size:14px;font-weight:550;text-decoration:none}
+    .entry-home:hover{text-decoration:underline}
     a:focus-visible,button:focus-visible,input:focus-visible{outline:2px solid #0071e3;outline-offset:3px}
-    .preview-access{width:min(100%,320px);margin:30px auto 0;padding-top:22px;border-top:1px solid #e8e8ed;text-align:left}
-    .preview-access label{display:block;margin-bottom:9px;font-size:13px;font-weight:600}
-    .access-controls{display:flex;gap:8px}
-    .access-controls input{flex:1;min-width:0;padding:10px 13px;border:1px solid #d2d2d7;border-radius:12px;background:#fff;color:inherit;font:inherit}
-    .access-controls button{min-height:44px;flex-shrink:0;border:0;border-radius:12px;padding:0 15px;background:#0071e3;color:#fff;font:inherit;font-size:14px;font-weight:600;cursor:pointer}
-    .access-controls button:hover{background:#0067d0}
-    .access-controls button:disabled{opacity:.55;cursor:default}
-    .access-error{margin:9px 0 0;color:#a62020;font-size:13px;line-height:1.5}
-    .access-error:empty{display:none}
+    @media (prefers-reduced-motion:no-preference){.entry-form button{transition:background-color .15s}}
   </style>
 </head>
 <body>
   <main>
-    <section class="notice" aria-labelledby="title">
-      <h1 id="title">CVML Workspace</h1>
-      <p class="message">v3.0 snapshot 2</p>
-      <a class="home-link" href="../">정식 화면 보기</a>
-      <form id="preview-access" class="preview-access" autocomplete="off">
-        <label for="preview-name">Username</label><input id="preview-name" required maxlength="40" autocomplete="username" placeholder="Username" style="width:100%;padding:12px;border:1px solid #d2d2d7;border-radius:12px;margin-bottom:16px;font:inherit"><label for="preview-code">Password</label>
-        <div class="access-controls">
-          <input id="preview-code" type="password" inputmode="numeric" maxlength="4" required aria-describedby="preview-error" disabled>
-          <button type="submit" disabled>Log in</button>
-        </div>
-        <p id="preview-error" class="access-error" role="status"></p>
-        <noscript><p>테스트 서버에 입장하려면 자바스크립트를 켜 주세요.</p></noscript>
+    <section class="entry" aria-labelledby="entry-title">
+      <p class="entry-brand">CVML · TEST SERVER</p>
+      <h1 id="entry-title">CVML Workspace</h1>
+      <p class="entry-version">v3.0 snapshot 3</p>
+      <form id="workspace-login" class="entry-form" novalidate>
+        <label for="workspace-name">이름</label>
+        <input id="workspace-name" name="username" type="text" maxlength="40" autocomplete="username" spellcheck="false" placeholder="예: 홍길동" required disabled>
+        <label for="workspace-password">비밀번호</label>
+        <input id="workspace-password" name="password" type="password" maxlength="200" autocomplete="current-password" required aria-describedby="workspace-error" disabled>
+        <label class="entry-remember" for="workspace-remember"><input id="workspace-remember" type="checkbox" disabled>이 브라우저에서 30일 동안 로그인 유지</label>
+        <button type="submit" disabled>로그인</button>
+        <p id="workspace-error" class="entry-error" role="alert"></p>
+        <noscript><p class="entry-error">로그인하려면 자바스크립트를 켜 주세요.</p></noscript>
       </form>
+      <p class="entry-help">연구실 구성원을 위한 화면이에요. 이름은 기록을 남긴 사람을 표시하는 데 쓰이고, 비밀번호는 연구실 관리자에게 문의해 주세요.</p>
+      <a class="entry-home" href="../">정식 화면 보기</a>
     </section>
   </main>
-  <script type="module" src="./access.js?v=3.0-snapshot2a"></script>
+  <script type="module" src="./access.js?v=workspace-3"></script>
 </body>
 </html>

@@ -1,4 +1,4 @@
-import {dashboardView,monitoringAccess,saveTestAPIUsageHistory} from '../app.js?patch=snapshot3-1';
+import {dashboardView,monitoringAccess,saveTestAPIUsageHistory} from '../app.js?patch=workspace-3';
 import {dollars,usageStatus} from '../openrouter-model.js?v=1.2.0';
 import {emptyHistory,chartData,needsRecording} from './api-usage-model.js?v=2.1.1';
 import {APIUsageStore} from './api-usage-store.js?v=2.1.1';
