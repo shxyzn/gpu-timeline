@@ -136,7 +136,7 @@ document.querySelector('.priority-tabs').addEventListener('keydown',event=>{
 routeHash();
 renderCurrent();
 
-import './monitoring.js?patch=zero-balance-v211';
+import './monitoring.js?v=2.1.2';
 import './availability.js?patch=zero-balance-v211';
 
 import './api-usage.js?patch=zero-balance-v211';

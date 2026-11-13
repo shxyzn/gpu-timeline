@@ -51,8 +51,8 @@ function state(s,c){
 function renderCards(){
   const view=dashboardView();if(!view.config)return;
   if(!store&&view.config.dashboard){store=new MonitoringStore(view.config.dashboard);void refreshPublic();}
-  const note=document.querySelector('.priority-header p');if(note)note.textContent='v2.1.1 · 연구실의 모든 흐름을, 한눈에.';
-  if(view.build&&$('dashboard-version'))$('dashboard-version').textContent='대시보드 v2.1.1'+(/^[a-f0-9]{40}$/.test(view.build.revision||'')?'+'+view.build.revision.slice(0,7):'');
+  const note=document.querySelector('.priority-header p');if(note)note.textContent='v2.1.2 · 연구실의 모든 흐름을, 한눈에.';
+  if(view.build&&$('dashboard-version'))$('dashboard-version').textContent='대시보드 v2.1.2'+(/^[a-f0-9]{40}$/.test(view.build.revision||'')?'+'+view.build.revision.slice(0,7):'');
   if(!$('monitor-release')){
     const intro=document.createElement('div');intro.id='monitor-release';intro.className='monitor-release';
     intro.innerHTML='<div class="monitor-release-copy"><span>새로운 기능 · v2.1</span><h2>서버 상태 모니터링 업데이트</h2><p>서버마다 다르게. 필요한 항목만. 원하는 시각에.<br>일반 점검과 하루 1~2회의 정밀 점검을 직접 구성하세요.</p></div><div class="monitor-release-number" aria-hidden="true">2.1</div>';

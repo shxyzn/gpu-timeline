@@ -1,6 +1,7 @@
 .cinema-v21 #release-video,.cinema-v21 #kimi-service-notice,.cinema-v21 #server-welcome{margin:0 0 12px;border-radius:20px;scroll-margin-top:24px}
 .cinema-v21 #release-video:has(+.priority-header){margin-bottom:32px}
-#test-server-link{min-height:44px}
+.priority-header-buttons{display:inline-grid;grid-auto-flow:column;grid-auto-columns:1fr;gap:inherit}
+.priority-header-buttons>.edit-button{box-sizing:border-box;font-family:inherit}
 .cinema-v21 #server-welcome{margin-bottom:32px;border:1px solid #e4e5e9;background:#fff;overflow:hidden;color:#1d1d1f}
 .server-welcome-toggle{display:flex;align-items:center;justify-content:space-between;gap:18px;padding:20px 25px;list-style:none;cursor:pointer;user-select:none}
 .server-welcome-toggle::-webkit-details-marker{display:none}

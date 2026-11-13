@@ -677,13 +677,13 @@ try {
   assert.equal(await preview.locator('#patch-notes').count(),0);
   if(environment.profile==='production'){
     assert.equal(await preview.title(),'CVML GPU Timeline');
-    assert.equal(await preview.locator('#mode').evaluate(e=>e.previousElementSibling.id),'test-server-link');
+    assert.equal(await preview.locator('#admin-login').evaluate(e=>e.previousElementSibling.id),'test-server-link');
     assert.equal(await preview.getByRole('link',{name:'테스트 서버',exact:true}).getAttribute('href'),'./test-server/');
     assert.equal(await preview.locator('#kimi-service-notice,#server-welcome,#kimi-tribute-dialog').count(),0);
     assert.equal(await preview.locator('#maintenance-notice').count(),0);
     assert.equal(await preview.locator('#production-maintenance-notice').isVisible(),false);
     assert.equal(await preview.locator('.priority-home').count(),0);
-    assert.match(await preview.locator('#dashboard-version').innerText(),/대시보드 v2.1/);
+    assert.match(await preview.locator('#dashboard-version').innerText(),/^대시보드 v2\.1\.2(?:\+|$)/);
   }else{
     assert.equal(await preview.locator('#maintenance-notice').count(),1);
     assert.match(await preview.locator('#maintenance-notice').textContent(),/사이트 점검 중/);
