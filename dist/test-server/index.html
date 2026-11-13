@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="robots" content="noindex">
-  <title>테스트 운영 종료 · CVML GPU Timeline</title>
+  <title>CVML Workspace · v3.0 snapshot 2</title>
   <style>
     *{box-sizing:border-box}
     body{margin:0;background:#f5f5f7;color:#1d1d1f;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans KR",sans-serif;-webkit-font-smoothing:antialiased}
@@ -30,21 +30,20 @@
 <body>
   <main>
     <section class="notice" aria-labelledby="title">
-      <p class="brand">CVML GPU TIMELINE</p>
-      <h1 id="title">연구실의 모든 것, 한곳에.</h1>
-      <p class="message">v3.0 snapshot 1 · 테스트 서버</p>
+      <h1 id="title">CVML Workspace</h1>
+      <p class="message">v3.0 snapshot 2</p>
       <a class="home-link" href="../">정식 화면 보기</a>
       <form id="preview-access" class="preview-access" autocomplete="off">
-        <label for="preview-name">사용자 이름</label><input id="preview-name" required maxlength="40" autocomplete="username" placeholder="이름을 입력하세요" style="width:100%;padding:12px;border:1px solid #d2d2d7;border-radius:12px;margin-bottom:16px;font:inherit"><label for="preview-code">비밀번호</label>
+        <label for="preview-name">Username</label><input id="preview-name" required maxlength="40" autocomplete="username" placeholder="Username" style="width:100%;padding:12px;border:1px solid #d2d2d7;border-radius:12px;margin-bottom:16px;font:inherit"><label for="preview-code">Password</label>
         <div class="access-controls">
           <input id="preview-code" type="password" inputmode="numeric" maxlength="4" required aria-describedby="preview-error" disabled>
-          <button type="submit" disabled>입장</button>
+          <button type="submit" disabled>Log in</button>
         </div>
         <p id="preview-error" class="access-error" role="status"></p>
         <noscript><p>테스트 서버에 입장하려면 자바스크립트를 켜 주세요.</p></noscript>
       </form>
     </section>
   </main>
-  <script type="module" src="./access.js?v=3.0-snapshot1"></script>
+  <script type="module" src="./access.js?v=3.0-snapshot2"></script>
 </body>
 </html>

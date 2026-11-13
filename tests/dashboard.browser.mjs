@@ -593,8 +593,8 @@ try {
   const stagingEntry=base+'/test-server/', stagingPreview=stagingEntry+'preview.html';
   async function enterStaging(page,anchor=''){
     await page.goto(stagingEntry+(anchor?'?panel='+anchor:''));
-    await page.getByLabel('사용자 이름').fill('테스트 사용자');
-    const field=page.getByLabel('비밀번호',{exact:true});
+    await page.getByLabel('Username').fill('테스트 사용자');
+    const field=page.getByLabel('Password',{exact:true});
     await field.fill(String.fromCharCode(50,52,57,48));
     await field.press('Enter');
     await page.waitForURL(stagingPreview+'**');
@@ -613,14 +613,14 @@ try {
   await closed.setViewportSize({width:320,height:844});
   await closed.goto(stagingPreview+'#resources');
   await closed.waitForURL(stagingEntry+'?panel=resources');
-  assert.equal(await closed.getByRole('heading',{name:'연구실의 모든 것, 한곳에.'}).isVisible(),true);
+  assert.equal(await closed.getByRole('heading',{name:'CVML Workspace'}).isVisible(),true);
   assert.equal(await closed.locator('#api-usage-board').count(),0);
   const premature=closedRequests.filter(url=>url.pathname.endsWith('/config.json')||url.pathname.endsWith('/app.js')||['raw.githubusercontent.com','api.github.com','openrouter.ai'].includes(url.hostname));
   assert.deepEqual(premature.map(url=>url.pathname),[],'the preview must not load the dashboard or its data before entry');
   assert.equal(new URL(await closed.getByRole('link',{name:'정식 화면 보기'}).getAttribute('href'),closed.url()).href,base+'/');
   assert.ok(await closed.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
-  await closed.getByLabel('사용자 이름').fill('테스트 사용자');
-  const entryCode=closed.getByLabel('비밀번호',{exact:true});
+  await closed.getByLabel('Username').fill('테스트 사용자');
+  const entryCode=closed.getByLabel('Password',{exact:true});
   await entryCode.fill('0000');
   await entryCode.press('Enter');
   await closed.getByText('비밀번호가 맞지 않아요.',{exact:true}).waitFor();
@@ -781,7 +781,7 @@ try {
     await preview.waitForFunction(()=>document.getElementById('api-usage-state').textContent.includes('개 키의 관측 기록'));
     assert.ok(usageHistoryReads>historyReadsBefore);
     assert.equal(await preview.locator('#api-usage-board').evaluate(e=>e.previousElementSibling.id),'openrouter-grid');
-    if(environment.profile==='test')assert.match(await preview.locator('#dashboard-version').innerText(),/테스트 v3.0 snapshot 1/);
+    if(environment.profile==='test')assert.match(await preview.locator('#dashboard-version').innerText(),/테스트 v3.0 snapshot 2/);
     assert.equal(await preview.locator('#api-usage-key option').count(),3);
     assert.ok(await preview.locator('#api-usage-plot [data-usage-day]').count()>0);
     assert.equal(await preview.locator('#api-usage-board script').count(),0);
