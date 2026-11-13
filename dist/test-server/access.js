@@ -61,7 +61,7 @@ if (form) {
       import('../promo.js?patch=closed-panels'),
       import('../usage.js'),
       import('./app.js?patch=snapshot3-1'),
-      import('./research.js?v=3.0-snapshot2'),
+      import('./research.js?v=3.0-snapshot2a'),
     ]);
   }
 }
