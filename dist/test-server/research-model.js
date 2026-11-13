@@ -193,10 +193,11 @@ export function applyResearchOperation(original, operation) {
       collection.push(record);
     } else {
       // A retried request whose first response was lost must not fail or duplicate. `prior`
-      // lists the times of this editor's own earlier attempts at the same new record, so a retry
-      // with a corrected field replaces that attempt instead of being taken for someone else's.
+      // lists the times of this editor's own earlier attempts from the same open form, so a
+      // retry with a corrected field replaces that attempt instead of being taken for someone
+      // else's edit. Any other save in between leaves a different updated_at and still conflicts.
       if (same(stored, record)) return doc;
-      const own = operation.base === null && Array.isArray(operation.prior) && operation.prior.includes(stored.updated_at);
+      const own = Array.isArray(operation.prior) && operation.prior.includes(stored.updated_at);
       if (stored.updated_at !== operation.base && !own) fail(stale);
       collection[index] = record;
     }
@@ -396,10 +397,17 @@ export function researchOverview(doc, on = today()) {
   const order = {milestone: 0, target: 1, end: 2};
   deadlines.sort((a, b) => a.date.localeCompare(b.date) || order[a.kind] - order[b.kind] || a.project.name.localeCompare(b.project.name, 'ko'));
   const unacknowledged = doc.outputs.filter(o => !o.acks.some(a => doc.projects.some(p => p.id === a.project_id)));
-  return {progress, deadlines,
+  const overdue = deadlines.filter(d => d.days < 0), lateTargets = overdue.filter(d => d.kind === 'target').length;
+  const targeted = running.filter(p => p.rows.length).length, remaining = running.reduce((sum, p) => sum + p.remaining, 0);
+  // What a one-line summary may claim. "met" needs a running project that has targets and no
+  // target left unmet past its deadline, a project that already ended included: a count of zero
+  // alone also describes a project nobody gave targets to, or one that ended short.
+  const verdict = !doc.projects.length ? 'empty' : remaining ? 'need' : lateTargets ? 'late'
+    : targeted ? 'met' : running.length ? 'untargeted' : 'idle';
+  return {progress, deadlines, verdict,
     counts: {projects: running.length, ended: progress.length - running.length, archived: doc.projects.length - active.length,
-      remaining: running.reduce((sum, p) => sum + p.remaining, 0), pending: running.reduce((sum, p) => sum + p.pending, 0),
-      gap: running.reduce((sum, p) => sum + p.gap, 0),
+      remaining, pending: running.reduce((sum, p) => sum + p.pending, 0),
+      gap: running.reduce((sum, p) => sum + p.gap, 0), untargeted: running.length - targeted, late_targets: lateTargets,
       missed: running.filter(p => p.state === 'missed').length, outputs: doc.outputs.length, unacknowledged: unacknowledged.length},
-    next: deadlines.find(d => d.days >= 0) || null, overdue: deadlines.filter(d => d.days < 0)};
+    next: deadlines.find(d => d.days >= 0) || null, overdue};
 }

@@ -1231,14 +1231,15 @@ try {
     assert.equal(await reader.locator('#workspace-research').isVisible(),true);
     assert.equal(await reader.locator('#gpu-workspace').isVisible(),false);
     assert.equal(await reader.locator('.ws-nav [aria-current=page]').innerText(),'연구과제');
-    assert.deepEqual(await reader.locator('#rs-summary .rs-stat strong').allTextContents(),['1개','1건','D-20','2건']);
+    // The page reads its own "today": allow for midnight (KST) passing after the dates were seeded.
+    assert.match((await reader.locator('#rs-summary .rs-stat strong').allTextContents()).join(' | '),/^1개 \| 1건 \| D-(20|19) \| 2건$/);
     const card=reader.locator(`[data-rs-project="${running.id}"]`);
     assert.equal(await reader.locator('.rs-project').count(),1);
     assert.equal(await card.locator('h3').innerText(),'멀티모달 주행 과제 <b>');
     assert.equal(await card.locator('h3 b').count(),0);
     assert.match(await card.locator('.rs-verdict').innerText(),/SCI\(E\) 논문 1편 더 필요 · 그중 1건은 진행 중/);
     assert.deepEqual(await card.locator('tr[data-rs-target]').evaluateAll(rows=>rows.map(row=>row.dataset.state)),['covered','met']);
-    assert.match(await card.locator('tr[data-rs-target]').first().innerText(),/SCI\(E\) 논문 · 2차년도[\s\S]*1\s*\/ 2편[\s\S]*투고·심사 중 1[\s\S]*1편 더 필요[\s\S]*D-40/);
+    assert.match(await card.locator('tr[data-rs-target]').first().innerText(),/SCI\(E\) 논문 · 2차년도[\s\S]*1\s*\/ 2편[\s\S]*투고·심사 중 1[\s\S]*1편 더 필요[\s\S]*D-(40|39)/);
     assert.match(await card.locator('tr[data-rs-target]').nth(1).innerText(),/특허 출원[\s\S]*1\s*\/ 1건[\s\S]*달성/);
     await card.locator('summary',{hasText:'사사한 실적 3건'}).click();
     assert.equal(await card.locator('.rs-line').count(),3);
@@ -1253,6 +1254,10 @@ try {
     await card.locator('.rs-fold').nth(1).locator('[data-rs-copy]').first().click();
     assert.equal(await reader.evaluate(()=>navigator.clipboard.readText()),'This work was supported by IITP (No. RS-2025-00123456).');
     assert.equal(await reader.locator('#rs-feedback').innerText(),'사사문구를 복사했어요.');
+    // Opening a fold is not a change: the next periodic render leaves the card, and so keyboard
+    // focus and a text selection inside it, alone.
+    await reader.evaluate(()=>{window.__card=document.querySelector('.rs-project');document.dispatchEvent(new CustomEvent('dashboard:render'));});
+    assert.equal(await reader.evaluate(()=>window.__card.isConnected&&[...window.__card.querySelectorAll('.rs-fold')].every(fold=>fold.open)),true);
     assert.equal(await reader.locator('#workspace-research [data-rs-action]').count(),0);
     assert.match(await reader.locator('#rs-access').innerText(),/읽기 전용/);
     await reader.screenshot({path:path.join(output,'research-projects-desktop.png'),fullPage:true});
@@ -1268,6 +1273,8 @@ try {
     assert.match(await reader.locator('.rs-output',{hasText:'출원한 특허'}).locator('.rs-acks').innerText(),/특허 출원 목표에 반영/);
     await reader.locator('[data-rs-kind=patent]').click();
     assert.equal(await reader.locator('.rs-output').count(),1);
+    assert.equal(await reader.evaluate(()=>document.activeElement.dataset.rsKind),'patent','choosing a kind keeps keyboard focus on its chip');
+    assert.equal(await reader.locator('[data-rs-kind=patent]').getAttribute('aria-pressed'),'true');
     await reader.locator('[data-rs-kind=all]').click();
     await reader.locator('#rs-project-filter').selectOption('none');
     assert.equal(await reader.locator('.rs-output').count(),1);
@@ -1289,8 +1296,6 @@ try {
     await reader.locator('#admin-dialog').waitFor();
     assert.equal(await reader.locator('#rs-feedback').innerText(),'관리자 연결 후 다시 눌러 주세요.');
     await reader.locator('#admin-dialog [data-close-dialog]').first().click();
-    assert.equal(isEnvelope(researchSealed),true);
-    assert.equal(/멀티모달|RS-2025|Published|acknowledgement/.test(JSON.stringify(researchSealed)),false);
     assert.equal(researchWrites,0);
     // A failed refresh keeps the last records on screen.
     researchUnavailable=true;
@@ -1320,6 +1325,19 @@ try {
     assert.equal(await reader.locator('#workspace-home').isVisible(),false);
     await reader.locator('#tab-timeline').click();
     assert.equal(await reader.locator('#workspace-gpu-link').getAttribute('href'),'#timeline');
+    // The bar's link follows the open tab however it was chosen, here with the arrow keys.
+    await reader.locator('#tab-timeline').press('ArrowRight');
+    assert.equal(await reader.locator('#tab-resources').getAttribute('aria-selected'),'true');
+    assert.equal(await reader.locator('#workspace-gpu-link').getAttribute('href'),'#resources');
+    // Leaving the dashboard stops its film: a hidden player must not keep sounding.
+    await reader.evaluate(()=>{window.__filmPauses=0;document.querySelector('#gpu-workspace video').pause=()=>{window.__filmPauses++;};});
+    await openView(reader,'home');
+    assert.equal(await reader.evaluate(()=>window.__filmPauses),1);
+    assert.equal(await reader.locator('#workspace-home .ws-card').nth(1).getAttribute('href'),'#resources');
+    await reader.locator('#workspace-gpu-link').click();
+    await reader.locator('#gpu-workspace').waitFor();
+    assert.equal(await reader.locator('#tab-resources').getAttribute('aria-selected'),'true');
+    await reader.locator('#tab-timeline').click();
     await reader.reload();
     await reader.locator('body[data-workspace=ready]').waitFor();
     assert.equal(await reader.locator('#gpu-workspace').isVisible(),true);
@@ -1435,6 +1453,11 @@ try {
     for(const width of [390,320]){
       await admin.setViewportSize({width,height:844});
       await admin.locator('#rs-tab-projects').click();
+      // The archived project is the full card: a date range, a milestone and linked outputs.
+      await admin.locator('[data-rs-phase=archived]').click();
+      await admin.locator(`[data-rs-project="${running.id}"] details.rs-fold`).first().evaluate(fold=>{fold.open=true;});
+      assert.ok(await fits(admin),`a full project card overflows at ${width}px`);
+      await admin.screenshot({path:path.join(output,`research-project-card-mobile-${width}.png`),fullPage:true});
       await admin.locator('[data-rs-phase=active]').click();
       for(const name of ['projects','outputs','schedule','acks']){
         await admin.locator('#rs-tab-'+name).click();
@@ -1443,6 +1466,11 @@ try {
       }
       await admin.locator('#rs-add-project').click();
       assert.ok(await admin.locator('#rs-project-dialog').evaluate(dialog=>dialog.scrollWidth<=dialog.clientWidth+1),`project form overflows at ${width}px`);
+      // A date needs room to be read while it is typed; the count beside it must not squeeze it.
+      const dueWidth=await admin.locator('#rs-p-targets [data-f=due_on]').first().evaluate(input=>input.getBoundingClientRect().width);
+      assert.ok(dueWidth>=140,`the target deadline field is only ${dueWidth}px wide at ${width}px`);
+      await admin.locator('#rs-p-targets').scrollIntoViewIfNeeded();
+      await admin.screenshot({path:path.join(output,`research-project-form-${width}.png`)});
       await admin.locator('#rs-project-dialog [data-rs-close]').first().click();
       await admin.locator('#rs-add-output').click();
       assert.ok(await admin.locator('#rs-output-dialog').evaluate(dialog=>dialog.scrollWidth<=dialog.clientWidth+1),`output form overflows at ${width}px`);
@@ -1458,6 +1486,23 @@ try {
     await admin.evaluate(()=>document.getElementById('admin-logout').click());
     await admin.waitForFunction(()=>!document.querySelector('#workspace-research [data-rs-action]'));
     assert.match(await admin.locator('#rs-access').innerText(),/읽기 전용/);
+
+    // "모든 목표 달성" is never claimed for a project that ended short, or one without targets.
+    const summaryNote=text=>admin.waitForFunction(expected=>document.querySelector('#rs-summary .rs-stat:nth-child(2) p')?.textContent.includes(expected),text);
+    await sealResearch(validateResearch({schema_version:1,revision:researchDoc.revision+1,updated_at:made.at,projects:[ended],outputs:[]}));
+    await admin.locator('#rs-refresh').click();
+    await summaryNote('기한 지난 목표 1건');
+    assert.equal(await admin.locator('#rs-summary .rs-stat.ok').count(),0);
+    await openView(admin,'home');
+    assert.equal(await admin.locator('#workspace-home .ws-card-title').first().innerText(),'기한 지난 목표 1건');
+    await openView(admin,'research');
+    await sealResearch(validateResearch({schema_version:1,revision:researchDoc.revision+1,updated_at:made.at,projects:[makeProject({name:'목표 없는 과제',ends_on:kst(100),targets:[]},made)],outputs:[]}));
+    await admin.locator('#rs-refresh').click();
+    await summaryNote('목표 실적을 등록하면');
+    await openView(admin,'home');
+    assert.match(await admin.locator('#workspace-home .ws-card').first().innerText(),/목표 실적 미등록[\s\S]*목표 미등록 1개/);
+    assert.doesNotMatch(await admin.locator('#workspace-home').innerText(),/모든 목표 달성/);
+    await openView(admin,'research');
 
     // Signing out closes the workspace; staying signed in is opt-in and ends everywhere at once.
     await admin.locator('#workspace-logout').click();

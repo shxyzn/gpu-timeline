@@ -1,9 +1,9 @@
 import {dashboardView,monitoringAccess,openDashboardLogin,runAdminTask} from '../app.js?patch=workspace-3';
-import {GATE} from './gate.js?v=workspace-3';
-import {currentSession} from './session.js?v=workspace-3';
-import {documentKeys,fromBase64} from './workspace-crypto.js?v=workspace-3';
-import {ResearchStore} from './research-store.js?v=workspace-3';
-import {OUTPUT_KINDS,METRICS,emptyResearch,makeProject,makeOutput,projectProgress,researchOverview,remainingText,outputWarnings,ackText,ACK_LABELS,statusLabel,targetLabel,today,daysUntil,ddayLabel,newID} from './research-model.js?v=workspace-3';
+import {GATE} from './gate.js?v=workspace-3a';
+import {currentSession} from './session.js?v=workspace-3a';
+import {documentKeys,fromBase64} from './workspace-crypto.js?v=workspace-3a';
+import {ResearchStore} from './research-store.js?v=workspace-3a';
+import {OUTPUT_KINDS,METRICS,emptyResearch,makeProject,makeOutput,projectProgress,researchOverview,remainingText,outputWarnings,ackText,ACK_LABELS,statusLabel,targetLabel,today,daysUntil,ddayLabel,newID} from './research-model.js?v=workspace-3a';
 
 // Research-project tracker of the test-server workspace: what each project owes, by when,
 // what already counts, and which acknowledgement (사사) every output carries.
@@ -12,7 +12,7 @@ const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;
 const day=date=>{if(!date)return '';const [y,m,d]=date.split('-').map(Number);return `${y}. ${m}. ${d}.`;};
 const stamp=at=>at?new Intl.DateTimeFormat('ko-KR',{timeZone:'Asia/Seoul',month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit',hourCycle:'h23'}).format(new Date(at))+' KST':'';
 const root=$('workspace-research'),session=currentSession(GATE);
-let doc=emptyResearch(),store=null,loaded=false,loading=false,loadError='',lastRead=0,saving=false;
+let doc=emptyResearch(),store=null,loaded=false,loading=false,loadError='',lastRead=0,lastTry=0,saving=false;
 let tab='projects',phase='active',kind='all',projectFilter='all',query='';
 let editing=null,pending=null,confirming=null,refocus=null;
 const open=new Set(),drawn=new WeakMap();
@@ -76,11 +76,29 @@ if(root&&session){
 
 function feedback(message){$('rs-feedback').textContent=message;}
 // Write markup only when it changed: a periodic refresh must not drop focus or a text selection.
-function setHTML(element,html){if(drawn.get(element)!==html){element.innerHTML=html;drawn.set(element,html);}}
+// Which folds are open is kept out of the markup and applied afterwards, so opening one does not
+// count as a change.
+function setHTML(element,html){
+  if(drawn.get(element)===html)return;
+  element.innerHTML=html;drawn.set(element,html);
+  for(const fold of element.querySelectorAll('[data-rs-open]'))fold.open=open.has(fold.dataset.rsOpen);
+}
+// The control that has keyboard focus, as a selector that finds it again after a list is redrawn.
+function focusMark(){
+  const element=document.activeElement;
+  if(!element||!root.contains(element))return null;
+  const quoted=value=>`"${CSS.escape(value)}"`;
+  if(element.dataset.rsAction&&element.dataset.rsId)return `[data-rs-action=${quoted(element.dataset.rsAction)}][data-rs-id=${quoted(element.dataset.rsId)}]`;
+  if(element.dataset.rsKind)return `[data-rs-kind=${quoted(element.dataset.rsKind)}]`;
+  if(element.tagName==='SUMMARY'&&element.parentElement.dataset.rsOpen)return `[data-rs-open=${quoted(element.parentElement.dataset.rsOpen)}]>summary`;
+  return null;
+}
 function notify(){document.dispatchEvent(new CustomEvent('research:change'));}
 
 function onDashboard(){
   const view=dashboardView();
+  // This module runs after the dashboard core has started, so a missing config is a failed one.
+  if(!store&&!view.config&&!loadError){loadError='대시보드 설정을 불러오지 못했어요. 페이지를 새로고침해 주세요.';notify();}
   if(!store&&view.config){
     if(view.config.mode!=='live'||!view.config.dashboard){loaded=true;loadError='예시 데이터 모드에서는 연구과제 기록을 불러오지 않아요.';render();notify();return;}
     store={pending:true};
@@ -91,12 +109,15 @@ function onDashboard(){
       }catch{store=null;loadError='로그인 정보를 확인할 수 없어요. 로그아웃한 뒤 다시 로그인해 주세요.';render();notify();}
     })();
   }
+  // A tab left open keeps its numbers current: re-read every five minutes while it is in sight
+  // and nothing is being edited.
+  else if(loaded&&Date.now()-Math.max(lastRead,lastTry)>300000&&!document.hidden&&!document.querySelector('dialog[open]'))void read();
   render();
 }
 
 async function read(){
   if(!store||store.pending||loading||saving)return;
-  loading=true;render();
+  loading=true;lastTry=Date.now();render();
   try{const next=await store.readPublic();if(next.revision>=doc.revision)doc=next;loaded=true;loadError='';lastRead=Date.now();}
   catch(error){loadError=error.message;}
   finally{loading=false;render();notify();}
@@ -120,7 +141,7 @@ function standardAcks(project){
 function outputLine(output,project,achieved){
   const ack=output.acks.find(a=>a.project_id===project.id),applied=ackText(ack,project,output),k=OUTPUT_KINDS[output.kind],key='ack:'+project.id+':'+output.id;
   return `<li class="rs-line"><div class="rs-line-main"><span class="rs-dot ${achieved?'done':'pending'}" aria-hidden="true"></span><div><strong>${esc(output.title)}</strong><span>${esc([k.label+(output.grade?' · '+k.grades[output.grade]:''),output.venue,statusLabel(output)+(output.date?' '+day(output.date):'')].filter(Boolean).join(' · '))}</span></div></div>
-    <details class="rs-inline" data-rs-open="${key}"${open.has(key)?' open':''}><summary>${ackSummary(applied)}</summary>${ackBlock(applied.text,applied.label)}</details></li>`;
+    <details class="rs-inline" data-rs-open="${key}"><summary>${ackSummary(applied)}</summary>${ackBlock(applied.text,applied.label)}</details></li>`;
 }
 function targetRow(row){
   const ratio=Math.min(100,row.done/row.count*100),planned=Math.min(100-ratio,row.pending/row.count*100);
@@ -140,13 +161,13 @@ function projectCard(p,view){
       <div class="rs-project-end"><span class="rs-due ${p.ended?'late':tone(p.days)}"><strong>${p.ended?'종료':esc(ddayLabel(p.days))}</strong>${esc((project.starts_on?day(project.starts_on)+' ~ ':'')+day(project.ends_on))}</span></div></header>
     <p class="rs-verdict ${p.state}"><span>${esc(stateText)}</span>${esc(remainingText(p))}${p.remaining&&p.pending?` · 그중 ${p.pending}건은 진행 중`:''}</p>
     ${p.rows.length?`<table class="rs-targets"><caption>목표 실적</caption><thead><tr><th scope="col">목표</th><th scope="col">달성 / 목표</th><th scope="col">남은 실적</th><th scope="col">기한</th></tr></thead><tbody>${p.rows.map(targetRow).join('')}</tbody></table>`:`<p class="rs-muted">목표 실적이 아직 없어요.${view.unlocked?' 과제 수정에서 지표와 목표 수를 추가해 주세요.':''}</p>`}
-    <details class="rs-fold" data-rs-open="${key}"${open.has(key)?' open':''}><summary>사사한 실적 ${p.linked.length}건</summary>
+    <details class="rs-fold" data-rs-open="${key}"><summary>사사한 실적 ${p.linked.length}건</summary>
       ${p.linked.length?'':'<p class="rs-muted">이 과제를 사사한 실적이 아직 없어요.</p>'}
       ${rows.map(row=>`<h4>${esc(row.label)} <span>${row.done} / ${row.count}${esc(row.unit)}</span></h4><ul class="rs-lines">${row.outputs.map(item=>outputLine(item.output,project,item.achieved)).join('')}</ul>`).join('')}
       ${p.extra.length?`<h4>목표 외 실적 <span>맞는 목표가 없어 집계하지 않았어요</span></h4><ul class="rs-lines">${p.extra.map(o=>outputLine(o,project,false)).join('')}</ul>`:''}
       ${p.excluded.length?`<h4>집계 제외 <span>집계하지 않도록 지정한 실적</span></h4><ul class="rs-lines">${p.excluded.map(o=>outputLine(o,project,false)).join('')}</ul>`:''}
     </details>
-    <details class="rs-fold" data-rs-open="${ackKey}"${open.has(ackKey)?' open':''}><summary>이 과제의 사사문구</summary>${standardAcks(project)}</details>
+    <details class="rs-fold" data-rs-open="${ackKey}"><summary>이 과제의 사사문구</summary>${standardAcks(project)}</details>
     ${pendingMilestones.length?`<ul class="rs-milestones" aria-label="남은 일정">${pendingMilestones.map(m=>`<li>${dueBadge(m.date,daysOf(m.date))}<span>${esc(m.title)}</span></li>`).join('')}</ul>`:''}
     ${project.note?`<p class="rs-project-note">${esc(project.note)}</p>`:''}
     <div class="rs-card-foot"><span>${esc(project.updated_by)} · ${esc(stamp(project.updated_at))} 수정</span>${view.unlocked?`<span class="rs-card-actions"><button type="button" class="rs-button" data-rs-action="output-for" data-rs-id="${project.id}"${view.busy?' disabled':''}>이 과제에 실적 추가</button><button type="button" class="rs-button" data-rs-action="project-edit" data-rs-id="${project.id}"${view.busy?' disabled':''}>과제 수정</button></span>`:''}</div></article>`;
@@ -173,7 +194,7 @@ function outputCard(output,view){
     <h3>${esc(output.title)}</h3>${meta.length?`<p class="rs-output-meta">${meta.join(' · ')}</p>`:''}${output.link?`<p class="rs-output-meta"><a href="${esc(output.link)}" target="_blank" rel="noopener noreferrer">링크 열기 ↗</a></p>`:''}
     ${links.length?`<ul class="rs-acks" aria-label="사사한 과제">${links.map(({ack,project})=>{
       const applied=ackText(ack,project,output),key='oack:'+output.id+':'+project.id,where=view.placements.get(project.id+'|'+output.id),target=where?.rows.length?where.rows.join(', ')+' 목표에 반영':where?.reason||'';
-      return `<li><div class="rs-acks-head"><strong>${esc(projectName(project))}</strong>${project.number?`<code>${esc(project.number)}</code>`:''}<span>${esc(target)}</span></div><details class="rs-inline" data-rs-open="${key}"${open.has(key)?' open':''}><summary>${ackSummary(applied)}${applied.source==='missing'?'':' 보기'}</summary>${ackBlock(applied.text,applied.label)}</details></li>`;}).join('')}</ul>`:'<p class="rs-warn-line">어느 과제의 실적인지 아직 연결하지 않았어요. 사사한 과제를 지정하면 그 과제의 목표에 반영돼요.</p>'}
+      return `<li><div class="rs-acks-head"><strong>${esc(projectName(project))}</strong>${project.number?`<code>${esc(project.number)}</code>`:''}<span>${esc(target)}</span></div><details class="rs-inline" data-rs-open="${key}"><summary>${ackSummary(applied)}${applied.source==='missing'?'':' 보기'}</summary>${ackBlock(applied.text,applied.label)}</details></li>`;}).join('')}</ul>`:'<p class="rs-warn-line">어느 과제의 실적인지 아직 연결하지 않았어요. 사사한 과제를 지정하면 그 과제의 목표에 반영돼요.</p>'}
     ${output.note?`<p class="rs-project-note">${esc(output.note)}</p>`:''}
     <div class="rs-card-foot"><span>${esc(output.updated_by)} · ${esc(stamp(output.updated_at))} 수정</span>${view.unlocked?`<span class="rs-card-actions"><button type="button" class="rs-button" data-rs-action="output-edit" data-rs-id="${output.id}"${view.busy?' disabled':''}>실적 수정</button></span>`:''}</div></article>`;
 }
@@ -190,16 +211,21 @@ function render(){
   for(const button of root.querySelectorAll('[data-rs-tab]')){const on=button.dataset.rsTab===tab;button.setAttribute('aria-selected',String(on));button.tabIndex=on?0:-1;$(button.getAttribute('aria-controls')).hidden=!on;}
   const overview=researchOverview(doc),c=overview.counts;
   const next=overview.next,late=overview.overdue.length;
+  // Zero left over is good news only when the model calls it "met": see researchOverview.
+  const need={need:[c.remaining,'건',c.pending?`그중 ${c.pending}건은 진행 중 · ${c.gap?`새로 시작할 실적 ${c.gap}건`:'새로 시작할 실적은 없어요'}`:'목표에서 달성 수를 뺀 합계','need'],
+    met:[0,'건',c.untargeted?`남은 목표가 없어요 · 목표 미등록 과제 ${c.untargeted}개`:'남은 목표가 없어요','ok'],
+    late:[0,'건',`진행 중인 과제 기준 · 기한 지난 목표 ${c.late_targets}건은 따로 확인해 주세요`,''],
+    untargeted:['—','','과제에 목표 실적을 등록하면 계산해요',''],idle:['—','','진행 중인 과제가 없어요',''],empty:['—','','등록된 과제가 없어요','']}[overview.verdict];
   setHTML($('rs-summary'),!loaded?(loadError&&!loading?'':'<p class="rs-muted rs-loading">연구과제 기록을 불러오는 중이에요.</p>'):[
     ['진행 중 과제',c.projects,'개',c.ended||c.archived?`종료 ${c.ended} · 보관 ${c.archived}`:'등록된 과제 기준',''],
-    ['더 필요한 실적',c.remaining,'건',c.remaining?(c.pending?`그중 ${c.pending}건은 진행 중 · 새로 시작할 실적 ${c.gap}건`:'목표에서 달성 수를 뺀 합계'):'남은 목표가 없어요',c.remaining?'need':'ok'],
+    ['더 필요한 실적',...need],
     ['가장 가까운 기한',next?ddayLabel(next.days):'—','',next?`${day(next.date)} · ${projectName(next.project)} · ${next.title}`:'남은 기한이 없어요',next?tone(next.days):''],
     ['확인할 것',late+c.unacknowledged,'건',late||c.unacknowledged?[late?`기한 지남 ${late}건`:'',c.unacknowledged?`사사 과제 미지정 ${c.unacknowledged}건`:''].filter(Boolean).join(' · '):'모두 정리돼 있어요',late||c.unacknowledged?'warn':'ok'],
   ].map(([label,value,unit,note,kind])=>`<div class="rs-stat ${kind}"><span>${label}</span><strong>${esc(value)}<small>${unit}</small></strong><p>${esc(note)}</p></div>`).join(''));
   const groups={active:overview.progress.filter(p=>p.phase!=='ended'),ended:overview.progress.filter(p=>p.phase==='ended'),archived:doc.projects.filter(p=>p.archived)};
   for(const name of Object.keys(groups)){$('rs-count-'+name).textContent=groups[name].length;root.querySelector(`[data-rs-phase="${name}"]`).setAttribute('aria-pressed',String(name===phase));}
   $('rs-count-outputs').textContent=doc.outputs.length||'';$('rs-count-schedule').textContent=overview.deadlines.length||'';
-  const focus=document.activeElement?.closest?.('[data-rs-action]'),focusKey=focus&&root.contains(focus)&&focus.dataset.rsId?[focus.dataset.rsAction,focus.dataset.rsId]:null;
+  const focused=focusMark();
   // Only the open tab holds markup, so a hidden list never keeps stale buttons around.
   for(const [name,id] of [['projects','rs-projects'],['outputs','rs-outputs'],['schedule','rs-schedule'],['acks','rs-acks']])if(!loaded||name!==tab)setHTML($(id),'');
   if(!loaded)return;
@@ -208,7 +234,9 @@ function render(){
     setHTML($('rs-projects'),list.map(p=>projectCard(p,{...view,busy})).join('')||`<div class="rs-empty"><strong>${phase==='active'?(doc.projects.length?'진행 중인 과제가 없어요.':'아직 등록된 과제가 없어요.'):phase==='ended'?'종료된 과제가 없어요.':'보관한 과제가 없어요.'}</strong><p>${phase==='active'?(view.unlocked?'‘＋ 과제 추가’로 과제와 목표 실적을 등록해 보세요.':'관리자가 과제를 등록하면 이곳에 목표와 달성 현황이 표시돼요.'):phase==='ended'?'종료일이 지난 과제가 이곳에 모여요.':'과제 수정에서 보관하면 이곳으로 옮겨져요.'}</p></div>`);
   }else if(tab==='outputs'){
     const counts=Object.fromEntries(Object.keys(OUTPUT_KINDS).map(id=>[id,doc.outputs.filter(o=>o.kind===id).length]));
-    setHTML($('rs-kinds'),`<button type="button" data-rs-kind="all" aria-pressed="${kind==='all'}">전체 <span>${doc.outputs.length}</span></button>`+Object.entries(OUTPUT_KINDS).filter(([id])=>counts[id]||kind===id).map(([id,k])=>`<button type="button" data-rs-kind="${id}" aria-pressed="${kind===id}">${k.label} <span>${counts[id]}</span></button>`).join(''));
+    setHTML($('rs-kinds'),`<button type="button" data-rs-kind="all">전체 <span>${doc.outputs.length}</span></button>`+Object.entries(OUTPUT_KINDS).filter(([id])=>counts[id]||kind===id).map(([id,k])=>`<button type="button" data-rs-kind="${id}">${k.label} <span>${counts[id]}</span></button>`).join(''));
+    // Pressed state is set in place: choosing a chip must not replace the chip that has focus.
+    for(const chip of $('rs-kinds').children)chip.setAttribute('aria-pressed',String(chip.dataset.rsKind===kind));
     if(projectFilter!=='all'&&projectFilter!=='none'&&!doc.projects.some(p=>p.id===projectFilter))projectFilter='all';
     const options='<option value="all">모든 과제</option><option value="none">사사 과제 미지정</option>'+doc.projects.map(p=>`<option value="${p.id}">${esc(projectName(p))}</option>`).join('');
     setHTML($('rs-project-filter'),options);
@@ -226,8 +254,13 @@ function render(){
     const upcoming=overview.deadlines.filter(d=>d.days>=0);
     setHTML($('rs-schedule'),(overview.overdue.length?`<h3>기한이 지났어요 <span>${overview.overdue.length}</span></h3><ul class="rs-deadlines">${overview.overdue.map(item).join('')}</ul>`:'')+(upcoming.length?`<h3>다가오는 기한 <span>${upcoming.length}</span></h3><ul class="rs-deadlines">${upcoming.map(item).join('')}</ul>`:'')||'<div class="rs-empty"><strong>남은 기한이 없어요.</strong><p>과제의 종료일, 목표 기한, 일정이 이곳에 날짜순으로 모여요.</p></div>');
   }
-  const target=refocus||focusKey;
-  if(target&&!document.querySelector('dialog[open]')){root.querySelector(`[data-rs-action="${target[0]}"][data-rs-id="${target[1]}"]:not(:disabled)`)?.focus({preventScroll:true});refocus=null;}
+  // After a save, focus goes to the saved record's button; otherwise back to the control that
+  // had it, when redrawing a list took that control away.
+  const target=refocus?`[data-rs-action="${refocus[0]}"][data-rs-id="${refocus[1]}"]`:focused;
+  if(target&&!document.querySelector('dialog[open]')){
+    if(refocus||!root.contains(document.activeElement))root.querySelector(target+':not(:disabled)')?.focus({preventScroll:true});
+    refocus=null;
+  }
   for(const id of ['rs-project-form','rs-output-form'])for(const field of $(id).querySelectorAll('input,select,textarea,button'))field.disabled=busy;
   if(!view.unlocked)for(const id of ['rs-project-dialog','rs-output-dialog','rs-confirm-dialog'])if($(id).open&&!saving)$(id).close();
 }
@@ -322,17 +355,18 @@ async function saveRecord(event,type){
   try{
     const input=type==='project'?readProject():readOutput(),signature=JSON.stringify(input),previous=editing?.record||null;
     // An unchanged retry resends the very same record. A new record also keeps its identity for
-    // as long as the dialog is open, and names its own earlier attempts, so a save whose reply
-    // was lost is replaced by the corrected retry instead of being stored twice.
+    // as long as the dialog is open, and every save names this form's own earlier attempts, so a
+    // save whose reply was lost is replaced by the corrected retry instead of being stored twice
+    // or mistaken for someone else's edit.
     if(pending?.signature!==signature){
       const at=new Date().toISOString(),options={by:session.name,at,previous:previous||editing?.draft||null};
       const record=type==='project'?makeProject(input,options):makeOutput(input,doc.projects,options);
       if(!previous)editing.draft={id:record.id,created_at:record.created_at};
-      pending={signature,operation:{type:type+'_save',[type]:record,base:previous?.updated_at??null,...(previous?{}:{prior:[...(editing.attempts||[])]}),at}};
+      pending={signature,operation:{type:type+'_save',[type]:record,base:previous?.updated_at??null,prior:[...(editing.attempts||[])],at}};
     }
     const created=!previous,attempt=pending.operation;
     const savedID=attempt[type].id;
-    if(created)editing.attempts=[...(editing.attempts||[]),attempt.at];
+    if(!editing.attempts?.includes(attempt.at))editing.attempts=[...(editing.attempts||[]),attempt.at];
     await commit(attempt,errorID,()=>{
       $(`rs-${type}-dialog`).close();pending=null;editing=null;refocus=[type+'-edit',savedID];
       feedback(type==='project'?(created?'과제를 추가했어요.':'과제를 수정했어요.'):(created?'실적을 추가했어요.':'실적을 수정했어요.'));

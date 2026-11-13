@@ -1,6 +1,6 @@
 import {GitHubEditsStore,encodeJSON,decodeJSON} from '../edits.js?v=1.2.0';
-import {emptyResearch,validateResearch,applyResearchOperation} from './research-model.js?v=workspace-3';
-import {isEnvelope,sealJSON,openJSON} from './workspace-crypto.js?v=workspace-3';
+import {emptyResearch,validateResearch,applyResearchOperation} from './research-model.js?v=workspace-3a';
+import {isEnvelope,sealJSON,openJSON} from './workspace-crypto.js?v=workspace-3a';
 
 // The research document of the test server. It is stored sealed with the workspace key, so the
 // file on the public status branch is unreadable without the shared login password. Commit

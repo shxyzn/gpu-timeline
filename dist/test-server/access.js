@@ -1,14 +1,14 @@
 // Entry gate of the test-server workspace. index.html checks the shared password and starts a
 // session; preview.html loads the workspace only for a signed-in browser. This is separate from
 // dashboard administration, which still needs the administrator's own GitHub connection.
-import {GATE} from './gate.js?v=workspace-3';
-import {openGate,toBase64} from './workspace-crypto.js?v=workspace-3';
-import {currentSession,startSession,lastName,cleanName} from './session.js?v=workspace-3';
+import {GATE} from './gate.js?v=workspace-3a';
+import {openGate,toBase64} from './workspace-crypto.js?v=workspace-3a';
+import {currentSession,startSession,endSession,lastName,cleanName} from './session.js?v=workspace-3a';
 
 const form=document.getElementById('workspace-login');
 const previewURL=new URL('./preview.html',import.meta.url);
 const entryURL=new URL('./',import.meta.url);
-const anchors=new Set(['home','research','now','timeline','resources','servers','parcel','more','release-video','api-usage-board']);
+const anchors=new Set(['home','research','now','timeline','resources','servers','parcel','more','release-video','api-usage-board','patch-notes']);
 
 if(form){
   const name=document.getElementById('workspace-name'),password=document.getElementById('workspace-password');
@@ -45,12 +45,18 @@ if(form){
   }
 }else{
   const leave=()=>{const anchor=location.hash.slice(1);if(anchors.has(anchor))entryURL.searchParams.set('panel',anchor);location.replace(entryURL.href);};
-  if(!currentSession(GATE))leave();
+  const session=currentSession(GATE);
+  if(!session)leave();
   else{
     // A page restored from the back/forward cache still holds the earlier visitor's records and
     // name in memory. Start over so the gate decides again from nothing.
     window.addEventListener('pageshow',event=>{if(event.persisted){document.querySelector('main').hidden=true;if(currentSession(GATE))location.reload();else leave();}});
     window.addEventListener('storage',()=>{if(!currentSession(GATE))leave();});
+    // The name and sign-out belong to the gate: they must work while the dashboard is still
+    // loading, and when it fails to load. Hide the page before leaving: a browser may keep it
+    // for Back, and it must come back empty.
+    document.getElementById('workspace-user').textContent=session.name+'님';
+    document.getElementById('workspace-logout').onclick=()=>{document.querySelector('main').hidden=true;endSession();location.assign(entryURL.href);};
     document.querySelector('main').hidden=false;
     try{
       await Promise.all([
@@ -58,12 +64,13 @@ if(form){
         import('../promo.js?patch=closed-panels'),
         import('../usage.js'),
         import('./app.js?patch=workspace-3'),
-        import('./workspace.js?v=workspace-3'),
-        import('./research-board.js?v=workspace-3'),
+        import('./workspace.js?v=workspace-3a'),
+        import('./research-board.js?v=workspace-3a'),
       ]);
     }catch{
       const problem=document.getElementById('workspace-load-error');
       if(problem)problem.hidden=false;
+      document.body.dataset.workspace='failed';
     }
   }
 }

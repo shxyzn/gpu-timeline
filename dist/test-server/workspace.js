@@ -1,9 +1,9 @@
 import {dashboardView} from '../app.js?patch=workspace-3';
-import {GATE} from './gate.js?v=workspace-3';
-import {currentSession,endSession} from './session.js?v=workspace-3';
-import {researchState} from './research-board.js?v=workspace-3';
+import {GATE} from './gate.js?v=workspace-3a';
+import {currentSession} from './session.js?v=workspace-3a';
+import {researchState} from './research-board.js?v=workspace-3a';
 import {availableCurrentView} from './availability-model.js?v=2.1-as';
-import {ddayLabel} from './research-model.js?v=workspace-3';
+import {ddayLabel} from './research-model.js?v=workspace-3a';
 
 // Shell of the test-server workspace: one bar to move between the home, the research tracker
 // and the GPU dashboard, and a home that summarises both. The URL hash names the view, so the
@@ -25,6 +25,8 @@ function show(){
   if(view===current)return;
   const first=current===null;current=view;
   if(!first)window.scrollTo({top:0});
+  // A film in a hidden view would keep playing, heard but with no control in sight.
+  for(const media of document.querySelectorAll('[data-ws-section][hidden] video,[data-ws-section][hidden] audio'))media.pause();
   document.dispatchEvent(new CustomEvent('workspace:view',{detail:view}));
 }
 
@@ -32,17 +34,25 @@ function researchCard(){
   const {loaded,loadError,overview}=researchState();
   // After a failed refresh the last records are still the best answer; say so instead of hiding them.
   if(!loaded||!overview)return loadError?{title:'기록을 불러오지 못했어요',kind:'',facts:[esc(loadError)]}:{title:'불러오는 중…',kind:'',facts:['과제와 실적 기록을 확인하고 있어요.']};
-  const c=overview.counts,next=overview.next,late=overview.overdue.length;
-  if(!c.projects&&!c.ended)return {title:'등록된 과제가 없어요',kind:'',facts:['과제와 목표 실적을 등록하면 남은 실적과 기한이 여기에 표시돼요.']};
-  const facts=[`진행 중 과제 <strong>${c.projects}개</strong>${c.remaining&&c.pending?` · 그중 <strong>${c.pending}건</strong>은 진행 중`:''}`];
+  const c=overview.counts,next=overview.next,late=overview.overdue.length,verdict=overview.verdict;
+  if(verdict==='empty')return {title:'등록된 과제가 없어요',kind:'',facts:['과제와 목표 실적을 등록하면 남은 실적과 기한이 여기에 표시돼요.']};
+  const facts=[];
+  if(c.remaining&&c.pending)facts.push(`그중 <strong>${c.pending}건</strong>은 진행 중 · ${c.gap?`새로 시작할 실적 <strong>${c.gap}건</strong>`:'새로 시작할 실적은 없어요'}`);
+  facts.push([`진행 중인 과제 <strong>${c.projects}개</strong>`,c.untargeted?`목표 미등록 <strong>${c.untargeted}개</strong>`:'',c.ended?`종료 ${c.ended}개`:''].filter(Boolean).join(' · '));
+  if(verdict==='untargeted')facts.push('과제에 목표 실적을 등록하면 남은 실적을 계산해요.');
   if(next)facts.push(`가장 가까운 기한 <strong>${esc(ddayLabel(next.days))}</strong> · ${esc(day(next.date))} ${esc(next.project.short||next.project.name)}`);
   if(late||c.unacknowledged)facts.push([late?`기한 지남 <strong>${late}건</strong>`:'',c.unacknowledged?`사사 과제 미지정 <strong>${c.unacknowledged}건</strong>`:''].filter(Boolean).join(' · '));
   if(loadError)facts.push('최신 기록을 불러오지 못해 마지막으로 받은 내용을 보여 드려요.');
-  return c.remaining?{title:`실적 ${c.remaining}<small>건</small> 더 필요`,kind:'need',facts}:{title:'모든 목표 달성',kind:'ok',facts};
+  // "모든 목표 달성" is the model's call (researchOverview): never for a project without targets
+  // or while a target of an ended project is still unmet.
+  const title={need:`실적 ${c.remaining}<small>건</small> 더 필요`,late:`기한 지난 목표 ${c.late_targets}<small>건</small>`,met:'모든 목표 달성',untargeted:'목표 실적 미등록',idle:'진행 중인 과제가 없어요'}[verdict];
+  return {title,kind:{need:'need',late:'late',met:'ok'}[verdict]||'',facts};
 }
 function gpuCard(){
   const view=dashboardView();
-  if(!view.config||!view.lastFetch)return {title:'불러오는 중…',kind:'',facts:['서버 상태를 확인하고 있어요.']};
+  // This module runs after the dashboard core has started, so a missing config is a failed one.
+  if(!view.config)return {title:'불러오지 못했어요',kind:'',facts:['대시보드 설정을 불러오지 못했어요. 페이지를 새로고침해 주세요.']};
+  if(!view.lastFetch)return {title:'불러오는 중…',kind:'',facts:['서버 상태를 확인하고 있어요.']};
   const now=Date.now(),g=availableCurrentView(view.servers,view.telemetryServers,now,view.config.stale_after_seconds||1200);
   const facts=[`점유 <strong>${g.busy}</strong> · 확인 필요 <strong>${g.unknown}</strong> · API 실험 <strong>${g.apiRunning}</strong>`];
   if(g.alerts.length)facts.push(`${g.alerts.map(a=>esc(a.server.name)).join(', ')} · 수신 상태 확인 필요`);
@@ -62,16 +72,20 @@ function renderHome(){
   if(drawnHome!==html){home.innerHTML=html;drawnHome=html;}
 }
 
+// The bar's GPU link and the home card return to the dashboard tab that is open, however it was
+// chosen: a click, the arrow keys, a button inside the dashboard, or the address itself.
+function syncGpuLink(){
+  const link=$('workspace-gpu-link'),href='#'+(document.querySelector('#gpu-workspace [data-panel][aria-selected="true"]')?.dataset.panel||'now');
+  if(link&&link.getAttribute('href')!==href){link.setAttribute('href',href);renderHome();}
+}
+
 if(session){
-  $('workspace-user').textContent=session.name+'님';
-  // Hide the page before leaving: a browser may keep it for Back, and it must come back empty.
-  $('workspace-logout').onclick=()=>{document.querySelector('main').hidden=true;endSession();location.assign(new URL('./',location.href).href);};
-  // GPU tabs rewrite the hash without a navigation; keep the bar's link on the last tab seen.
-  document.addEventListener('click',event=>{const tab=event.target.closest?.('#gpu-workspace [data-panel]');if(tab)$('workspace-gpu-link').setAttribute('href','#'+tab.dataset.panel);});
+  const tabs=document.querySelector('#gpu-workspace [role=tablist]');
+  if(tabs)new MutationObserver(syncGpuLink).observe(tabs,{attributes:true,subtree:true,attributeFilter:['aria-selected']});
   window.addEventListener('hashchange',show);
   document.addEventListener('dashboard:render',()=>{document.title=TITLES[current||viewOf()];renderHome();});
   document.addEventListener('research:change',renderHome);
-  show();renderHome();
+  show();syncGpuLink();renderHome();
   // Lets scripts and checks tell when the bar and the first view are wired up.
   document.body.dataset.workspace='ready';
 }

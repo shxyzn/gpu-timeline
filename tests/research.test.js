@@ -252,7 +252,8 @@ test('deadlines: missed targets, ended projects and the overview', () => {
   assert.equal(projectProgress(project(), [], on).state, 'untargeted');
   const overview = researchOverview(doc(projects, outputs), on);
   assert.deepEqual(overview.progress.map(p => p.project.name), ['진행 과제', '달성 과제', '끝난 과제']);
-  assert.deepEqual(overview.counts, {projects: 2, ended: 1, archived: 1, remaining: 2, pending: 1, gap: 1, missed: 0, outputs: 3, unacknowledged: 1});
+  assert.deepEqual(overview.counts, {projects: 2, ended: 1, archived: 1, remaining: 2, pending: 1, gap: 1, untargeted: 0, late_targets: 1, missed: 0, outputs: 3, unacknowledged: 1});
+  assert.equal(overview.verdict, 'need');
   assert.deepEqual(overview.deadlines.map(d => [d.date, d.kind, d.title]), [
     ['2026-10-31', 'target', '특허 출원 1건 · SW 등록 1건 남음'],
     ['2026-11-01', 'milestone', '지난 일정'],
@@ -263,6 +264,30 @@ test('deadlines: missed targets, ended projects and the overview', () => {
   ]);
   assert.deepEqual([overview.next.date, overview.next.days], ['2026-12-10', 27]);
   assert.deepEqual(overview.overdue.map(d => d.days), [-13, -12]);
+});
+
+test('"all targets met" is claimed only when it is true', () => {
+  const short = project({name: '끝난 과제', ends_on: '2026-10-31', targets: [{metric: 'paper_sci', count: 3}]});
+  const bare = project({name: '목표 없는 과제'});
+  const met = project({name: '달성 과제', targets: [{metric: 'paper_kci', count: 1}]});
+  const open = project({name: '남은 과제', targets: [{metric: 'paper_sci', count: 2}]});
+  const paper = projects => [output({grade: 'kci', acks: [{project_id: met.id}]}, projects)];
+  const verdict = (projects, outputs = []) => researchOverview(doc(projects, outputs), on).verdict;
+  assert.equal(verdict([]), 'empty');
+  // Zero left over is not good news for a project that ended short, or that has no targets.
+  assert.equal(verdict([short]), 'late');
+  assert.equal(verdict([bare]), 'untargeted');
+  assert.equal(verdict([met, short], paper([met, short])), 'late');
+  assert.equal(verdict([met], paper([met])), 'met');
+  assert.equal(verdict([met, bare], paper([met, bare])), 'met');
+  assert.equal(researchOverview(doc([met, bare], paper([met, bare])), on).counts.untargeted, 1);
+  assert.equal(verdict([open, short]), 'need');
+  assert.equal(verdict([project({name: '보관', archived: true, targets: [{metric: 'paper_sci', count: 1}]})]), 'idle');
+  // An overdue milestone is a reminder, not an unmet target.
+  assert.equal(verdict([project({name: '달성 과제', targets: [{metric: 'paper_kci', count: 1}], milestones: [{title: '지난 일정', date: '2026-11-01'}]}, {previous: met})],
+    paper([met])), 'met');
+  const ended = researchOverview(doc([short]), on);
+  assert.deepEqual([ended.counts.projects, ended.counts.remaining, ended.counts.late_targets], [0, 0, 1]);
 });
 
 test('edits apply to the latest document with optimistic concurrency', () => {
@@ -297,6 +322,12 @@ test('edits apply to the latest document with optimistic concurrency', () => {
   // Someone else's edit in between is still protected.
   const touched = {...firstSaved, outputs: [{...first, note: '다른 사람', updated_at: '2026-11-02T12:00:00.000Z'}]};
   assert.throws(() => applyResearchOperation(touched, {type: 'output_save', output: fixed, base: null, prior: [first.updated_at], at: fixed.updated_at}), /먼저 수정/);
+  // The same for an edit: the form started from `first`, its first save landed unseen, and the
+  // corrected retry still names the version it started from.
+  const again = output({title: 'Typo paper, revised'}, [], {previous: first, at: '2026-11-05T00:00:00.000Z'});
+  assert.throws(() => applyResearchOperation(retried, {type: 'output_save', output: again, base: first.updated_at, at: again.updated_at}), /먼저 수정/);
+  assert.deepEqual(applyResearchOperation(retried, {type: 'output_save', output: again, base: first.updated_at, prior: [fixed.updated_at], at: again.updated_at}).outputs.map(item => item.title), ['Typo paper, revised']);
+  assert.throws(() => applyResearchOperation(touched, {type: 'output_save', output: again, base: first.updated_at, prior: [fixed.updated_at], at: again.updated_at}), /먼저 수정/);
   // Turning a target into a different indicator drops the explicit links that pointed at it.
   const host = project({targets: [{metric: 'paper_sci', count: 1}, {metric: 'conf_intl', count: 1}]});
   const tied = output({kind: 'conference', grade: 'intl', status: 'presented', acks: [{project_id: host.id, target_id: host.targets[0].id}]}, [host]);
