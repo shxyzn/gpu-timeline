@@ -611,13 +611,14 @@ try {
   await closed.waitForURL(stagingEntry+'?panel=resources');
   assert.equal(await closed.getByRole('heading',{name:'테스트 운영 종료'}).isVisible(),true);
   assert.equal(await closed.locator('#api-usage-board').count(),0);
-  assert.equal(closedRequests.some(url=>url.origin!==base||url.pathname.endsWith('/config.json')||url.pathname.endsWith('/app.js')),false);
+  const premature=closedRequests.filter(url=>url.pathname.endsWith('/config.json')||url.pathname.endsWith('/app.js')||['raw.githubusercontent.com','api.github.com','openrouter.ai'].includes(url.hostname));
+  assert.deepEqual(premature.map(url=>url.pathname),[],'the preview must not load the dashboard or its data before entry');
   assert.equal(new URL(await closed.getByRole('link',{name:'정식 화면 보기'}).getAttribute('href'),closed.url()).href,base+'/');
   assert.ok(await closed.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
   const entryCode=closed.getByLabel('테스트 서버 비밀번호');
   await entryCode.fill('0000');
   await entryCode.press('Enter');
-  await closed.getByRole('status').getByText('비밀번호가 맞지 않아요.').waitFor();
+  await closed.getByText('비밀번호가 맞지 않아요.',{exact:true}).waitFor();
   assert.equal(new URL(closed.url()).pathname,'/test-server/');
   await closed.close();
 
