@@ -598,8 +598,10 @@ try {
     await field.fill(String.fromCharCode(50,52,57,48));
     await field.press('Enter');
     await page.waitForURL(stagingPreview+'**');
+    await page.waitForFunction(()=>document.querySelector('#snapshot-user')?.textContent.includes('테스트 사용자'));
     await page.getByRole('button',{name:/GPU 사용량 관리/}).click();
     if(anchor)await page.goto(stagingPreview+'#'+anchor);
+    if(anchor)await page.waitForFunction(()=>document.querySelector('#snapshot-user')?.textContent.includes('테스트 사용자'));
     if(anchor)await page.getByRole('button',{name:/GPU 사용량 관리/}).click();
   }
   async function openDashboard(page,environment,anchor=''){
