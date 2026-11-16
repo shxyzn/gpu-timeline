@@ -1,7 +1,7 @@
 import {dashboardView} from '../app.js?patch=workspace-3';
 import {GATE} from './gate.js?v=workspace-4';
 import {currentSession} from './session.js?v=workspace-4';
-import {researchState} from './research-board.js?v=workspace-4';
+import {researchState} from './research-board.js?v=workspace-4a';
 import {availableCurrentView} from './availability-model.js?v=2.1-as';
 import {ddayLabel} from './research-model.js?v=workspace-4';
 

@@ -14,7 +14,7 @@ const stamp=at=>at?new Intl.DateTimeFormat('ko-KR',{timeZone:'Asia/Seoul',month:
 const root=$('workspace-research'),session=currentSession(GATE);
 let doc=emptyResearch(),store=null,loaded=false,loading=false,loadError='',lastRead=0,lastTry=0,saving=false;
 let tab='projects',phase='active',kind='all',projectFilter='all',query='',proposalPhase='open';
-let editing=null,pending=null,confirming=null,refocus=null;
+let editing=null,pending=null,confirming=null,refocus=null,busyCheck=null;
 const open=new Set(),drawn=new WeakMap();
 
 export function researchState(){return {doc,loaded,loading,loadError,overview:loaded?researchOverview(doc):null};}
@@ -233,6 +233,9 @@ function render(){
   if(!root||!session)return;
   // Saving re-reads the latest file itself, so a failed refresh does not have to block editing.
   const view=access(),ready=loaded&&!!store&&!store.pending,busy=view.busy||saving;
+  // The shared editor announces a change while it is still busy (its login does) and not again
+  // when it is done, so check back until it is idle instead of waiting for the next periodic render.
+  if(view.busy&&!busyCheck)busyCheck=setTimeout(()=>{busyCheck=null;render();},300);
   $('rs-access').textContent=view.unlocked?'관리자 모드 · 과제·실적·제안서를 추가·수정할 수 있어요.':'읽기 전용 · 추가·수정은 관리자 연결 후 할 수 있어요.';
   $('rs-admin').hidden=view.unlocked||!view.enabled;
   $('rs-error').textContent=loadError;

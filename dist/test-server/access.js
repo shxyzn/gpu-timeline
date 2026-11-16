@@ -64,8 +64,8 @@ if(form){
         import('../promo.js?patch=closed-panels'),
         import('../usage.js'),
         import('./app.js?patch=workspace-3'),
-        import('./workspace.js?v=workspace-4'),
-        import('./research-board.js?v=workspace-4'),
+        import('./workspace.js?v=workspace-4a'),
+        import('./research-board.js?v=workspace-4a'),
       ]);
     }catch{
       const problem=document.getElementById('workspace-load-error');
