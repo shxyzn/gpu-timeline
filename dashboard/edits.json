@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "revision": 1025,
-  "updated_at": "2026-11-16T00:15:49.162Z",
+  "revision": 1026,
+  "updated_at": "2026-11-16T00:25:49.217Z",
   "manual_jobs": [],
   "hidden_jobs": [
     {
@@ -73,15 +73,15 @@
       "usage": {
         "usage": 62.90031024,
         "usage_daily": 0,
-        "usage_weekly": 62.90031024,
+        "usage_weekly": 0,
         "usage_monthly": 62.90031024,
         "limit": 1000,
         "limit_remaining": 937.09968976,
         "byok_usage": 0,
         "limit_reset": null
       },
-      "checked_at": "2026-11-15T23:24:49.204Z",
-      "attempted_at": "2026-11-15T23:24:48.958Z",
+      "checked_at": "2026-11-16T00:25:49.217Z",
+      "attempted_at": "2026-11-16T00:25:48.972Z",
       "error": null
     }
   ],
