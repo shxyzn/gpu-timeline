@@ -212,6 +212,8 @@ body[data-workspace] .ws-loading{display:none}
 .rs-dialog .rs-ack-detail label.field{margin:0}
 
 /* ---- Dashboard polish that applies only on the test server ---- */
+/* Orders and deliveries sit at the top of 더보기 instead of a tab of their own. */
+.test-server #panel-more>#parcel{margin-bottom:28px}
 /* A long experiment name used to squeeze its time into a one-character column. */
 .test-server .gpu-experiment{flex-wrap:wrap;gap:2px 10px}
 .test-server .gpu-experiment span:first-child{flex:1 1 12em;min-width:0;overflow-wrap:anywhere}

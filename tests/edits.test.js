@@ -10,7 +10,7 @@ const server = {server_id: 'server-a', name: '서버 A', collector_ok: true, upd
   gpus: [{uuid: 'GPU-A', index: 0, process_count: 0, utilization: 0, memory_used_mib: 0}],
   jobs: [{id: 'job-1', name: '서버 실험', status: 'running', gpu_uuids: ['GPU-A']}]};
 const config = {repository: 'shxyzn/gpu-timeline', branch: 'status', path: 'dashboard/edits.json'};
-const input = {server_id: 'server-a', name: 'GEPA · 상현 🧪', owner: '상현', gpu_uuids: ['GPU-A'],
+const input = {server_id: 'server-a', name: 'GEPA · 홍길동 🧪', owner: '홍길동', gpu_uuids: ['GPU-A'],
   description: '실험', status: 'running', started_at: '2026-09-15T00:00:00.000Z'};
 const job = () => makeManualJob(input, [server], now, 'web-aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa');
 const add = () => ({type: 'add', job: job(), at: now});
@@ -174,7 +174,7 @@ test('form times always use Korea time independently of the browser timezone', (
   assert.equal(fromKstInput(''), null);
 });
 
-const collector = {...server.jobs[0], owner: '상현', description: '', started_at: '2026-09-15T00:00:17.123Z', expected_end_at: null, ended_at: null,
+const collector = {...server.jobs[0], owner: '홍길동', description: '', started_at: '2026-09-15T00:00:17.123Z', expected_end_at: null, ended_at: null,
   progress: {completed: 25, total: 100, updated_at: now}};
 const editCollector = (patch, data = emptyEdits(), visible = collector) =>
   makeEditOperation({...visible, ...patch}, server.server_id, visible, [server], data, now);

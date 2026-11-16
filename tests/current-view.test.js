@@ -52,9 +52,9 @@ test('progress preserves missing values and clamps displayed percentages',()=>{
 });
 test('compact experiment names retain explicit task, model, method, seed and owner without inventing a model family',()=>{
   const original='exp46 · AIME · 8B GEPA · 정답 2회 연속 시 진짜 AIME 문제로 교체 · 8B 검증 · seed0';
-  const result=experimentPresentation({name:original,owner:'상현'});
+  const result=experimentPresentation({name:original,owner:'홍길동'});
   assert.equal(result.title,'exp46 · AIME / 8B');
-  assert.deepEqual(result.meta,['GEPA','seed 0','상현']);
+  assert.deepEqual(result.meta,['GEPA','seed 0','홍길동']);
   assert.equal(result.original,original);
   assert.equal(result.title.includes('Qwen'),false);
   const named=experimentPresentation({name:'exp_kmj_39 · GEPA · AIME · Qwen3-4B task+reflection · paper protocol · seed2',owner:'kmj'});

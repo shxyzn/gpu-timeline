@@ -116,14 +116,15 @@ function routeHash() {
   if(anchor==='api-usage-board'){
     setPanel('resources',false);
     requestAnimationFrame(()=>$(anchor)?.scrollIntoView({block:'start'}));
-  } else if(['release-video','patch-notes'].includes(anchor)) {
-    setPanel(anchor==='patch-notes'?'more':'now',false);
+  } else if(['parcel','patch-notes'].includes(anchor)) {
+    // Orders and deliveries live in 더보기 on the test server; old #parcel links land there.
+    setPanel('more',false);
     requestAnimationFrame(()=>$(anchor)?.scrollIntoView({block:'start'}));
   } else if(document.querySelector(`[data-panel="${CSS.escape(anchor)}"]`)) setPanel(anchor);
 }
 window.addEventListener('hashchange',routeHash);
-document.querySelectorAll('a[href="#release-video"],a[href="#patch-notes"]').forEach(link=>link.addEventListener('click',()=>{
-  setPanel(link.hash==='#patch-notes'?'more':'now',false);
+document.querySelectorAll('a[href="#parcel"],a[href="#patch-notes"]').forEach(link=>link.addEventListener('click',()=>{
+  setPanel('more',false);
   requestAnimationFrame(()=>$(link.hash.slice(1))?.scrollIntoView({block:'start'}));
 }));
 document.querySelector('.priority-tabs').addEventListener('keydown',event=>{
@@ -137,7 +138,7 @@ document.querySelector('.priority-tabs').addEventListener('keydown',event=>{
 routeHash();
 renderCurrent();
 
-import './monitoring.js?patch=workspace-3';
+import './monitoring.js?patch=workspace-5';
 import './availability.js?patch=workspace-3';
 
 import './api-usage.js?patch=workspace-3';

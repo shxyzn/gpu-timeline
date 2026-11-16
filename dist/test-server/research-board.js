@@ -1,9 +1,9 @@
 import {dashboardView,monitoringAccess,openDashboardLogin,runAdminTask} from '../app.js?patch=workspace-3';
-import {GATE} from './gate.js?v=workspace-4';
-import {currentSession} from './session.js?v=workspace-4';
-import {documentKeys,fromBase64} from './workspace-crypto.js?v=workspace-4';
-import {ResearchStore} from './research-store.js?v=workspace-4';
-import {OUTPUT_KINDS,METRICS,PROPOSAL_STATUSES,PROPOSAL_OPEN,PROPOSAL_ROLES,emptyResearch,makeProject,makeOutput,makeProposal,projectProgress,researchOverview,remainingText,outputWarnings,ackText,ACK_LABELS,statusLabel,targetLabel,today,daysUntil,ddayLabel,newID} from './research-model.js?v=workspace-4';
+import {GATE} from './gate.js?v=workspace-5';
+import {currentSession} from './session.js?v=workspace-5';
+import {documentKeys,fromBase64} from './workspace-crypto.js?v=workspace-5';
+import {ResearchStore} from './research-store.js?v=workspace-5';
+import {OUTPUT_KINDS,METRICS,PROPOSAL_STATUSES,PROPOSAL_OPEN,PROPOSAL_ROLES,emptyResearch,makeProject,makeOutput,makeProposal,projectProgress,researchOverview,remainingText,outputWarnings,ackText,ACK_LABELS,statusLabel,targetLabel,today,daysUntil,ddayLabel,newID} from './research-model.js?v=workspace-5';
 
 // Research-project tracker of the test-server workspace: what each project owes, by when,
 // what already counts, and which acknowledgement (사사) every output carries.
@@ -74,7 +74,7 @@ if(root&&session){
       <div class="field-grid"><label class="field">지원기관·사업명 · 선택<input id="rs-r-agency" maxlength="120" placeholder="예: IITP · 정보통신방송 기술개발"></label><label class="field">공고명 · 선택<input id="rs-r-call" maxlength="160" placeholder="예: 2027년도 신규과제 공모"></label></div>
       <div class="field-grid"><label class="field">상태<select id="rs-r-status">${Object.entries(PROPOSAL_STATUSES).map(([id,label])=>`<option value="${id}">${label}</option>`).join('')}</select></label><label class="field">참여 형태 · 선택<select id="rs-r-role"><option value="">선택 안 함</option>${Object.entries(PROPOSAL_ROLES).map(([id,label])=>`<option value="${id}">${label}</option>`).join('')}</select></label></div>
       <div class="field-grid"><label class="field">제출 마감일<input id="rs-r-due" type="date" required></label><label class="field">결과 발표일 · 선택<input id="rs-r-result" type="date"></label></div>
-      <label class="field">작성 담당 · 선택<input id="rs-r-members" maxlength="200" placeholder="예: 박상현(총괄), 홍길동"></label>
+      <label class="field">작성 담당 · 선택<input id="rs-r-members" maxlength="200" placeholder="예: 홍길동(총괄), 김철수"></label>
       <label class="field">공고 링크 · 선택<input id="rs-r-link" type="url" maxlength="500" placeholder="https://" spellcheck="false"></label>
       <label class="field">메모 · 선택<textarea id="rs-r-note" maxlength="1000" rows="3" placeholder="준비 서류, 협력 기관, 남은 작업 등"></textarea></label>
       <p class="admin-help">연구비 금액과 제안서 본문의 아이디어는 적지 마세요. 선정되면 ‘＋ 과제 추가’로 과제를 등록해 목표 실적을 관리해요.</p>

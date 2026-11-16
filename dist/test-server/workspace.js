@@ -1,9 +1,9 @@
 import {dashboardView} from '../app.js?patch=workspace-3';
-import {GATE} from './gate.js?v=workspace-4';
-import {currentSession} from './session.js?v=workspace-4';
-import {researchState} from './research-board.js?v=workspace-4a';
+import {GATE} from './gate.js?v=workspace-5';
+import {currentSession} from './session.js?v=workspace-5';
+import {researchState} from './research-board.js?v=workspace-5';
 import {availableCurrentView} from './availability-model.js?v=2.1-as';
-import {ddayLabel} from './research-model.js?v=workspace-4';
+import {ddayLabel} from './research-model.js?v=workspace-5';
 
 // Shell of the test-server workspace: one bar to move between the home, the research tracker
 // and the GPU dashboard, and a home that summarises both. The URL hash names the view, so the
@@ -11,7 +11,7 @@ import {ddayLabel} from './research-model.js?v=workspace-4';
 const $=id=>document.getElementById(id);
 const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const day=date=>{const [y,m,d]=date.split('-').map(Number);return `${y}. ${m}. ${d}.`;};
-const GPU_ANCHORS=new Set(['now','timeline','resources','servers','parcel','more','release-video','api-usage-board','patch-notes']);
+const GPU_ANCHORS=new Set(['now','timeline','resources','servers','parcel','more','api-usage-board','patch-notes']);
 const TITLES={home:'CVML Workspace',research:'연구과제 · CVML Workspace',gpu:'GPU 대시보드 · CVML Workspace'};
 const session=currentSession(GATE),home=$('workspace-home');
 let current=null,drawnHome='';

@@ -57,7 +57,7 @@ sudo journalctl -u gpu-timeline-shared.service -n 20 --no-pager
 새 실험은 사용할 Conda 환경과 작업 폴더에서 다음처럼 실행합니다. `python train.py`를 **원래 실행할 명령 전체**로 바꾸세요.
 
 ```bash
-/usr/local/bin/gputl run --name "GEPA" --owner "상현" --gpus 0 \
+/usr/local/bin/gputl run --name "GEPA" --owner "홍길동" --gpus 0 \
   -- python train.py
 ```
 
@@ -76,7 +76,7 @@ sudo journalctl -u gpu-timeline-shared.service -n 20 --no-pager
 
 ```bash
 # 이미 실행 중인 실험 등록: 필요하면 --start에 실제 시작시각 입력
-gputl add --id exp01 --name "GEPA" --owner "상현" --gpus 0
+gputl add --id exp01 --name "GEPA" --owner "홍길동" --gpus 0
 
 # 내 실험 ID와 상태 확인
 gputl list

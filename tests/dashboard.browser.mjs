@@ -76,10 +76,10 @@ try {
     gpus: [{uuid: `${id}-gpu`, index: 0, name: 'NVIDIA GeForce RTX 4090', process_count: 0, utilization: previewMode && id === 'server-a' ? 86 : 0,
       memory_used_mib: previewMode && id === 'server-a' ? 21000 : 0, memory_total_mib: 24564},
       ...(previewMode && id === 'server-b' ? [{uuid:`${id}-gpu-1`,index:1,name:'NVIDIA GeForce RTX 4090',process_count:0,utilization:0,memory_used_mib:0,memory_total_mib:24564}] : [])],
-    jobs: id === 'server-a' ? [{id: 'job-original', name: previewMode ? 'exp46 · AIME · 8B GEPA · 정답 2회 연속 시 진짜 AIME 문제로 교체 · 8B 검증 · seed0' : 'GEPA collector', owner: '상현', gpu_uuids: [`${id}-gpu`],
+    jobs: id === 'server-a' ? [{id: 'job-original', name: previewMode ? 'exp46 · AIME · 8B GEPA · 정답 2회 연속 시 진짜 AIME 문제로 교체 · 8B 검증 · seed0' : 'GEPA collector', owner: '홍길동', gpu_uuids: [`${id}-gpu`],
       started_at: iso(-2), expected_end_at: iso(2), eta_source: 'progress',
       progress: {completed: progressCompleted, total: 100, updated_at: iso(0)},
-      ended_at: collectorFinished ? iso(0) : null, status: collectorFinished ? 'completed' : 'running'}] : id === 'server-b' && testAPI ? [{id:'api-live',name:'API current <script> test',owner:'상현',resource_type:'api',api_slot:0,gpu_uuids:[],started_at:iso(-1),expected_end_at:iso(2),status:'running',progress:{completed:25,total:100,updated_at:iso(0)}}] : []});
+      ended_at: collectorFinished ? iso(0) : null, status: collectorFinished ? 'completed' : 'running'}] : id === 'server-b' && testAPI ? [{id:'api-live',name:'API current <script> test',owner:'홍길동',resource_type:'api',api_slot:0,gpu_uuids:[],started_at:iso(-1),expected_end_at:iso(2),status:'running',progress:{completed:25,total:100,updated_at:iso(0)}}] : []});
   const fulfill = (route, body, status = 200) => route.fulfill({status, contentType: 'application/json', body: JSON.stringify(body)});
   await context.route('https://fonts.googleapis.com/**', route => route.fulfill({body: '', contentType: 'text/css'}));
   await context.route('https://fonts.gstatic.com/**', route => route.abort());
@@ -314,7 +314,7 @@ try {
 
   await page.locator('#manual-add').click();
   await page.locator('#manual-name').fill('Qwen3 · 수동 실험 <script> 🧪');
-  await page.locator('#manual-owner').fill('상현');
+  await page.locator('#manual-owner').fill('홍길동');
   await page.locator('#manual-server').selectOption('server-b');
   await page.locator('#manual-gpus input').check();
   const start = new Date(now.getTime() + 8 * 3600000).toISOString().slice(0, 16); // 1h ago in KST
@@ -645,6 +645,8 @@ try {
     if(environment.profile==='test')await enterStaging(page,anchor);
     else await page.goto(base+environment.path+(anchor?'#'+anchor:''));
   }
+  // The test server keeps orders and deliveries at the top of 더보기; production has its own tab.
+  const parcelTab=environment=>environment.profile==='test'?'#tab-more':'#tab-parcel';
 
   // The public entry stays closed until the preview code is accepted.
   const closed=await context.newPage(),closedRequests=[];
@@ -743,47 +745,9 @@ try {
   }
   assert.equal(await preview.locator(environment.profile==='test'?'#gpu-workspace>details[open]':'main>details[open]').count(),0);
   if(environment.profile==='test'){
-    // Kimi tribute: user gesture, keyboard guardrails, original asset, dismissal.
-    assert.equal(await preview.locator('#kimi-service-notice').evaluate(e=>e.previousElementSibling.id),'release-video');
-    assert.equal(await preview.locator('#server-welcome').evaluate(e=>e.previousElementSibling.id),'kimi-service-notice');
-    assert.equal(await preview.locator('#server-welcome img').isVisible(),false);
-    await preview.locator('.server-welcome-toggle').press('Enter');
-    await preview.waitForFunction(()=>document.querySelector('#server-welcome img').naturalWidth===1122);
-    assert.equal(await preview.locator('#server-welcome img').evaluate(e=>e.naturalHeight),1402);
-    assert.match(await preview.locator('#server-welcome img').getAttribute('src'),/media\/alonso-welcome\.webp$/);
-    await preview.locator('#server-welcome').screenshot({path:path.join(output,environment.profile+'-alonso-welcome-desktop.png')});
-    for(const width of [390,320]){
-      await preview.setViewportSize({width,height:844});
-      assert.ok(await preview.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
-      await preview.locator('#server-welcome').screenshot({path:path.join(output,environment.profile+'-alonso-welcome-'+width+'.png')});
-    }
-    await preview.locator('.server-welcome-toggle').click();
-    assert.equal(await preview.locator('#server-welcome img').isVisible(),false);
-    await preview.setViewportSize({width:1440,height:1000});
-    await preview.keyboard.press('x');
-    assert.equal(await preview.locator('#kimi-tribute-dialog').isVisible(),false);
-    await preview.locator('.kimi-service-toggle').click();
-    assert.match(await preview.locator('#kimi-service-notice').innerText(),/Kimi\(191\).*서버 장애로 A\/S 진행 중/s);
-    await preview.locator('#kimi-tribute-open').click();
-    await preview.locator('#kimi-tribute-dialog').waitFor({state:'visible'});
-    await preview.waitForFunction(()=>document.querySelector('#kimi-tribute-image').naturalWidth===401);
-    assert.equal(await preview.locator('#kimi-tribute-image').evaluate(e=>e.naturalHeight),498);
-    assert.match(await preview.locator('#kimi-tribute-caption').innerText(),/드라이버 챔피언을 확정 짓고 휴가를 떠났습니다/);
-    await preview.screenshot({path:path.join(output,environment.profile+'-kimi-tribute-desktop.png'),fullPage:false});
-    await preview.keyboard.press('Escape');
-    assert.equal(await preview.locator('#kimi-tribute-dialog').isVisible(),false);
-    assert.equal(await preview.locator('#kimi-tribute-open').evaluate(e=>e===document.activeElement),true);
-    await preview.keyboard.press('x');
-    assert.equal(await preview.locator('#kimi-tribute-dialog').isVisible(),true);
-    await preview.mouse.click(8,8);
-    assert.equal(await preview.locator('#kimi-tribute-dialog').isVisible(),false);
-    await preview.locator('.kimi-service-toggle').click();
-    await preview.keyboard.press('x');
-    assert.equal(await preview.locator('#kimi-tribute-dialog').isVisible(),false);
-    await preview.locator('.kimi-service-toggle').click();
-    await preview.keyboard.press('Shift+X');
-    assert.equal(await preview.locator('#kimi-tribute-dialog').isVisible(),true);
-    await preview.locator('#kimi-tribute-close').click();
+    // The test server shows none of the film, A/S, new-server or release boxes, and no parcel tab.
+    assert.equal(await preview.locator('#release-video,#kimi-service-notice,#server-welcome,#kimi-tribute-dialog,#monitor-release,#tab-parcel,#panel-parcel').count(),0);
+    assert.equal(await preview.locator('#gpu-workspace>header').evaluate(e=>e.previousElementSibling),null);
   }
   assert.equal(await preview.locator('#panel-now').isVisible(),true);
   assert.equal(await preview.locator('#panel-timeline').isVisible(),false);
@@ -829,7 +793,7 @@ try {
     await preview.waitForFunction(()=>document.getElementById('api-usage-state').textContent.includes('개 키의 관측 기록'));
     assert.ok(usageHistoryReads>historyReadsBefore);
     assert.equal(await preview.locator('#api-usage-board').evaluate(e=>e.previousElementSibling.id),'openrouter-grid');
-    if(environment.profile==='test')assert.match(await preview.locator('#dashboard-version').innerText(),/테스트 v3.0 snapshot 4/);
+    if(environment.profile==='test')assert.match(await preview.locator('#dashboard-version').innerText(),/테스트 v3.0 snapshot 5/);
     assert.equal(await preview.locator('#api-usage-key option').count(),3);
     assert.ok(await preview.locator('#api-usage-plot [data-usage-day]').count()>0);
     assert.equal(await preview.locator('#api-usage-board script').count(),0);
@@ -878,8 +842,9 @@ try {
   assert.equal(monitoringWrites,0);
   await preview.locator('#tab-more').click();
   assert.equal(await preview.locator('#usage').isVisible(),true);
-  await preview.locator('#tab-parcel').click();
-  assert.equal(new URL(preview.url()).hash,'#parcel');
+  await preview.locator(parcelTab(environment)).click();
+  assert.equal(new URL(preview.url()).hash,environment.profile==='test'?'#more':'#parcel');
+  if(environment.profile==='test')assert.equal(await preview.locator('#panel-more>#parcel').count(),1,'orders and deliveries open at the top of 더보기');
   assert.equal(parcelCalls,0);
   assert.equal(await preview.locator('#parcel-count-active').innerText(),'0');
   await preview.locator('#parcel-quick-lookup > summary').click();
@@ -909,7 +874,7 @@ try {
   assert.equal(await preview.evaluate(()=>navigator.clipboard.readText()),'123456789012');
   await preview.screenshot({path:path.join(output,environment.profile+'-test-server-parcel-desktop.png'),fullPage:true});
   await preview.locator('#tab-now').click();
-  await preview.locator('#tab-parcel').click();
+  await preview.locator(parcelTab(environment)).click();
   assert.equal(await preview.locator('.parcel-history li').count(),2);
   assert.equal(parcelCalls,1);
   const departureColor=await preview.locator('.parcel-summary h3').evaluate(e=>getComputedStyle(e).color);
@@ -1036,7 +1001,7 @@ try {
   assert.equal(parcelCalls,callsBeforeViewer);assert.equal(writes,writesAfterOrders);
   await viewer.reload();
   // A reload keeps the signed-in visitor on the same dashboard tab.
-  if(environment.profile==='test'){await viewer.locator('body[data-workspace=ready]').waitFor();assert.equal(await viewer.locator('#tab-parcel').getAttribute('aria-selected'),'true');}
+  if(environment.profile==='test'){await viewer.locator('body[data-workspace=ready]').waitFor();assert.equal(await viewer.locator('#tab-more').getAttribute('aria-selected'),'true');}
   await viewer.locator('[data-parcel-card]').first().waitFor();
   assert.equal(await viewer.locator('[data-parcel-card]').count(),3);
   assert.equal(await viewer.locator('#parcel-count-active').innerText(),'3');
@@ -1132,10 +1097,11 @@ try {
   }
 
   await preview.locator('#tab-more').click();
+  assert.equal(await preview.locator('#patch-notes').count(),0);
+  if(environment.profile==='production'){
   if(!await preview.locator('#release-video').evaluate(e=>e.open))await preview.locator('#release-video-toggle').click();
   await preview.locator('#release-video').scrollIntoViewIfNeeded();
   assert.match(await preview.locator('#release-video source').getAttribute('src'),/v2\.1-film/);
-  assert.equal(await preview.locator('#patch-notes').count(),0);
   if(!skipFilms){
   await preview.locator('#release-video video').evaluate(video=>video.load());
   await preview.waitForFunction(()=>document.querySelector('#release-video video').readyState>=1);
@@ -1143,11 +1109,12 @@ try {
   assert.equal(await preview.locator('#release-video video').evaluate(v=>v.videoWidth),1920);
   }
   assert.equal(await preview.locator('#release-video video').getAttribute('poster'),'../media/poster-v2.1.jpg');
+  }
 
   await preview.locator('#tab-now').click();
   for(const width of [390,320]) {
     await preview.setViewportSize({width,height:844});
-    for(const name of ['now','timeline','resources','servers','parcel','more']) {
+    for(const name of ['now','timeline','resources','servers',...(environment.profile==='test'?[]:['parcel']),'more']) {
       await preview.locator('#tab-'+name).click();
       assert.ok(await preview.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),`test-server ${name} overflows at ${width}px`);
       if(name==='resources'){
@@ -1159,13 +1126,6 @@ try {
     }
     await preview.locator('#tab-now').click();
     await preview.locator('#current-gpu-tab').click();
-    if(environment.profile==='test'){
-      await preview.locator('#kimi-tribute-open').click();
-      assert.ok(await preview.locator('#kimi-tribute-dialog').evaluate(e=>e.scrollWidth<=e.clientWidth+1));
-      assert.ok(await preview.locator('#kimi-tribute-dialog').evaluate(e=>e.getBoundingClientRect().height<=innerHeight));
-      await preview.locator('#kimi-tribute-dialog').screenshot({path:path.join(output,environment.profile+`-kimi-tribute-mobile-${width}.png`)});
-      await preview.locator('#kimi-tribute-close').click();
-    }
     await preview.screenshot({path:path.join(output,environment.profile+`-test-server-mobile-${width}.png`),fullPage:true});
     await preview.locator('#current-gpus [data-as-history="server-a"]').click();
     assert.ok(await preview.locator('#as-history-dialog').evaluate(e=>e.scrollWidth<=e.clientWidth+1));
@@ -1173,7 +1133,7 @@ try {
     await preview.locator('#current-api-tab').click();
     assert.ok(await preview.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),`test-server API overflows at ${width}px`);
     await preview.screenshot({path:path.join(output,environment.profile+`-test-server-api-mobile-${width}.png`),fullPage:true});
-    await preview.locator('#tab-parcel').click();
+    await preview.locator(parcelTab(environment)).click();
     assert.ok(await preview.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),`parcel result overflows at ${width}px`);
     await preview.screenshot({path:path.join(output,environment.profile+`-test-server-parcel-mobile-${width}.png`),fullPage:true});
     await preview.locator('#parcel-order-add').click();
@@ -1206,7 +1166,7 @@ try {
   // ---- Test-server workspace: home, research tracker, sealed storage, sign-out ----------------
   {
     const kst=offset=>new Intl.DateTimeFormat('sv-SE',{timeZone:'Asia/Seoul'}).format(Date.now()+offset*86400000);
-    const made={by:'상현',at:new Date(Date.now()-86400000).toISOString()};
+    const made={by:'홍길동',at:new Date(Date.now()-86400000).toISOString()};
     const running=makeProject({name:'멀티모달 주행 과제 <b>',short:'IITP 멀티모달',agency:'IITP',number:'RS-2025-00123456',starts_on:kst(-300),ends_on:kst(400),
       ack_en:'This work was supported by IITP (No. RS-2025-00123456).',ack_patent:'과제고유번호 RS-2025-00123456 · 기여율 1/1',
       targets:[{metric:'paper_sci',count:2,due_on:kst(40),label:'2차년도'},{metric:'patent_app_dom',count:1}],milestones:[{title:'연차보고서 제출',date:kst(20)}]},made);
@@ -1329,21 +1289,11 @@ try {
     await reader.locator('#tab-timeline').press('ArrowRight');
     assert.equal(await reader.locator('#tab-resources').getAttribute('aria-selected'),'true');
     assert.equal(await reader.locator('#workspace-gpu-link').getAttribute('href'),'#resources');
-    // Leaving the dashboard stops its film: a hidden player must not keep sounding. The notice's
-    // X shortcut also stays with the dashboard, even when the notice was left open.
-    await reader.evaluate(()=>{window.__filmPauses=0;document.querySelector('#gpu-workspace video').pause=()=>{window.__filmPauses++;};document.getElementById('kimi-service-notice').open=true;});
     await openView(reader,'home');
-    assert.equal(await reader.evaluate(()=>window.__filmPauses),1);
-    await reader.keyboard.press('x');
-    assert.equal(await reader.locator('#kimi-tribute-dialog').isVisible(),false,'the X shortcut must not open the tribute outside the GPU dashboard');
     assert.equal(await reader.locator('#workspace-home .ws-card').nth(1).getAttribute('href'),'#resources');
     await reader.locator('#workspace-gpu-link').click();
     await reader.locator('#gpu-workspace').waitFor();
     assert.equal(await reader.locator('#tab-resources').getAttribute('aria-selected'),'true');
-    await reader.keyboard.press('x');
-    await reader.locator('#kimi-tribute-dialog').waitFor({state:'visible'});
-    await reader.locator('#kimi-tribute-close').click();
-    await reader.evaluate(()=>{document.getElementById('kimi-service-notice').open=false;});
     await reader.locator('#tab-timeline').click();
     await reader.reload();
     await reader.locator('body[data-workspace=ready]').waitFor();

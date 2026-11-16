@@ -55,11 +55,6 @@ function renderCards(){
   // The workspace bar already names the test server and its version.
   const note=document.querySelector('.priority-header p');if(note)note.textContent='GPU·API 실험과 서버 상태를 한눈에 확인해요.';
   if(view.build&&$('dashboard-version'))$('dashboard-version').textContent='테스트 v'+patch+(/^[a-f0-9]{40}$/.test(view.build.revision||'')?'+'+view.build.revision.slice(0,7):'');
-  if(!$('monitor-release')){
-    const intro=document.createElement('div');intro.id='monitor-release';intro.className='monitor-release';
-    intro.innerHTML='<div class="monitor-release-copy"><span>새로운 기능 · v2.1</span><h2>서버 상태 모니터링 업데이트</h2><p>서버마다 다르게. 필요한 항목만. 원하는 시각에.<br>일반 점검과 하루 1~2회의 정밀 점검을 직접 구성하세요.</p></div><div class="monitor-release-number" aria-hidden="true">2.1</div>';
-    $('panel-servers').prepend(intro);
-  }
   document.querySelectorAll('#servers .server-card').forEach((card,index)=>{
     const s=view.servers[index];if(!s)return;const c=savedConfig(s.server_id),st=state(s,c);
     card.querySelector('.monitor-card')?.remove();

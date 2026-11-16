@@ -9,8 +9,8 @@ import {GATE} from '../dist/test-server/gate.js';
 import {encodeJSON, decodeJSON} from '../dist/edits.js';
 
 const at = '2026-11-01T00:00:00.000Z', on = '2026-11-13';
-const project = (input = {}, options = {}) => makeProject({name: 'IITP 과제', ends_on: '2027-12-31', targets: [], ...input}, {by: '상현', at, ...options});
-const output = (input, projects, options = {}) => makeOutput({kind: 'paper', grade: 'sci', status: 'published', title: '논문', acks: [], ...input}, projects, {by: '상현', at, ...options});
+const project = (input = {}, options = {}) => makeProject({name: 'IITP 과제', ends_on: '2027-12-31', targets: [], ...input}, {by: '홍길동', at, ...options});
+const output = (input, projects, options = {}) => makeOutput({kind: 'paper', grade: 'sci', status: 'published', title: '논문', acks: [], ...input}, projects, {by: '홍길동', at, ...options});
 const doc = (projects, outputs = []) => validateResearch({...emptyResearch(), projects, outputs});
 const row = (progress, index) => { const r = progress.rows[index]; return [r.done, r.pending, r.remaining, r.state]; };
 
@@ -144,19 +144,19 @@ test('domestic and international patents are counted apart; older combined targe
 });
 
 test('proposals: validation, edits, deadlines and documents saved before them', () => {
-  const r = makeProposal({title: '  2027 신규 과제 ', agency: 'IITP', call: '신규 공모', role: 'lead', members: '박상현', due_on: '2026-11-30', result_on: '2027-01-15'}, {by: '상현', at});
+  const r = makeProposal({title: '  2027 신규 과제 ', agency: 'IITP', call: '신규 공모', role: 'lead', members: '홍길동', due_on: '2026-11-30', result_on: '2027-01-15'}, {by: '홍길동', at});
   assert.match(r.id, /^r-[a-f0-9-]{36}$/);
   assert.deepEqual([r.title, r.status, r.result_on, r.link], ['2027 신규 과제', 'preparing', '2027-01-15', '']);
-  assert.throws(() => makeProposal({title: '제목'}, {by: '상현', at}), /마감일/);
-  assert.throws(() => makeProposal({title: ' ', due_on: '2026-11-30'}, {by: '상현', at}), /제목/);
-  assert.throws(() => makeProposal({title: '제목', due_on: '2026-11-30', status: 'won'}, {by: '상현', at}), /상태/);
-  assert.throws(() => makeProposal({title: '제목', due_on: '2026-11-30', role: 'boss'}, {by: '상현', at}), /참여 형태/);
+  assert.throws(() => makeProposal({title: '제목'}, {by: '홍길동', at}), /마감일/);
+  assert.throws(() => makeProposal({title: ' ', due_on: '2026-11-30'}, {by: '홍길동', at}), /제목/);
+  assert.throws(() => makeProposal({title: '제목', due_on: '2026-11-30', status: 'won'}, {by: '홍길동', at}), /상태/);
+  assert.throws(() => makeProposal({title: '제목', due_on: '2026-11-30', role: 'boss'}, {by: '홍길동', at}), /참여 형태/);
   // A document from before proposals reads as having none.
   const legacy = {schema_version: 1, revision: 3, updated_at: at, projects: [], outputs: []};
   assert.deepEqual(validateResearch(structuredClone(legacy)).proposals, []);
   let data = applyResearchOperation(legacy, {type: 'proposal_save', proposal: r, base: null, at});
   assert.deepEqual([data.revision, data.proposals.length], [4, 1]);
-  const sent = makeProposal({...r, status: 'submitted'}, {by: '상현', at: '2026-11-20T00:00:00.000Z', previous: r});
+  const sent = makeProposal({...r, status: 'submitted'}, {by: '홍길동', at: '2026-11-20T00:00:00.000Z', previous: r});
   assert.throws(() => applyResearchOperation(data, {type: 'proposal_save', proposal: sent, base: 'stale', at: sent.updated_at}), /먼저 수정/);
   const writing = researchOverview(data, on);
   assert.deepEqual(writing.deadlines.map(d => [d.kind, d.date, d.where, d.title]), [['proposal', '2026-11-30', '제안서 · IITP', '제출 마감 · 2027 신규 과제']]);
@@ -165,7 +165,7 @@ test('proposals: validation, edits, deadlines and documents saved before them', 
   assert.deepEqual(researchOverview(data, on).deadlines.map(d => [d.kind, d.date]), [['result', '2027-01-15']]);
   // Missing the submission date while still writing is overdue; a result shows nothing more.
   assert.equal(researchOverview(applyResearchOperation(legacy, {type: 'proposal_save', proposal: r, base: null, at}), '2026-12-02').counts.late_proposals, 1);
-  const done = makeProposal({...sent, status: 'rejected'}, {by: '상현', at: '2026-11-21T00:00:00.000Z', previous: sent});
+  const done = makeProposal({...sent, status: 'rejected'}, {by: '홍길동', at: '2026-11-21T00:00:00.000Z', previous: sent});
   data = applyResearchOperation(data, {type: 'proposal_save', proposal: done, base: sent.updated_at, at: done.updated_at});
   assert.deepEqual(researchOverview(data, on).deadlines, []);
   data = applyResearchOperation(data, {type: 'proposal_delete', id: r.id, base: done.updated_at, at});
@@ -538,32 +538,32 @@ test('a workspace session lives in the tab, or for 30 days when remembered', () 
     const gate = {salt: 'salt-1', key_id: 'k1'}, key = toBase64(new Uint8Array(32)), now = Date.parse('2026-11-13T00:00:00Z');
     assert.equal(currentSession(gate, now), null);
     disk.setItem('cvml.test.login-log', '[]'); tab.setItem('cvml-gpu-timeline.test-preview.v1', 'entered');
-    startSession(gate, {name: '  박\u0000상현  ', key}, now);
-    assert.deepEqual(currentSession(gate, now), {name: '박 상현', key, key_id: 'k1', remembered: false});
+    startSession(gate, {name: '  홍\u0000길동  ', key}, now);
+    assert.deepEqual(currentSession(gate, now), {name: '홍 길동', key, key_id: 'k1', remembered: false});
     assert.equal(disk.items.has('cvml.workspace.session.v1'), false);
-    assert.equal(lastName(), '박 상현');
+    assert.equal(lastName(), '홍 길동');
     // Old flags from the previous login are cleared, and the old flag alone is not a session.
     assert.equal(disk.items.has('cvml.test.login-log'), false);
     assert.equal(tab.items.has('cvml-gpu-timeline.test-preview.v1'), false);
     // A session that no longer counts (expired, or the gate changed) is refused and removed, so
     // it does not go on holding the document key.
     for (const [changed, at] of [[gate, now + 2 * 86400000], [{salt: 'salt-2', key_id: 'k1'}, now], [{salt: 'salt-1', key_id: 'k2'}, now]]) {
-      startSession(gate, {name: '상현', key}, now);
+      startSession(gate, {name: '홍길동', key}, now);
       assert.equal(tab.items.has('cvml.workspace.session.v1'), true);
       assert.equal(currentSession(changed, at), null);
       assert.equal(tab.items.has('cvml.workspace.session.v1'), false);
     }
-    startSession(gate, {name: '상현', key, remember: true}, now);
+    startSession(gate, {name: '홍길동', key, remember: true}, now);
     assert.equal(tab.items.has('cvml.workspace.session.v1'), false);
     assert.equal(currentSession(gate, now + 29 * 86400000).remembered, true);
     assert.equal(disk.items.has('cvml.workspace.session.v1'), true);
     assert.equal(currentSession(gate, now + 31 * 86400000), null);
     assert.equal(disk.items.has('cvml.workspace.session.v1'), false);
-    startSession(gate, {name: '상현', key, remember: true}, now);
+    startSession(gate, {name: '홍길동', key, remember: true}, now);
     endSession();
     assert.equal(disk.items.has('cvml.workspace.session.v1'), false);
     assert.equal(currentSession(gate, now), null);
-    assert.equal(lastName(), '상현');
+    assert.equal(lastName(), '홍길동');
     assert.throws(() => startSession(gate, {name: ' ', key}, now), /이름/);
     for (const text of ['{', '{"name":"x"}', JSON.stringify({name: 'x', key: 'short', key_id: 'k1', gate: 'salt-1', expires: now + 1000})]) {
       tab.setItem('cvml.workspace.session.v1', text);
@@ -574,7 +574,7 @@ test('a workspace session lives in the tab, or for 30 days when remembered', () 
     install('sessionStorage', {getItem() { throw new Error('blocked'); }, setItem() { throw new Error('blocked'); }, removeItem() { throw new Error('blocked'); }});
     install('localStorage', {getItem() { throw new Error('blocked'); }, setItem() { throw new Error('blocked'); }, removeItem() { throw new Error('blocked'); }});
     assert.equal(currentSession(gate, now), null);
-    assert.throws(() => startSession(gate, {name: '상현', key}, now), /저장 공간/);
+    assert.throws(() => startSession(gate, {name: '홍길동', key}, now), /저장 공간/);
     assert.equal(cleanName('a'.repeat(60)).length, 40);
   } finally {
     for (const [name, descriptor] of [['sessionStorage', original.s], ['localStorage', original.l]]) {

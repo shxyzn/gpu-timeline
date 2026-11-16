@@ -1,14 +1,14 @@
 // Entry gate of the test-server workspace. index.html checks the shared password and starts a
 // session; preview.html loads the workspace only for a signed-in browser. This is separate from
 // dashboard administration, which still needs the administrator's own GitHub connection.
-import {GATE} from './gate.js?v=workspace-4';
-import {openGate,toBase64} from './workspace-crypto.js?v=workspace-4';
-import {currentSession,startSession,endSession,lastName,cleanName} from './session.js?v=workspace-4';
+import {GATE} from './gate.js?v=workspace-5';
+import {openGate,toBase64} from './workspace-crypto.js?v=workspace-5';
+import {currentSession,startSession,endSession,lastName,cleanName} from './session.js?v=workspace-5';
 
 const form=document.getElementById('workspace-login');
 const previewURL=new URL('./preview.html',import.meta.url);
 const entryURL=new URL('./',import.meta.url);
-const anchors=new Set(['home','research','now','timeline','resources','servers','parcel','more','release-video','api-usage-board','patch-notes']);
+const anchors=new Set(['home','research','now','timeline','resources','servers','parcel','more','api-usage-board','patch-notes']);
 
 if(form){
   const name=document.getElementById('workspace-name'),password=document.getElementById('workspace-password');
@@ -60,12 +60,10 @@ if(form){
     document.querySelector('main').hidden=false;
     try{
       await Promise.all([
-        import('./kimi-tribute.js?v=workspace-4'),
-        import('../promo.js?patch=closed-panels'),
         import('../usage.js'),
-        import('./app.js?patch=workspace-3'),
-        import('./workspace.js?v=workspace-4a'),
-        import('./research-board.js?v=workspace-4a'),
+        import('./app.js?patch=workspace-5'),
+        import('./workspace.js?v=workspace-5'),
+        import('./research-board.js?v=workspace-5'),
       ]);
     }catch{
       const problem=document.getElementById('workspace-load-error');
