@@ -166,6 +166,12 @@ body[data-workspace] .ws-loading{display:none}
 /* ---- Research: outputs and deadlines ---- */
 .rs-output-top{display:flex;gap:6px;flex-wrap:wrap}
 .rs-pill.kind{background:#ececf0;color:#2c2c30}
+.rs-pill.proposal.writing{background:var(--ws-amber-soft);color:var(--ws-amber)}
+.rs-pill.proposal.pending{background:var(--ws-blue-soft);color:#0058b0}
+.rs-pill.proposal.done{background:var(--ws-green-soft);color:var(--ws-green)}
+.rs-pill.proposal.closed{background:#ececf0;color:#616169}
+.rs-proposal-dates{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0 2px}
+.rs-proposal[data-status=rejected] h3,.rs-proposal[data-status=dropped] h3{color:#616169}
 .rs-output-meta{margin:7px 0 0;color:var(--ws-muted);font-size:13px;line-height:1.6;overflow-wrap:anywhere}
 .rs-output-meta a{color:var(--ws-accent);font-weight:600;text-decoration:none}
 .rs-acks{display:grid;gap:8px;margin:14px 0 0;padding:0;list-style:none}
@@ -254,6 +260,8 @@ body[data-workspace] .ws-loading{display:none}
   /* Four tabs do not fit one row on a phone; two rows keep every tab in sight. */
   .rs-tabs{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));width:100%;border-radius:24px;overflow:visible}
   .rs-tabs button{padding:0 8px}
+  /* Five tabs: the last one takes a whole row instead of leaving a gap. */
+  .rs-tabs button:last-child:nth-child(odd){grid-column:1/-1}
 }
 @media (max-width:380px){
   .ws-brand span{display:none}

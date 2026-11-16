@@ -1,9 +1,9 @@
 import {dashboardView} from '../app.js?patch=workspace-3';
-import {GATE} from './gate.js?v=workspace-3a';
-import {currentSession} from './session.js?v=workspace-3a';
-import {researchState} from './research-board.js?v=workspace-3a';
+import {GATE} from './gate.js?v=workspace-4';
+import {currentSession} from './session.js?v=workspace-4';
+import {researchState} from './research-board.js?v=workspace-4';
 import {availableCurrentView} from './availability-model.js?v=2.1-as';
-import {ddayLabel} from './research-model.js?v=workspace-3a';
+import {ddayLabel} from './research-model.js?v=workspace-4';
 
 // Shell of the test-server workspace: one bar to move between the home, the research tracker
 // and the GPU dashboard, and a home that summarises both. The URL hash names the view, so the
@@ -35,12 +35,15 @@ function researchCard(){
   // After a failed refresh the last records are still the best answer; say so instead of hiding them.
   if(!loaded||!overview)return loadError?{title:'기록을 불러오지 못했어요',kind:'',facts:[esc(loadError)]}:{title:'불러오는 중…',kind:'',facts:['과제와 실적 기록을 확인하고 있어요.']};
   const c=overview.counts,next=overview.next,late=overview.overdue.length,verdict=overview.verdict;
-  if(verdict==='empty')return {title:'등록된 과제가 없어요',kind:'',facts:['과제와 목표 실적을 등록하면 남은 실적과 기한이 여기에 표시돼요.']};
+  // Proposals in the works, one line: how many are being written and how many await a result.
+  const writing=c.writing||c.submitted?[c.writing?`작성 중인 제안서 <strong>${c.writing}건</strong>`:'',c.submitted?`결과 대기 <strong>${c.submitted}건</strong>`:''].filter(Boolean).join(' · '):'';
+  if(verdict==='empty')return {title:'등록된 과제가 없어요',kind:'',facts:['과제와 목표 실적을 등록하면 남은 실적과 기한이 여기에 표시돼요.',writing].filter(Boolean)};
   const facts=[];
   if(c.remaining&&c.pending)facts.push(`그중 <strong>${c.pending}건</strong>은 진행 중 · ${c.gap?`새로 시작할 실적 <strong>${c.gap}건</strong>`:'새로 시작할 실적은 없어요'}`);
   facts.push([`진행 중인 과제 <strong>${c.projects}개</strong>`,c.untargeted?`목표 미등록 <strong>${c.untargeted}개</strong>`:'',c.ended?`종료 ${c.ended}개`:''].filter(Boolean).join(' · '));
+  if(writing)facts.push(writing);
   if(verdict==='untargeted')facts.push('과제에 목표 실적을 등록하면 남은 실적을 계산해요.');
-  if(next)facts.push(`가장 가까운 기한 <strong>${esc(ddayLabel(next.days))}</strong> · ${esc(day(next.date))} ${esc(next.project.short||next.project.name)}`);
+  if(next)facts.push(`가장 가까운 기한 <strong>${esc(ddayLabel(next.days))}</strong> · ${esc(day(next.date))} ${esc(next.where)}`);
   if(late||c.unacknowledged)facts.push([late?`기한 지남 <strong>${late}건</strong>`:'',c.unacknowledged?`사사 과제 미지정 <strong>${c.unacknowledged}건</strong>`:''].filter(Boolean).join(' · '));
   if(loadError)facts.push('최신 기록을 불러오지 못해 마지막으로 받은 내용을 보여 드려요.');
   // "모든 목표 달성" is the model's call (researchOverview): never for a project without targets
@@ -65,7 +68,7 @@ function card(href,label,content,go){
 function renderHome(){
   if(!home||!session)return;
   const {overview}=researchState(),upcoming=(overview?.deadlines||[]).filter(d=>d.days>=0).slice(0,5),late=overview?.overdue||[];
-  const item=d=>`<li class="${d.days<0?'late':''}"><span class="rs-due ${d.days<0?'late':d.days<=30?'soon':d.days<=90?'near':'far'}"><strong>${esc(ddayLabel(d.days))}</strong>${esc(day(d.date))}</span><div><strong>${esc(d.title)}</strong><span>${esc(d.project.short||d.project.name)}</span></div></li>`;
+  const item=d=>`<li class="${d.days<0?'late':''}"><span class="rs-due ${d.days<0?'late':d.days<=30?'soon':d.days<=90?'near':'far'}"><strong>${esc(ddayLabel(d.days))}</strong>${esc(day(d.date))}</span><div><strong>${esc(d.title)}</strong><span>${esc(d.where)}</span></div></li>`;
   const html=`<span class="ws-eyebrow">CVML WORKSPACE</span><h1 id="ws-home-title">${esc(session.name)}님, 안녕하세요.</h1><p>연구실 과제의 남은 실적과 GPU 현황을 한곳에서 확인해요.</p>
     <div class="ws-cards">${card('#research','연구과제',researchCard(),'과제별 실적 보기')}${card($('workspace-gpu-link')?.getAttribute('href')||'#now','GPU 대시보드',gpuCard(),'GPU·실험 현황 보기')}</div>
     ${late.length||upcoming.length?`<section class="ws-upcoming" aria-labelledby="ws-upcoming-title"><h2 id="ws-upcoming-title">챙겨야 할 기한</h2><ul class="rs-deadlines">${[...late.slice(0,3),...upcoming].map(item).join('')}</ul></section>`:''}`;

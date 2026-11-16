@@ -1,7 +1,7 @@
 // Research-project tracker: document shape, validation, edits and the counting rules.
 // Pure functions only. Calendar dates are plain YYYY-MM-DD strings read as Asia/Seoul days.
 export const DAY = 86400000;
-export const LIMITS = Object.freeze({projects: 100, outputs: 2000, targets: 30, milestones: 40, acks: 8, bytes: 300000});
+export const LIMITS = Object.freeze({projects: 100, outputs: 2000, proposals: 300, targets: 30, milestones: 40, acks: 8, bytes: 300000});
 
 // What an output can be, the states it moves through, and the states that count as achieved
 // when a target does not say otherwise. A paper counts once it is published and a talk once it
@@ -14,7 +14,7 @@ export const OUTPUT_KINDS = Object.freeze({
   conference: {label: '학술대회', unit: '편', grades: {intl: '국제', domestic: '국내'},
     statuses: ['preparing', 'submitted', 'accepted', 'presented'], achieved: ['presented'],
     dateLabel: '발표(예정)일', venueLabel: '학술대회', identifierLabel: 'DOI'},
-  patent: {label: '특허', unit: '건', grades: {domestic: '국내', intl: '국외'},
+  patent: {label: '특허', unit: '건', grades: {domestic: '국내', intl: '국제'},
     statuses: ['preparing', 'filed', 'registered'], achieved: ['filed', 'registered'],
     dateLabel: '출원·등록일', venueLabel: '출원국·기관', identifierLabel: '출원·등록번호'},
   software: {label: 'SW 등록', unit: '건', grades: {},
@@ -38,13 +38,25 @@ export const METRICS = Object.freeze({
   paper_any: {label: '학술지 논문 (전체)', unit: '편', accepts: o => o.kind === 'paper'},
   conf_intl: {label: '국제 학술대회 발표', unit: '편', accepts: o => o.kind === 'conference' && o.grade === 'intl'},
   conf_domestic: {label: '국내 학술대회 발표', unit: '편', accepts: o => o.kind === 'conference' && o.grade === 'domestic'},
-  patent_app: {label: '특허 출원', unit: '건', accepts: o => o.kind === 'patent', achieved: ['filed', 'registered']},
-  patent_reg: {label: '특허 등록', unit: '건', accepts: o => o.kind === 'patent', achieved: ['registered']},
+  patent_app_dom: {label: '국내 특허 출원', unit: '건', accepts: o => o.kind === 'patent' && o.grade === 'domestic', achieved: ['filed', 'registered']},
+  patent_reg_dom: {label: '국내 특허 등록', unit: '건', accepts: o => o.kind === 'patent' && o.grade === 'domestic', achieved: ['registered']},
+  patent_app_intl: {label: '국제 특허 출원', unit: '건', accepts: o => o.kind === 'patent' && o.grade === 'intl', achieved: ['filed', 'registered']},
+  patent_reg_intl: {label: '국제 특허 등록', unit: '건', accepts: o => o.kind === 'patent' && o.grade === 'intl', achieved: ['registered']},
+  // Before the domestic/international split a patent target counted both. Targets saved then
+  // keep working; the form offers these only to a row that already uses one.
+  patent_app: {label: '특허 출원 (국내·국제 합산)', unit: '건', accepts: o => o.kind === 'patent', achieved: ['filed', 'registered'], legacy: true},
+  patent_reg: {label: '특허 등록 (국내·국제 합산)', unit: '건', accepts: o => o.kind === 'patent', achieved: ['registered'], legacy: true},
   software: {label: 'SW 등록', unit: '건', accepts: o => o.kind === 'software'},
   custom: {label: '직접 입력', unit: '건', accepts: () => false},
 });
 
-export const emptyResearch = () => ({schema_version: 1, revision: 0, updated_at: null, projects: [], outputs: []});
+// Proposals (제안서) the lab is writing or has sent: what, to whom, by when, and how it went.
+// They are not outputs and count toward no target; a selected proposal becomes a project.
+export const PROPOSAL_STATUSES = Object.freeze({preparing: '작성 중', submitted: '제출 완료', selected: '선정', rejected: '미선정', dropped: '제출 안 함'});
+export const PROPOSAL_OPEN = Object.freeze(['preparing', 'submitted']);
+export const PROPOSAL_ROLES = Object.freeze({lead: '주관', joint: '공동', partner: '참여·위탁'});
+
+export const emptyResearch = () => ({schema_version: 1, revision: 0, updated_at: null, projects: [], outputs: [], proposals: []});
 export const newID = prefix => `${prefix}-${crypto.randomUUID()}`;
 
 const text = (value, max, min = 0) => typeof value === 'string' && value.length >= min && value.length <= max;
@@ -95,6 +107,18 @@ function checkProject(p) {
   }
 }
 
+function checkProposal(r) {
+  if (!r || typeof r !== 'object' || !id(r.id, 'r')) fail('제안서 기록 형식이 올바르지 않아요.');
+  if (!text(r.title, 160, 1) || r.title.trim() !== r.title) fail('제안서 제목(과제명)을 입력해 주세요. (160자 이내)');
+  if (!text(r.agency, 120) || !text(r.call, 160) || !text(r.members, 200) || !text(r.note, 1000)) fail('제안서 정보가 너무 길어요.');
+  if (!Object.hasOwn(PROPOSAL_STATUSES, r.status)) fail('제안서 상태를 선택해 주세요.');
+  if (!(r.role === '' || Object.hasOwn(PROPOSAL_ROLES, r.role))) fail('참여 형태를 다시 선택해 주세요.');
+  if (!validDate(r.due_on)) fail('제출 마감일을 입력해 주세요.');
+  if (!optionalDate(r.result_on)) fail('결과 발표일의 날짜를 확인해 주세요.');
+  if (!link(r.link)) fail('링크는 http:// 또는 https://로 시작하는 주소로 입력해 주세요.');
+  if (!time(r.created_at) || !time(r.updated_at) || !text(r.updated_by, 40)) fail('제안서 기록 형식이 올바르지 않아요.');
+}
+
 function checkOutput(o, projects) {
   const kind = o && typeof o === 'object' && Object.hasOwn(OUTPUT_KINDS, o.kind) ? OUTPUT_KINDS[o.kind] : null;
   if (!kind || !id(o.id, 'o')) fail('실적 기록 형식이 올바르지 않아요.');
@@ -121,6 +145,10 @@ export function validateResearch(doc) {
       !(doc.updated_at === null || time(doc.updated_at)) || !Array.isArray(doc.projects) || !Array.isArray(doc.outputs)) {
     fail('연구과제 문서 형식이 올바르지 않아요. 원본을 확인해 주세요.');
   }
+  // Documents saved before proposals existed have no list; they start with an empty one.
+  if (doc.proposals === undefined) doc.proposals = [];
+  if (!Array.isArray(doc.proposals)) fail('연구과제 문서 형식이 올바르지 않아요. 원본을 확인해 주세요.');
+  if (doc.proposals.length > LIMITS.proposals) fail(`제안서는 ${LIMITS.proposals}개까지 등록할 수 있어요.`);
   if (doc.projects.length > LIMITS.projects) fail(`과제는 ${LIMITS.projects}개까지 등록할 수 있어요.`);
   if (doc.outputs.length > LIMITS.outputs) fail(`실적은 ${LIMITS.outputs}개까지 등록할 수 있어요.`);
   const projects = new Map();
@@ -134,6 +162,12 @@ export function validateResearch(doc) {
     checkOutput(o, projects);
     if (outputs.has(o.id)) fail('같은 실적이 두 번 저장돼 있어요.');
     outputs.add(o.id);
+  }
+  const proposals = new Set();
+  for (const r of doc.proposals) {
+    checkProposal(r);
+    if (proposals.has(r.id)) fail('같은 제안서가 두 번 저장돼 있어요.');
+    proposals.add(r.id);
   }
   if (new TextEncoder().encode(JSON.stringify(doc)).length > LIMITS.bytes) fail('연구과제 문서가 저장 한도에 도달했어요. 오래된 기록을 정리해 주세요.');
   return doc;
@@ -176,6 +210,19 @@ export function makeOutput(input, projects, {by, at = new Date().toISOString(), 
   return output;
 }
 
+export function makeProposal(input, {by, at = new Date().toISOString(), previous = null} = {}) {
+  const proposal = {
+    id: previous?.id || newID('r'), title: oneLine(input.title), agency: oneLine(input.agency), call: oneLine(input.call),
+    role: String(input.role || ''), members: oneLine(input.members), status: input.status || 'preparing',
+    due_on: String(input.due_on || ''), result_on: dateOrNull(input.result_on), link: oneLine(input.link), note: clean(input.note),
+    created_at: previous?.created_at || at, updated_at: at, updated_by: oneLine(by).slice(0, 40),
+  };
+  if (!proposal.title) fail('제안서 제목(과제명)을 입력해 주세요.');
+  if (!proposal.due_on) fail('제출 마감일을 입력해 주세요.');
+  checkProposal(proposal);
+  return proposal;
+}
+
 const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
 const stale = '다른 사람이 먼저 수정했어요. 창을 닫고 최신 내용을 확인한 뒤 다시 저장해 주세요.';
 
@@ -183,9 +230,10 @@ const stale = '다른 사람이 먼저 수정했어요. 창을 닫고 최신 내
 // (null for a new record); a different value means someone else saved in between.
 export function applyResearchOperation(original, operation) {
   const doc = structuredClone(validateResearch(original));
-  const collection = operation.type.startsWith('project') ? doc.projects : doc.outputs;
-  if (operation.type === 'project_save' || operation.type === 'output_save') {
-    const record = operation.type === 'project_save' ? operation.project : operation.output;
+  const kind = operation.type.split('_')[0];
+  const collection = kind === 'project' ? doc.projects : kind === 'proposal' ? doc.proposals : doc.outputs;
+  if (['project_save', 'output_save', 'proposal_save'].includes(operation.type)) {
+    const record = operation[kind];
     const index = collection.findIndex(item => item.id === record.id);
     const stored = index < 0 ? null : collection[index];
     if (!stored) {
@@ -209,7 +257,7 @@ export function applyResearchOperation(original, operation) {
         if (ack.project_id === record.id && ack.target_id && ack.target_id !== 'none' && !kept.has(ack.target_id)) ack.target_id = null;
       }
     }
-  } else if (operation.type === 'project_delete' || operation.type === 'output_delete') {
+  } else if (['project_delete', 'output_delete', 'proposal_delete'].includes(operation.type)) {
     const index = collection.findIndex(item => item.id === operation.id);
     if (index < 0) return doc;
     if (collection[index].updated_at !== operation.base) fail(stale);
@@ -247,6 +295,7 @@ const byDate = (a, b) => (a.date || '9999-12-31').localeCompare(b.date || '9999-
 // Indicators that count the same outputs: a journal paper fills its own grade and the "all
 // papers" target, a patent fills application and registration. `wide` marks the broader side.
 const FAMILIES = Object.freeze({paper_sci: ['paper', false], paper_scopus: ['paper', false], paper_kci: ['paper', false], paper_any: ['paper', true],
+  patent_app_dom: ['patent_dom', true], patent_reg_dom: ['patent_dom', false], patent_app_intl: ['patent_intl', true], patent_reg_intl: ['patent_intl', false],
   patent_app: ['patent', true], patent_reg: ['patent', false]});
 const PLANNED = 'preparing';
 
@@ -388,16 +437,25 @@ export function researchOverview(doc, on = today()) {
     const dates = [...new Set(p.rows.filter(row => row.remaining > 0).map(row => row.due_on))];
     for (const date of dates) {
       const items = remainingItems(p.rows.filter(row => row.due_on === date));
-      deadlines.push({kind: 'target', project: p.project, date, days: daysUntil(date, on),
+      deadlines.push({kind: 'target', project: p.project, where: p.project.short || p.project.name, date, days: daysUntil(date, on),
         title: items.map(item => `${item.label} ${item.count}${item.unit}`).join(' · ') + ' 남음'});
     }
-    for (const m of p.project.milestones) if (!m.done) deadlines.push({kind: 'milestone', project: p.project, date: m.date, days: daysUntil(m.date, on), title: m.title});
-    if (!dates.includes(p.project.ends_on) && !p.ended) deadlines.push({kind: 'end', project: p.project, date: p.project.ends_on, days: p.days, title: '과제 종료'});
+    const where = p.project.short || p.project.name;
+    for (const m of p.project.milestones) if (!m.done) deadlines.push({kind: 'milestone', project: p.project, where, date: m.date, days: daysUntil(m.date, on), title: m.title});
+    if (!dates.includes(p.project.ends_on) && !p.ended) deadlines.push({kind: 'end', project: p.project, where, date: p.project.ends_on, days: p.days, title: '과제 종료'});
   }
-  const order = {milestone: 0, target: 1, end: 2};
-  deadlines.sort((a, b) => a.date.localeCompare(b.date) || order[a.kind] - order[b.kind] || a.project.name.localeCompare(b.project.name, 'ko'));
+  // A proposal still being written is due on its submission date; one that was sent waits for
+  // its result. A submission date that passed while still "작성 중" is listed as overdue.
+  const proposals = doc.proposals || [];
+  for (const r of proposals) {
+    const where = '제안서' + (r.agency ? ' · ' + r.agency : '');
+    if (r.status === 'preparing') deadlines.push({kind: 'proposal', proposal: r, where, date: r.due_on, days: daysUntil(r.due_on, on), title: `제출 마감 · ${r.title}`});
+    else if (r.status === 'submitted' && r.result_on && r.result_on >= on) deadlines.push({kind: 'result', proposal: r, where, date: r.result_on, days: daysUntil(r.result_on, on), title: `결과 발표 · ${r.title}`});
+  }
+  const order = {milestone: 0, proposal: 1, target: 2, result: 3, end: 4};
+  deadlines.sort((a, b) => a.date.localeCompare(b.date) || order[a.kind] - order[b.kind] || a.where.localeCompare(b.where, 'ko'));
   const unacknowledged = doc.outputs.filter(o => !o.acks.some(a => doc.projects.some(p => p.id === a.project_id)));
-  const overdue = deadlines.filter(d => d.days < 0), lateTargets = overdue.filter(d => d.kind === 'target').length;
+  const overdue = deadlines.filter(d => d.days < 0), lateProposals = overdue.filter(d => d.kind === 'proposal').length, lateTargets = overdue.filter(d => d.kind === 'target').length;
   const targeted = running.filter(p => p.rows.length).length, remaining = running.reduce((sum, p) => sum + p.remaining, 0);
   // What a one-line summary may claim. "met" needs a running project that has targets and no
   // target left unmet past its deadline, a project that already ended included: a count of zero
@@ -408,6 +466,8 @@ export function researchOverview(doc, on = today()) {
     counts: {projects: running.length, ended: progress.length - running.length, archived: doc.projects.length - active.length,
       remaining, pending: running.reduce((sum, p) => sum + p.pending, 0),
       gap: running.reduce((sum, p) => sum + p.gap, 0), untargeted: running.length - targeted, late_targets: lateTargets,
-      missed: running.filter(p => p.state === 'missed').length, outputs: doc.outputs.length, unacknowledged: unacknowledged.length},
+      missed: running.filter(p => p.state === 'missed').length, outputs: doc.outputs.length, unacknowledged: unacknowledged.length,
+      proposals: proposals.length, writing: proposals.filter(r => r.status === 'preparing').length,
+      submitted: proposals.filter(r => r.status === 'submitted').length, late_proposals: lateProposals},
     next: deadlines.find(d => d.days >= 0) || null, overdue};
 }

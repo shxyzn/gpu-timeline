@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {LIMITS, emptyResearch, validateResearch, validDate, makeProject, makeOutput, applyResearchOperation, projectProgress,
+import {LIMITS, emptyResearch, validateResearch, validDate, makeProject, makeOutput, makeProposal, applyResearchOperation, projectProgress, METRICS,
   remainingText, researchOverview, outputWarnings, ackText, targetLabel, statusLabel, today, daysUntil, ddayLabel} from '../dist/test-server/research-model.js';
 import {sealGate, openGate, validGate, importDocumentKey, sealRetiredKey, documentKeys, sealJSON, openJSON, isEnvelope, toBase64, fromBase64} from '../dist/test-server/workspace-crypto.js';
 import {ResearchStore, RESEARCH_PATH} from '../dist/test-server/research-store.js';
@@ -109,7 +109,7 @@ test('papers fill the matching indicator; submitted work is shown as pipeline, n
 });
 
 test('a patent is an application first and a registration later', () => {
-  const p = project({targets: [{metric: 'patent_app', count: 2}, {metric: 'patent_reg', count: 1}]});
+  const p = project({targets: [{metric: 'patent_app_dom', count: 2}, {metric: 'patent_reg_dom', count: 1}]});
   const filed = output({kind: 'patent', grade: 'domestic', status: 'filed', title: '출원 특허', acks: [{project_id: p.id}]}, [p]);
   let progress = projectProgress(p, [filed], on);
   assert.deepEqual(row(progress, 0), [1, 0, 1, 'short']);
@@ -124,6 +124,53 @@ test('a patent is an application first and a registration later', () => {
   // registration is already under way.
   progress = projectProgress(p, [filed], on);
   assert.deepEqual([progress.remaining, progress.pending, progress.gap], [1, 1, 0]);
+});
+
+test('domestic and international patents are counted apart; older combined targets still work', () => {
+  assert.deepEqual(Object.keys(METRICS).filter(m => m.startsWith('patent') && !METRICS[m].legacy), ['patent_app_dom', 'patent_reg_dom', 'patent_app_intl', 'patent_reg_intl']);
+  const p = project({targets: [{metric: 'patent_app_dom', count: 1}, {metric: 'patent_reg_dom', count: 1}, {metric: 'patent_app_intl', count: 1}, {metric: 'patent_reg_intl', count: 1}]});
+  const ko = output({kind: 'patent', grade: 'domestic', status: 'registered', title: '국내 특허', acks: [{project_id: p.id}]}, [p]);
+  const pct = output({kind: 'patent', grade: 'intl', status: 'filed', title: 'PCT 출원', acks: [{project_id: p.id}]}, [p]);
+  let progress = projectProgress(p, [ko, pct], on);
+  assert.deepEqual(progress.rows.map(r => [r.label, r.done, r.pending]), [['국내 특허 출원', 1, 0], ['국내 특허 등록', 1, 0], ['국제 특허 출원', 1, 0], ['국제 특허 등록', 0, 1]]);
+  // The domestic pair is met; one international registration is owed and already under way.
+  assert.deepEqual([progress.remaining, progress.pending, progress.gap], [1, 1, 0]);
+  progress = projectProgress(p, [], on);
+  assert.deepEqual([progress.remaining, progress.gap], [2, 2], 'one domestic and one international patent are owed, not four');
+  // A target saved before the split counts patents of either country.
+  const old = project({targets: [{metric: 'patent_app', count: 2}, {metric: 'patent_reg', count: 1}]});
+  progress = projectProgress(old, [{...ko, acks: [{project_id: old.id, target_id: null, text: ''}]}, {...pct, acks: [{project_id: old.id, target_id: null, text: ''}]}], on);
+  assert.deepEqual(progress.rows.map(r => [r.label, r.done]), [['특허 출원 (국내·국제 합산)', 2], ['특허 등록 (국내·국제 합산)', 1]]);
+});
+
+test('proposals: validation, edits, deadlines and documents saved before them', () => {
+  const r = makeProposal({title: '  2027 신규 과제 ', agency: 'IITP', call: '신규 공모', role: 'lead', members: '박상현', due_on: '2026-11-30', result_on: '2027-01-15'}, {by: '상현', at});
+  assert.match(r.id, /^r-[a-f0-9-]{36}$/);
+  assert.deepEqual([r.title, r.status, r.result_on, r.link], ['2027 신규 과제', 'preparing', '2027-01-15', '']);
+  assert.throws(() => makeProposal({title: '제목'}, {by: '상현', at}), /마감일/);
+  assert.throws(() => makeProposal({title: ' ', due_on: '2026-11-30'}, {by: '상현', at}), /제목/);
+  assert.throws(() => makeProposal({title: '제목', due_on: '2026-11-30', status: 'won'}, {by: '상현', at}), /상태/);
+  assert.throws(() => makeProposal({title: '제목', due_on: '2026-11-30', role: 'boss'}, {by: '상현', at}), /참여 형태/);
+  // A document from before proposals reads as having none.
+  const legacy = {schema_version: 1, revision: 3, updated_at: at, projects: [], outputs: []};
+  assert.deepEqual(validateResearch(structuredClone(legacy)).proposals, []);
+  let data = applyResearchOperation(legacy, {type: 'proposal_save', proposal: r, base: null, at});
+  assert.deepEqual([data.revision, data.proposals.length], [4, 1]);
+  const sent = makeProposal({...r, status: 'submitted'}, {by: '상현', at: '2026-11-20T00:00:00.000Z', previous: r});
+  assert.throws(() => applyResearchOperation(data, {type: 'proposal_save', proposal: sent, base: 'stale', at: sent.updated_at}), /먼저 수정/);
+  const writing = researchOverview(data, on);
+  assert.deepEqual(writing.deadlines.map(d => [d.kind, d.date, d.where, d.title]), [['proposal', '2026-11-30', '제안서 · IITP', '제출 마감 · 2027 신규 과제']]);
+  assert.deepEqual([writing.next.days, writing.counts.writing, writing.counts.submitted, writing.verdict], [17, 1, 0, 'empty']);
+  data = applyResearchOperation(data, {type: 'proposal_save', proposal: sent, base: r.updated_at, at: sent.updated_at});
+  assert.deepEqual(researchOverview(data, on).deadlines.map(d => [d.kind, d.date]), [['result', '2027-01-15']]);
+  // Missing the submission date while still writing is overdue; a result shows nothing more.
+  assert.equal(researchOverview(applyResearchOperation(legacy, {type: 'proposal_save', proposal: r, base: null, at}), '2026-12-02').counts.late_proposals, 1);
+  const done = makeProposal({...sent, status: 'rejected'}, {by: '상현', at: '2026-11-21T00:00:00.000Z', previous: sent});
+  data = applyResearchOperation(data, {type: 'proposal_save', proposal: done, base: sent.updated_at, at: done.updated_at});
+  assert.deepEqual(researchOverview(data, on).deadlines, []);
+  data = applyResearchOperation(data, {type: 'proposal_delete', id: r.id, base: done.updated_at, at});
+  assert.deepEqual([data.proposals.length, data.revision], [0, 7]);
+  assert.throws(() => validateResearch({...emptyResearch(), proposals: [r, r]}), /두 번/);
 });
 
 test('yearly targets of one indicator fill the earliest deadline first', () => {
@@ -172,7 +219,7 @@ test('choosing the year keeps the other indicators; choosing another indicator r
   const p = project({ends_on: '2028-12-31', targets: [
     {metric: 'paper_sci', count: 1, due_on: '2026-12-31', label: '1차년도'}, {metric: 'paper_sci', count: 1, due_on: '2027-12-31', label: '2차년도'},
     {metric: 'paper_any', count: 2},
-    {metric: 'patent_app', count: 1, due_on: '2026-12-31'}, {metric: 'patent_app', count: 1, due_on: '2027-12-31'}, {metric: 'patent_reg', count: 1},
+    {metric: 'patent_app_dom', count: 1, due_on: '2026-12-31'}, {metric: 'patent_app_dom', count: 1, due_on: '2027-12-31'}, {metric: 'patent_reg_dom', count: 1},
     {metric: 'conf_intl', count: 1}]});
   const t = p.targets.map(target => target.id);
   const outputs = [
@@ -206,7 +253,7 @@ test('a yearly target is not filled by work that came after its deadline', () =>
 });
 
 test('what is still owed counts each output once', () => {
-  const p = project({targets: [{metric: 'paper_sci', count: 2}, {metric: 'paper_any', count: 2}, {metric: 'patent_app', count: 1}, {metric: 'patent_reg', count: 1}, {metric: 'conf_intl', count: 2}]});
+  const p = project({targets: [{metric: 'paper_sci', count: 2}, {metric: 'paper_any', count: 2}, {metric: 'patent_app_dom', count: 1}, {metric: 'patent_reg_dom', count: 1}, {metric: 'conf_intl', count: 2}]});
   const outputs = [output({status: 'submitted', acks: [{project_id: p.id}]}, [p]),
     output({kind: 'patent', grade: 'domestic', status: 'preparing', title: '준비 중 특허', acks: [{project_id: p.id}]}, [p])];
   const progress = projectProgress(p, outputs, on);
@@ -238,7 +285,7 @@ test('one paper acknowledging two projects counts for both and is flagged', () =
 });
 
 test('deadlines: missed targets, ended projects and the overview', () => {
-  const late = project({name: '끝난 과제', short: '종료', ends_on: '2026-10-31', targets: [{metric: 'patent_app', count: 1}, {metric: 'software', count: 1}]});
+  const late = project({name: '끝난 과제', short: '종료', ends_on: '2026-10-31', targets: [{metric: 'patent_app_dom', count: 1}, {metric: 'software', count: 1}]});
   const active = project({name: '진행 과제', short: '진행', ends_on: '2027-02-28', targets: [{metric: 'paper_sci', count: 1, due_on: '2026-12-31'}, {metric: 'paper_sci', count: 1}],
     milestones: [{title: '연차보고서', date: '2026-12-10'}, {title: '지난 일정', date: '2026-11-01'}, {title: '끝낸 일정', date: '2026-10-01', done: true}]});
   const done = project({name: '달성 과제', ends_on: '2027-06-30', targets: [{metric: 'paper_kci', count: 1}]});
@@ -252,10 +299,11 @@ test('deadlines: missed targets, ended projects and the overview', () => {
   assert.equal(projectProgress(project(), [], on).state, 'untargeted');
   const overview = researchOverview(doc(projects, outputs), on);
   assert.deepEqual(overview.progress.map(p => p.project.name), ['진행 과제', '달성 과제', '끝난 과제']);
-  assert.deepEqual(overview.counts, {projects: 2, ended: 1, archived: 1, remaining: 2, pending: 1, gap: 1, untargeted: 0, late_targets: 1, missed: 0, outputs: 3, unacknowledged: 1});
+  assert.deepEqual(overview.counts, {projects: 2, ended: 1, archived: 1, remaining: 2, pending: 1, gap: 1, untargeted: 0, late_targets: 1, missed: 0, outputs: 3, unacknowledged: 1,
+    proposals: 0, writing: 0, submitted: 0, late_proposals: 0});
   assert.equal(overview.verdict, 'need');
   assert.deepEqual(overview.deadlines.map(d => [d.date, d.kind, d.title]), [
-    ['2026-10-31', 'target', '특허 출원 1건 · SW 등록 1건 남음'],
+    ['2026-10-31', 'target', '국내 특허 출원 1건 · SW 등록 1건 남음'],
     ['2026-11-01', 'milestone', '지난 일정'],
     ['2026-12-10', 'milestone', '연차보고서'],
     ['2026-12-31', 'target', 'SCI(E) 논문 1편 남음'],
@@ -332,7 +380,7 @@ test('edits apply to the latest document with optimistic concurrency', () => {
   const host = project({targets: [{metric: 'paper_sci', count: 1}, {metric: 'conf_intl', count: 1}]});
   const tied = output({kind: 'conference', grade: 'intl', status: 'presented', acks: [{project_id: host.id, target_id: host.targets[0].id}]}, [host]);
   let linked = applyResearchOperation(applyResearchOperation(emptyResearch(), {type: 'project_save', project: host, base: null, at}), {type: 'output_save', output: tied, base: null, at});
-  const retyped = project({targets: [{...host.targets[0], metric: 'patent_reg'}, host.targets[1]]}, {previous: host, at: '2026-11-04T00:00:00.000Z'});
+  const retyped = project({targets: [{...host.targets[0], metric: 'patent_reg_dom'}, host.targets[1]]}, {previous: host, at: '2026-11-04T00:00:00.000Z'});
   linked = applyResearchOperation(linked, {type: 'project_save', project: retyped, base: host.updated_at, at: retyped.updated_at});
   assert.equal(linked.outputs[0].acks[0].target_id, null);
   assert.deepEqual(projectProgress(linked.projects[0], linked.outputs, on).rows.map(r => r.done), [0, 1]);
