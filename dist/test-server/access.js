@@ -1,9 +1,9 @@
 // Entry gate of the test-server workspace. index.html checks the shared password and starts a
 // session; preview.html loads the workspace only for a signed-in browser. This is separate from
 // dashboard administration, which still needs the administrator's own GitHub connection.
-import {GATE} from './gate.js?v=workspace-5';
-import {openGate,toBase64} from './workspace-crypto.js?v=workspace-5';
-import {currentSession,startSession,endSession,lastName,cleanName} from './session.js?v=workspace-5';
+import {GATE} from './gate.js?v=workspace-6';
+import {openGate,toBase64} from './workspace-crypto.js?v=workspace-6';
+import {currentSession,startSession,endSession,lastName,cleanName} from './session.js?v=workspace-6';
 
 const form=document.getElementById('workspace-login');
 const previewURL=new URL('./preview.html',import.meta.url);
@@ -61,9 +61,9 @@ if(form){
     try{
       await Promise.all([
         import('../usage.js'),
-        import('./app.js?patch=workspace-5'),
-        import('./workspace.js?v=workspace-5'),
-        import('./research-board.js?v=workspace-5'),
+        import('./app.js?patch=workspace-6'),
+        import('./workspace.js?v=workspace-6'),
+        import('./research-board.js?v=workspace-6'),
       ]);
     }catch{
       const problem=document.getElementById('workspace-load-error');

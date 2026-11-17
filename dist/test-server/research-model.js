@@ -406,12 +406,44 @@ export function remainingText(progress, limit = 5) {
     (items.length > limit ? ` 외 ${items.length - limit}개 지표` : '') + ' 더 필요';
 }
 
+// Acknowledgements that would not hold up in a report: no text at all for that project, or a
+// text that does not carry the project's number. Spaces, hyphens and case are ignored when the
+// number is looked for. '기타 성과' carries no acknowledgement and is not checked.
+const bare = value => value.replace(/[\s\-–—_.]/g, '').toLowerCase();
+export function ackIssues(output, projects) {
+  if (output.kind === 'other') return [];
+  const issues = [];
+  for (const ack of output.acks) {
+    const project = projects.find(p => p.id === ack.project_id);
+    if (!project) continue;
+    const applied = ackText(ack, project, output), name = project.short || project.name;
+    if (applied.source === 'missing') issues.push({code: 'ack-missing', project, label: `사사문구 없음 · ${name}`});
+    else if (project.number && !bare(applied.text).includes(bare(project.number))) issues.push({code: 'ack-number', project, label: `사사문구에 과제번호 없음 · ${name}`});
+  }
+  return issues;
+}
+
 export function outputWarnings(output, projects) {
   const warnings = [];
   const live = output.acks.filter(a => projects.some(p => p.id === a.project_id));
   if (!live.length) warnings.push({code: 'no-ack', label: '사사 과제 미지정'});
   if (live.length > 1) warnings.push({code: 'multi-ack', label: `중복 사사 ${live.length}개 과제`});
-  return warnings;
+  return [...warnings, ...ackIssues(output, projects)];
+}
+
+// The output list as tab-separated text, ready to paste into a spreadsheet for a report.
+export const EXPORT_COLUMNS = Object.freeze(['종류', '구분', '제목', '저자·발명자', '학술지·학술대회·기관', '상태', '날짜', '식별 번호', '사사 과제', '과제번호', '사사문구 확인', '링크']);
+export function outputsTable(outputs, projects) {
+  const cell = value => String(value ?? '').replace(/[\t\r\n]+/g, ' ').trim();
+  const rows = outputs.map(output => {
+    const kind = OUTPUT_KINDS[output.kind];
+    const linked = output.acks.map(a => projects.find(p => p.id === a.project_id)).filter(Boolean);
+    const issues = ackIssues(output, projects);
+    return [kind.label, output.grade ? kind.grades[output.grade] : '', output.title, output.authors, output.venue, statusLabel(output), output.date || '',
+      output.identifier, linked.map(p => p.short || p.name).join(', '), linked.map(p => p.number).filter(Boolean).join(', '),
+      !linked.length ? '사사 과제 미지정' : issues.length ? issues.map(i => i.label).join(', ') : '확인됨', output.link].map(cell).join('\t');
+  });
+  return [EXPORT_COLUMNS.join('\t'), ...rows].join('\n');
 }
 
 export const ACK_LABELS = Object.freeze({ack_en: '논문 · 영문', ack_ko: '논문 · 국문', ack_patent: '특허 출원서 표기'});
@@ -455,6 +487,7 @@ export function researchOverview(doc, on = today()) {
   const order = {milestone: 0, proposal: 1, target: 2, result: 3, end: 4};
   deadlines.sort((a, b) => a.date.localeCompare(b.date) || order[a.kind] - order[b.kind] || a.where.localeCompare(b.where, 'ko'));
   const unacknowledged = doc.outputs.filter(o => !o.acks.some(a => doc.projects.some(p => p.id === a.project_id)));
+  const ackProblems = doc.outputs.filter(o => ackIssues(o, doc.projects).length).length;
   const overdue = deadlines.filter(d => d.days < 0), lateProposals = overdue.filter(d => d.kind === 'proposal').length, lateTargets = overdue.filter(d => d.kind === 'target').length;
   const targeted = running.filter(p => p.rows.length).length, remaining = running.reduce((sum, p) => sum + p.remaining, 0);
   // What a one-line summary may claim. "met" needs a running project that has targets and no
@@ -466,7 +499,7 @@ export function researchOverview(doc, on = today()) {
     counts: {projects: running.length, ended: progress.length - running.length, archived: doc.projects.length - active.length,
       remaining, pending: running.reduce((sum, p) => sum + p.pending, 0),
       gap: running.reduce((sum, p) => sum + p.gap, 0), untargeted: running.length - targeted, late_targets: lateTargets,
-      missed: running.filter(p => p.state === 'missed').length, outputs: doc.outputs.length, unacknowledged: unacknowledged.length,
+      missed: running.filter(p => p.state === 'missed').length, outputs: doc.outputs.length, unacknowledged: unacknowledged.length, ack_issues: ackProblems,
       proposals: proposals.length, writing: proposals.filter(r => r.status === 'preparing').length,
       submitted: proposals.filter(r => r.status === 'submitted').length, late_proposals: lateProposals},
     next: deadlines.find(d => d.days >= 0) || null, overdue};

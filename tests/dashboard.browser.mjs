@@ -748,6 +748,7 @@ try {
     // The test server shows none of the film, A/S, new-server or release boxes, and no parcel tab.
     assert.equal(await preview.locator('#release-video,#kimi-service-notice,#server-welcome,#kimi-tribute-dialog,#monitor-release,#tab-parcel,#panel-parcel').count(),0);
     assert.equal(await preview.locator('#gpu-workspace>header').evaluate(e=>e.previousElementSibling),null);
+    assert.equal(await preview.locator('.priority-header h1').innerText(),'GPU Dashboard');
   }
   assert.equal(await preview.locator('#panel-now').isVisible(),true);
   assert.equal(await preview.locator('#panel-timeline').isVisible(),false);
@@ -793,7 +794,7 @@ try {
     await preview.waitForFunction(()=>document.getElementById('api-usage-state').textContent.includes('개 키의 관측 기록'));
     assert.ok(usageHistoryReads>historyReadsBefore);
     assert.equal(await preview.locator('#api-usage-board').evaluate(e=>e.previousElementSibling.id),'openrouter-grid');
-    if(environment.profile==='test')assert.match(await preview.locator('#dashboard-version').innerText(),/테스트 v3.0 snapshot 5/);
+    if(environment.profile==='test')assert.match(await preview.locator('#dashboard-version').innerText(),/테스트 v3.0 snapshot 6/);
     assert.equal(await preview.locator('#api-usage-key option').count(),3);
     assert.ok(await preview.locator('#api-usage-plot [data-usage-day]').count()>0);
     assert.equal(await preview.locator('#api-usage-board script').count(),0);
@@ -1192,7 +1193,7 @@ try {
     assert.equal(await reader.locator('#gpu-workspace').isVisible(),false);
     assert.equal(await reader.locator('.ws-nav [aria-current=page]').innerText(),'연구과제');
     // The page reads its own "today": allow for midnight (KST) passing after the dates were seeded.
-    assert.match((await reader.locator('#rs-summary .rs-stat strong').allTextContents()).join(' | '),/^1개 \| 1건 \| D-(20|19) \| 2건$/);
+    assert.match((await reader.locator('#rs-summary .rs-stat strong').allTextContents()).join(' | '),/^1개 \| 1건 \| D-(20|19) \| 3건$/);
     const card=reader.locator(`[data-rs-project="${running.id}"]`);
     assert.equal(await reader.locator('.rs-project').count(),1);
     assert.equal(await card.locator('h3').innerText(),'멀티모달 주행 과제 <b>');
@@ -1201,6 +1202,8 @@ try {
     assert.deepEqual(await card.locator('tr[data-rs-target]').evaluateAll(rows=>rows.map(row=>row.dataset.state)),['covered','met']);
     assert.match(await card.locator('tr[data-rs-target]').first().innerText(),/SCI\(E\) 논문 · 2차년도[\s\S]*1\s*\/ 2편[\s\S]*투고·심사 중 1[\s\S]*1편 더 필요[\s\S]*D-(40|39)/);
     assert.match(await card.locator('tr[data-rs-target]').nth(1).innerText(),/국내 특허 출원[\s\S]*1\s*\/ 1건[\s\S]*달성/);
+    await card.locator('[data-rs-copy-project]').click();
+    assert.equal((await reader.evaluate(()=>navigator.clipboard.readText())).split('\n').length,4);
     await card.locator('summary',{hasText:'사사한 실적 3건'}).click();
     assert.equal(await card.locator('.rs-line').count(),3);
     const customLine=card.locator('.rs-line',{hasText:'Submitted paper'});
@@ -1231,6 +1234,16 @@ try {
     assert.match(await reader.locator('.rs-output',{hasText:'국내 논문'}).innerText(),/사사 과제 미지정[\s\S]*어느 과제의 실적인지/);
     assert.match(await reader.locator('.rs-output',{hasText:'Published driving paper'}).locator('.rs-acks').innerText(),/IITP 멀티모달[\s\S]*RS-2025-00123456[\s\S]*SCI\(E\) 논문 · 2차년도 목표에 반영/);
     assert.match(await reader.locator('.rs-output',{hasText:'출원한 특허'}).locator('.rs-acks').innerText(),/국내 특허 출원 목표에 반영/);
+    // A written acknowledgement without the project number is flagged.
+    assert.match(await reader.locator('.rs-output',{hasText:'Submitted paper'}).locator('.rs-output-top').innerText(),/사사문구에 과제번호 없음 · IITP 멀티모달/);
+    assert.equal(await reader.locator('.rs-output',{hasText:'Published driving paper'}).locator('.rs-pill.warn').count(),0);
+    // The list copies as a table for a spreadsheet, one row per output under a header row.
+    await reader.locator('#rs-copy-outputs').click();
+    const copiedTable=(await reader.evaluate(()=>navigator.clipboard.readText())).split('\n');
+    assert.equal(copiedTable.length,5);
+    assert.match(copiedTable[0],/^종류\t구분\t제목/);
+    assert.match(copiedTable.find(line=>line.includes('Published driving paper')),/IITP 멀티모달\tRS-2025-00123456\t확인됨/);
+    assert.match(await reader.locator('#rs-feedback').innerText(),/실적 4건을 표로 복사했어요/);
     await reader.locator('[data-rs-kind=patent]').click();
     assert.equal(await reader.locator('.rs-output').count(),1);
     assert.equal(await reader.evaluate(()=>document.activeElement.dataset.rsKind),'patent','choosing a kind keeps keyboard focus on its chip');
@@ -1449,10 +1462,27 @@ try {
     await admin.locator('#rs-r-status').selectOption('preparing');
     await admin.locator('#rs-proposal-save').click();
     await admin.locator('#rs-proposal-dialog').waitFor({state:'hidden'});
+    // Marking it selected opens the project form with its name and agency filled in.
+    await proposal.locator('[data-rs-action=proposal-edit]').click();
+    await admin.locator('#rs-r-status').selectOption('selected');
+    await admin.locator('#rs-proposal-save').click();
+    await admin.locator('#rs-project-dialog').waitFor();
+    assert.equal(await admin.locator('#rs-p-name').inputValue(),'2027 온디바이스 비전 신규과제');
+    assert.equal(await admin.locator('#rs-p-agency').inputValue(),'IITP');
+    assert.match(await admin.locator('#rs-feedback').innerText(),/선정됐어요/);
+    await admin.locator('#rs-project-dialog [data-rs-close]').first().click();
+    await admin.locator('#rs-tab-proposals').click();
+    await admin.locator('[data-rs-proposal-phase=closed]').click();
+    await proposal.locator('[data-rs-action=proposal-project]').click();
+    await admin.locator('#rs-p-end').fill(kst(700));
+    await admin.locator('#rs-project-save').click();
+    await admin.locator('#rs-project-dialog').waitFor({state:'hidden'});
+    assert.ok(researchDoc.projects.some(project=>project.name==='2027 온디바이스 비전 신규과제'));
+    await admin.locator('#rs-tab-proposals').click();
+    await admin.locator('[data-rs-proposal-phase=closed]').click();
+    assert.match(await proposal.innerText(),/과제로 등록됨/);
+    assert.equal(await proposal.locator('[data-rs-action=proposal-project]').count(),0);
     await admin.screenshot({path:path.join(output,'research-proposals-desktop.png'),fullPage:true});
-    await openView(admin,'home');
-    assert.match(await admin.locator('#workspace-home .ws-card').first().innerText(),/작성 중인 제안서 1건/);
-    await openView(admin,'research');
     assert.deepEqual(researchErrors,[]);
 
     for(const width of [390,320]){

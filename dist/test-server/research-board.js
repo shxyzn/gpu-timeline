@@ -1,9 +1,9 @@
 import {dashboardView,monitoringAccess,openDashboardLogin,runAdminTask} from '../app.js?patch=workspace-3';
-import {GATE} from './gate.js?v=workspace-5';
-import {currentSession} from './session.js?v=workspace-5';
-import {documentKeys,fromBase64} from './workspace-crypto.js?v=workspace-5';
-import {ResearchStore} from './research-store.js?v=workspace-5';
-import {OUTPUT_KINDS,METRICS,PROPOSAL_STATUSES,PROPOSAL_OPEN,PROPOSAL_ROLES,emptyResearch,makeProject,makeOutput,makeProposal,projectProgress,researchOverview,remainingText,outputWarnings,ackText,ACK_LABELS,statusLabel,targetLabel,today,daysUntil,ddayLabel,newID} from './research-model.js?v=workspace-5';
+import {GATE} from './gate.js?v=workspace-6';
+import {currentSession} from './session.js?v=workspace-6';
+import {documentKeys,fromBase64} from './workspace-crypto.js?v=workspace-6';
+import {ResearchStore} from './research-store.js?v=workspace-6';
+import {OUTPUT_KINDS,METRICS,PROPOSAL_STATUSES,PROPOSAL_OPEN,PROPOSAL_ROLES,emptyResearch,makeProject,makeOutput,makeProposal,projectProgress,researchOverview,remainingText,outputWarnings,ackIssues,outputsTable,ackText,ACK_LABELS,statusLabel,targetLabel,today,daysUntil,ddayLabel,newID} from './research-model.js?v=workspace-6';
 
 // Research-project tracker of the test-server workspace: what each project owes, by when,
 // what already counts, and which acknowledgement (사사) every output carries.
@@ -14,7 +14,7 @@ const stamp=at=>at?new Intl.DateTimeFormat('ko-KR',{timeZone:'Asia/Seoul',month:
 const root=$('workspace-research'),session=currentSession(GATE);
 let doc=emptyResearch(),store=null,loaded=false,loading=false,loadError='',lastRead=0,lastTry=0,saving=false;
 let tab='projects',phase='active',kind='all',projectFilter='all',query='',proposalPhase='open';
-let editing=null,pending=null,confirming=null,refocus=null,busyCheck=null;
+let editing=null,pending=null,confirming=null,refocus=null,busyCheck=null,shownOutputs=[];
 const open=new Set(),drawn=new WeakMap();
 
 export function researchState(){return {doc,loaded,loading,loadError,overview:loaded?researchOverview(doc):null};}
@@ -30,7 +30,7 @@ if(root&&session){
   <div id="rs-summary" class="rs-summary" aria-label="연구과제 요약"></div>
   <div class="rs-tabs" role="tablist" aria-label="연구과제 보기"><button type="button" role="tab" id="rs-tab-projects" aria-controls="rs-panel-projects" data-rs-tab="projects">과제별 현황</button><button type="button" role="tab" id="rs-tab-proposals" aria-controls="rs-panel-proposals" data-rs-tab="proposals">제안서 <span id="rs-count-proposals"></span></button><button type="button" role="tab" id="rs-tab-outputs" aria-controls="rs-panel-outputs" data-rs-tab="outputs">실적 목록 <span id="rs-count-outputs"></span></button><button type="button" role="tab" id="rs-tab-schedule" aria-controls="rs-panel-schedule" data-rs-tab="schedule">기한·일정 <span id="rs-count-schedule"></span></button><button type="button" role="tab" id="rs-tab-acks" aria-controls="rs-panel-acks" data-rs-tab="acks">사사문구</button></div>
   <section id="rs-panel-projects" role="tabpanel" aria-labelledby="rs-tab-projects"><div class="rs-chips" role="group" aria-label="과제 상태"><button type="button" data-rs-phase="active">진행 중 <span id="rs-count-active">0</span></button><button type="button" data-rs-phase="ended">종료 <span id="rs-count-ended">0</span></button><button type="button" data-rs-phase="archived">보관 <span id="rs-count-archived">0</span></button></div><div id="rs-projects" class="rs-projects"></div></section>
-  <section id="rs-panel-outputs" role="tabpanel" aria-labelledby="rs-tab-outputs" hidden><div class="rs-filters"><div id="rs-kinds" class="rs-chips" role="group" aria-label="실적 종류"></div><label class="rs-select">과제<select id="rs-project-filter" aria-label="과제로 걸러 보기"></select></label><label class="rs-search">검색<input id="rs-query" type="search" maxlength="80" placeholder="제목·저자·학술지" autocomplete="off"></label></div><div id="rs-outputs" class="rs-outputs"></div></section>
+  <section id="rs-panel-outputs" role="tabpanel" aria-labelledby="rs-tab-outputs" hidden><div class="rs-filters"><div id="rs-kinds" class="rs-chips" role="group" aria-label="실적 종류"></div><label class="rs-select">과제<select id="rs-project-filter" aria-label="과제로 걸러 보기"></select></label><label class="rs-search">검색<input id="rs-query" type="search" maxlength="80" placeholder="제목·저자·학술지" autocomplete="off"></label><button type="button" id="rs-copy-outputs" class="rs-button" title="보이는 실적을 엑셀에 붙여 넣을 수 있는 표로 복사해요">표로 복사</button></div><div id="rs-outputs" class="rs-outputs"></div></section>
   <section id="rs-panel-proposals" role="tabpanel" aria-labelledby="rs-tab-proposals" hidden><div class="rs-chips" role="group" aria-label="제안서 상태"><button type="button" data-rs-proposal-phase="open">진행 중 <span id="rs-count-proposals-open">0</span></button><button type="button" data-rs-proposal-phase="closed">결과 <span id="rs-count-proposals-closed">0</span></button></div><div id="rs-proposals" class="rs-outputs"></div></section>
   <section id="rs-panel-schedule" role="tabpanel" aria-labelledby="rs-tab-schedule" hidden><div id="rs-schedule" class="rs-schedule"></div></section>
   <section id="rs-panel-acks" role="tabpanel" aria-labelledby="rs-tab-acks" hidden><p class="rs-muted rs-panel-lead">논문·특허를 쓸 때 그대로 붙여 넣을 과제별 표준 사사문구예요.</p><div id="rs-acks" class="rs-outputs"></div></section>
@@ -156,8 +156,9 @@ function standardAcks(project){
 }
 function outputLine(output,project,achieved){
   const ack=output.acks.find(a=>a.project_id===project.id),applied=ackText(ack,project,output),k=OUTPUT_KINDS[output.kind],key='ack:'+project.id+':'+output.id;
+  const issue=ackIssues({...output,acks:[ack]},[project])[0];
   return `<li class="rs-line"><div class="rs-line-main"><span class="rs-dot ${achieved?'done':'pending'}" aria-hidden="true"></span><div><strong>${esc(output.title)}</strong><span>${esc([k.label+(output.grade?' · '+k.grades[output.grade]:''),output.venue,statusLabel(output)+(output.date?' '+day(output.date):'')].filter(Boolean).join(' · '))}</span></div></div>
-    <details class="rs-inline" data-rs-open="${key}"><summary>${ackSummary(applied)}</summary>${ackBlock(applied.text,applied.label)}</details></li>`;
+    <details class="rs-inline" data-rs-open="${key}"><summary${issue?' class="rs-ack-warn"':''}>${issue?esc(issue.code==='ack-number'?'사사문구에 과제번호 없음':'사사문구 없음'):ackSummary(applied)}</summary>${ackBlock(applied.text,applied.label)}</details></li>`;
 }
 function targetRow(row){
   const ratio=Math.min(100,row.done/row.count*100),planned=Math.min(100-ratio,row.pending/row.count*100);
@@ -186,7 +187,7 @@ function projectCard(p,view){
     <details class="rs-fold" data-rs-open="${ackKey}"><summary>이 과제의 사사문구</summary>${standardAcks(project)}</details>
     ${pendingMilestones.length?`<ul class="rs-milestones" aria-label="남은 일정">${pendingMilestones.map(m=>`<li>${dueBadge(m.date,daysOf(m.date))}<span>${esc(m.title)}</span></li>`).join('')}</ul>`:''}
     ${project.note?`<p class="rs-project-note">${esc(project.note)}</p>`:''}
-    <div class="rs-card-foot"><span>${esc(project.updated_by)} · ${esc(stamp(project.updated_at))} 수정</span>${view.unlocked?`<span class="rs-card-actions"><button type="button" class="rs-button" data-rs-action="output-for" data-rs-id="${project.id}"${view.busy?' disabled':''}>이 과제에 실적 추가</button><button type="button" class="rs-button" data-rs-action="project-edit" data-rs-id="${project.id}"${view.busy?' disabled':''}>과제 수정</button></span>`:''}</div></article>`;
+    <div class="rs-card-foot"><span>${esc(project.updated_by)} · ${esc(stamp(project.updated_at))} 수정</span><span class="rs-card-actions">${p.linked.length?`<button type="button" class="rs-button" data-rs-copy-project="${project.id}">실적 표 복사</button>`:''}${view.unlocked?`<button type="button" class="rs-button" data-rs-action="output-for" data-rs-id="${project.id}"${view.busy?' disabled':''}>이 과제에 실적 추가</button><button type="button" class="rs-button" data-rs-action="project-edit" data-rs-id="${project.id}"${view.busy?' disabled':''}>과제 수정</button>`:''}</span></div></article>`;
 }
 const daysOf=date=>daysUntil(date,today());
 
@@ -215,6 +216,8 @@ function outputCard(output,view){
     <div class="rs-card-foot"><span>${esc(output.updated_by)} · ${esc(stamp(output.updated_at))} 수정</span>${view.unlocked?`<span class="rs-card-actions"><button type="button" class="rs-button" data-rs-action="output-edit" data-rs-id="${output.id}"${view.busy?' disabled':''}>실적 수정</button></span>`:''}</div></article>`;
 }
 
+// A selected proposal counts as registered once a project of the same name exists.
+const registered=r=>doc.projects.some(p=>p.name===r.title);
 const proposalTone=status=>status==='selected'?'done':status==='submitted'?'pending':status==='preparing'?'writing':'closed';
 function proposalCard(r,view){
   const days=daysOf(r.due_on),meta=[r.agency,r.call].filter(Boolean).map(esc);
@@ -226,7 +229,8 @@ function proposalCard(r,view){
     <div class="rs-proposal-dates">${when}${result}</div>
     ${r.members?`<p class="rs-output-meta">작성 담당 · ${esc(r.members)}</p>`:''}${r.link?`<p class="rs-output-meta"><a href="${esc(r.link)}" target="_blank" rel="noopener noreferrer">공고 열기 ↗</a></p>`:''}
     ${r.note?`<p class="rs-project-note">${esc(r.note)}</p>`:''}
-    <div class="rs-card-foot"><span>${esc(r.updated_by)} · ${esc(stamp(r.updated_at))} 수정</span>${view.unlocked?`<span class="rs-card-actions"><button type="button" class="rs-button" data-rs-action="proposal-edit" data-rs-id="${r.id}"${view.busy?' disabled':''}>제안서 수정</button></span>`:''}</div></article>`;
+    ${r.status==='selected'?`<p class="rs-output-meta">${registered(r)?'과제로 등록됨 · ‘과제별 현황’에서 목표 실적을 관리해요.':'선정됐어요. ‘과제로 등록’을 누르면 과제명·기관이 채워진 과제 추가 창이 열려요.'}</p>`:''}
+    <div class="rs-card-foot"><span>${esc(r.updated_by)} · ${esc(stamp(r.updated_at))} 수정</span>${view.unlocked?`<span class="rs-card-actions">${r.status==='selected'&&!registered(r)?`<button type="button" class="rs-button primary" data-rs-action="proposal-project" data-rs-id="${r.id}"${view.busy?' disabled':''}>과제로 등록</button>`:''}<button type="button" class="rs-button" data-rs-action="proposal-edit" data-rs-id="${r.id}"${view.busy?' disabled':''}>제안서 수정</button></span>`:''}</div></article>`;
 }
 
 function render(){
@@ -253,7 +257,7 @@ function render(){
     ['진행 중 과제',c.projects,'개',c.ended||c.archived?`종료 ${c.ended} · 보관 ${c.archived}`:'등록된 과제 기준',''],
     ['더 필요한 실적',...need],
     ['가장 가까운 기한',next?ddayLabel(next.days):'—','',next?`${day(next.date)} · ${next.where} · ${next.title}`:'남은 기한이 없어요',next?tone(next.days):''],
-    ['확인할 것',late+c.unacknowledged,'건',late||c.unacknowledged?[late?`기한 지남 ${late}건`:'',c.unacknowledged?`사사 과제 미지정 ${c.unacknowledged}건`:''].filter(Boolean).join(' · '):'모두 정리돼 있어요',late||c.unacknowledged?'warn':'ok'],
+    ['확인할 것',late+c.unacknowledged+c.ack_issues,'건',late||c.unacknowledged||c.ack_issues?[late?`기한 지남 ${late}건`:'',c.unacknowledged?`사사 과제 미지정 ${c.unacknowledged}건`:'',c.ack_issues?`사사문구 확인 ${c.ack_issues}건`:''].filter(Boolean).join(' · '):'모두 정리돼 있어요',late||c.unacknowledged||c.ack_issues?'warn':'ok'],
   ].map(([label,value,unit,note,kind])=>`<div class="rs-stat ${kind}"><span>${label}</span><strong>${esc(value)}<small>${unit}</small></strong><p>${esc(note)}</p></div>`).join(''));
   const groups={active:overview.progress.filter(p=>p.phase!=='ended'),ended:overview.progress.filter(p=>p.phase==='ended'),archived:doc.projects.filter(p=>p.archived)};
   for(const name of Object.keys(groups)){$('rs-count-'+name).textContent=groups[name].length;root.querySelector(`[data-rs-phase="${name}"]`).setAttribute('aria-pressed',String(name===phase));}
@@ -280,6 +284,7 @@ function render(){
     const needle=query.trim().toLowerCase();
     const list=doc.outputs.filter(o=>(kind==='all'||o.kind===kind)&&(projectFilter==='all'||(projectFilter==='none'?!o.acks.some(a=>doc.projects.some(p=>p.id===a.project_id)):o.acks.some(a=>a.project_id===projectFilter)))&&(!needle||[o.title,o.authors,o.venue,o.identifier].some(v=>v.toLowerCase().includes(needle))))
       .sort((a,b)=>(b.date||'').localeCompare(a.date||'')||b.updated_at.localeCompare(a.updated_at));
+    shownOutputs=list;$('rs-copy-outputs').disabled=!list.length;
     const placed=placements();
     setHTML($('rs-outputs'),list.map(o=>outputCard(o,{...view,busy,placements:placed})).join('')||`<div class="rs-empty"><strong>${doc.outputs.length?'조건에 맞는 실적이 없어요.':'아직 등록된 실적이 없어요.'}</strong><p>${doc.outputs.length?'종류·과제·검색어를 바꿔 보세요.':view.unlocked?'‘＋ 실적 추가’로 논문·특허를 등록하고 사사한 과제를 골라 주세요.':'관리자가 논문·특허를 등록하면 이곳에 표시돼요.'}</p></div>`);
   }else if(tab==='proposals'){
@@ -328,18 +333,26 @@ function milestoneRowForm(m={}){
   row.querySelector('[data-f=title]').value=m.title||'';row.querySelector('[data-f=date]').value=m.date||'';row.querySelector('[data-f=done]').checked=!!m.done;
   return row;
 }
-function openProject(project=null){
+function openProject(project=null,prefill=null){
   if(!requireAdmin())return;
   editing=project?{type:'project',record:structuredClone(project)}:{type:'project',record:null};pending=null;
   $('rs-project-form').reset();$('rs-project-error').textContent='';
   $('rs-project-title').textContent=project?'과제 수정':'과제 추가';$('rs-project-save').textContent=project?'변경 저장':'과제 저장';
   $('rs-project-delete').hidden=!project;$('rs-p-archived-row').hidden=!project;
-  const p=project||{};
+  const p=project||prefill||{};
   for(const [id,key] of [['name','name'],['short','short'],['number','number'],['agency','agency'],['start','starts_on'],['end','ends_on'],['ack-en','ack_en'],['ack-ko','ack_ko'],['ack-patent','ack_patent'],['note','note']])$('rs-p-'+id).value=p[key]??'';
   $('rs-p-archived').checked=!!p.archived;
   $('rs-p-targets').replaceChildren(...(p.targets?.length?p.targets:[{}]).map(targetRowForm));
   $('rs-p-milestones').replaceChildren(...(p.milestones||[]).map(milestoneRowForm));
   $('rs-project-dialog').showModal();$('rs-p-name').focus();
+}
+function openProjectFrom(proposal){
+  openProject(null,{name:proposal.title,agency:[proposal.agency,proposal.call].filter(Boolean).join(' · ').slice(0,120),
+    note:`제안서에서 등록${proposal.members?` · 작성 담당 ${proposal.members}`:''}`.slice(0,1000)});
+}
+async function copyTable(outputs,what){
+  try{await navigator.clipboard.writeText(outputsTable(outputs,doc.projects));feedback(`${what} 실적 ${outputs.length}건을 표로 복사했어요. 엑셀이나 한글 표에 붙여 넣으세요.`);}
+  catch{feedback('복사하지 못했어요. 브라우저의 클립보드 권한을 확인해 주세요.');}
 }
 function readProject(){
   const value=(row,name)=>row.querySelector(`[data-f=${name}]`);
@@ -429,6 +442,11 @@ async function saveRecord(event,type){
       // Show the list the saved record now lives in.
       if(type==='project'){tab='projects';phase=input.archived?'archived':input.ends_on<today()?'ended':'active';}
       if(type==='proposal'){tab='proposals';proposalPhase=PROPOSAL_OPEN.includes(input.status)?'open':'closed';}
+      // A proposal that has just been selected goes straight on to become a project.
+      if(type==='proposal'&&input.status==='selected'&&previous?.status!=='selected'&&!registered(attempt.proposal)){
+        const selected=attempt.proposal;
+        setTimeout(()=>{openProjectFrom(selected);feedback('제안서가 선정됐어요. 과제 정보를 확인하고 저장하면 과제로 등록돼요.');},0);
+      }
     });
   }catch(error){$(errorID).textContent=error.message||'입력 내용을 확인해 주세요.';}
 }
@@ -459,6 +477,9 @@ function bind(){
     const phaseButton=event.target.closest('[data-rs-phase]');if(phaseButton){phase=phaseButton.dataset.rsPhase;render();return;}
     const proposalButton=event.target.closest('[data-rs-proposal-phase]');if(proposalButton){proposalPhase=proposalButton.dataset.rsProposalPhase;render();return;}
     const kindButton=event.target.closest('[data-rs-kind]');if(kindButton){kind=kindButton.dataset.rsKind;render();return;}
+    const copyProject=event.target.closest('[data-rs-copy-project]');
+    if(copyProject){const project=doc.projects.find(p=>p.id===copyProject.dataset.rsCopyProject);if(project)await copyTable(doc.outputs.filter(o=>o.acks.some(a=>a.project_id===project.id)),`‘${projectName(project)}’`);return;}
+    if(event.target.closest('#rs-copy-outputs')){await copyTable(shownOutputs,'보이는');return;}
     const copy=event.target.closest('[data-rs-copy]');
     if(copy){try{await navigator.clipboard.writeText(copy.dataset.rsCopy);feedback(copy.dataset.rsCopied||'사사문구를 복사했어요.');const label=copy.textContent;copy.textContent='복사됨';setTimeout(()=>{if(copy.isConnected)copy.textContent=label;},2000);}catch{feedback('복사하지 못했어요. 문구를 직접 선택해서 복사해 주세요.');}return;}
     const action=event.target.closest('[data-rs-action]');if(!action)return;
@@ -467,6 +488,7 @@ function bind(){
     else if(action.dataset.rsAction==='output-for')openOutput(null,id);
     else if(action.dataset.rsAction==='output-edit')openOutput(doc.outputs.find(o=>o.id===id));
     else if(action.dataset.rsAction==='proposal-edit')openProposal(doc.proposals.find(r=>r.id===id));
+    else if(action.dataset.rsAction==='proposal-project'){const r=doc.proposals.find(item=>item.id===id);if(r)openProjectFrom(r);}
   });
   root.querySelector('.rs-tabs').addEventListener('keydown',event=>{
     if(!['ArrowLeft','ArrowRight','Home','End'].includes(event.key))return;

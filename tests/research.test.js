@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {LIMITS, emptyResearch, validateResearch, validDate, makeProject, makeOutput, makeProposal, applyResearchOperation, projectProgress, METRICS,
-  remainingText, researchOverview, outputWarnings, ackText, targetLabel, statusLabel, today, daysUntil, ddayLabel} from '../dist/test-server/research-model.js';
+  remainingText, researchOverview, outputWarnings, ackText, ackIssues, outputsTable, targetLabel, statusLabel, today, daysUntil, ddayLabel} from '../dist/test-server/research-model.js';
 import {sealGate, openGate, validGate, importDocumentKey, sealRetiredKey, documentKeys, sealJSON, openJSON, isEnvelope, toBase64, fromBase64} from '../dist/test-server/workspace-crypto.js';
 import {ResearchStore, RESEARCH_PATH} from '../dist/test-server/research-store.js';
 import {currentSession, startSession, endSession, cleanName, lastName} from '../dist/test-server/session.js';
@@ -141,6 +141,31 @@ test('domestic and international patents are counted apart; older combined targe
   const old = project({targets: [{metric: 'patent_app', count: 2}, {metric: 'patent_reg', count: 1}]});
   progress = projectProgress(old, [{...ko, acks: [{project_id: old.id, target_id: null, text: ''}]}, {...pct, acks: [{project_id: old.id, target_id: null, text: ''}]}], on);
   assert.deepEqual(progress.rows.map(r => [r.label, r.done]), [['특허 출원 (국내·국제 합산)', 2], ['특허 등록 (국내·국제 합산)', 1]]);
+});
+
+test('acknowledgements are checked for the project number and exported as a table', () => {
+  const p = project({short: 'IITP', number: 'RS-2025-00123456', ack_en: 'Supported by IITP (No. RS 2025 00123456).'});
+  const bare = project({name: '번호 없는 과제', short: '기업'});
+  const silent = project({name: '문구 없는 과제', short: 'NRF', number: 'NRF-1'});
+  const projects = [p, bare, silent];
+  const good = output({title: 'Good', acks: [{project_id: p.id}]}, projects);
+  const custom = output({title: 'Custom', acks: [{project_id: p.id, text: 'Thanks to IITP.'}]}, projects);
+  const empty = output({title: 'Empty', acks: [{project_id: silent.id}, {project_id: bare.id}]}, projects);
+  const done = output({kind: 'other', grade: '', status: 'done', title: '학위', acks: [{project_id: silent.id}]}, projects);
+  // Spaces and hyphens do not matter; a missing number or text does.
+  assert.deepEqual(ackIssues(good, projects), []);
+  assert.deepEqual(ackIssues(custom, projects).map(i => i.label), ['사사문구에 과제번호 없음 · IITP']);
+  assert.deepEqual(ackIssues(empty, projects).map(i => i.code), ['ack-missing', 'ack-missing']);
+  assert.deepEqual(ackIssues(done, projects), []);
+  assert.ok(outputWarnings(custom, projects).some(w => w.code === 'ack-number'));
+  assert.equal(researchOverview(doc(projects, [good, custom, empty, done]), on).counts.ack_issues, 2);
+  const table = outputsTable([good, {...custom, title: 'Tab\there', authors: '홍길동,\n김철수'}], projects).split('\n');
+  assert.equal(table.length, 3);
+  assert.equal(table[0].split('\t')[0], '종류');
+  assert.deepEqual(table[1].split('\t').slice(0, 3), ['논문', 'SCI(E)', 'Good']);
+  assert.deepEqual(table[2].split('\t').slice(2, 4), ['Tab here', '홍길동, 김철수']);
+  assert.match(table[1], /\tIITP\tRS-2025-00123456\t확인됨\t/);
+  assert.match(table[2], /사사문구에 과제번호 없음 · IITP/);
 });
 
 test('proposals: validation, edits, deadlines and documents saved before them', () => {
@@ -299,7 +324,7 @@ test('deadlines: missed targets, ended projects and the overview', () => {
   assert.equal(projectProgress(project(), [], on).state, 'untargeted');
   const overview = researchOverview(doc(projects, outputs), on);
   assert.deepEqual(overview.progress.map(p => p.project.name), ['진행 과제', '달성 과제', '끝난 과제']);
-  assert.deepEqual(overview.counts, {projects: 2, ended: 1, archived: 1, remaining: 2, pending: 1, gap: 1, untargeted: 0, late_targets: 1, missed: 0, outputs: 3, unacknowledged: 1,
+  assert.deepEqual(overview.counts, {projects: 2, ended: 1, archived: 1, remaining: 2, pending: 1, gap: 1, untargeted: 0, late_targets: 1, missed: 0, outputs: 3, unacknowledged: 1, ack_issues: 2,
     proposals: 0, writing: 0, submitted: 0, late_proposals: 0});
   assert.equal(overview.verdict, 'need');
   assert.deepEqual(overview.deadlines.map(d => [d.date, d.kind, d.title]), [

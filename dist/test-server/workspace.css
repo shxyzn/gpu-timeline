@@ -166,6 +166,7 @@ body[data-workspace] .ws-loading{display:none}
 /* ---- Research: outputs and deadlines ---- */
 .rs-output-top{display:flex;gap:6px;flex-wrap:wrap}
 .rs-pill.kind{background:#ececf0;color:#2c2c30}
+.rs-inline summary.rs-ack-warn{color:var(--ws-amber);font-weight:600}
 .rs-pill.proposal.writing{background:var(--ws-amber-soft);color:var(--ws-amber)}
 .rs-pill.proposal.pending{background:var(--ws-blue-soft);color:#0058b0}
 .rs-pill.proposal.done{background:var(--ws-green-soft);color:var(--ws-green)}
@@ -212,6 +213,11 @@ body[data-workspace] .ws-loading{display:none}
 .rs-dialog .rs-ack-detail label.field{margin:0}
 
 /* ---- Dashboard polish that applies only on the test server ---- */
+/* The workspace bar already carries the name, so the dashboard heading is a compact row. */
+.test-server.cinema-v21 .priority-header{padding:0 4px;margin:8px 0 18px;align-items:center}
+.test-server.cinema-v21 .priority-header h1{font-size:30px}
+.test-server.cinema-v21 .priority-header p{margin-top:6px}
+.test-server.cinema-v21 .priority-tabs{margin-bottom:22px}
 /* Orders and deliveries sit at the top of 더보기 instead of a tab of their own. */
 .test-server #panel-more>#parcel{margin-bottom:28px}
 /* A long experiment name used to squeeze its time into a one-character column. */

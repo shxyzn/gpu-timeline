@@ -1,9 +1,9 @@
 import {dashboardView} from '../app.js?patch=workspace-3';
-import {GATE} from './gate.js?v=workspace-5';
-import {currentSession} from './session.js?v=workspace-5';
-import {researchState} from './research-board.js?v=workspace-5';
+import {GATE} from './gate.js?v=workspace-6';
+import {currentSession} from './session.js?v=workspace-6';
+import {researchState} from './research-board.js?v=workspace-6';
 import {availableCurrentView} from './availability-model.js?v=2.1-as';
-import {ddayLabel} from './research-model.js?v=workspace-5';
+import {ddayLabel} from './research-model.js?v=workspace-6';
 
 // Shell of the test-server workspace: one bar to move between the home, the research tracker
 // and the GPU dashboard, and a home that summarises both. The URL hash names the view, so the
@@ -44,7 +44,7 @@ function researchCard(){
   if(writing)facts.push(writing);
   if(verdict==='untargeted')facts.push('과제에 목표 실적을 등록하면 남은 실적을 계산해요.');
   if(next)facts.push(`가장 가까운 기한 <strong>${esc(ddayLabel(next.days))}</strong> · ${esc(day(next.date))} ${esc(next.where)}`);
-  if(late||c.unacknowledged)facts.push([late?`기한 지남 <strong>${late}건</strong>`:'',c.unacknowledged?`사사 과제 미지정 <strong>${c.unacknowledged}건</strong>`:''].filter(Boolean).join(' · '));
+  if(late||c.unacknowledged||c.ack_issues)facts.push([late?`기한 지남 <strong>${late}건</strong>`:'',c.unacknowledged?`사사 과제 미지정 <strong>${c.unacknowledged}건</strong>`:'',c.ack_issues?`사사문구 확인 <strong>${c.ack_issues}건</strong>`:''].filter(Boolean).join(' · '));
   if(loadError)facts.push('최신 기록을 불러오지 못해 마지막으로 받은 내용을 보여 드려요.');
   // "모든 목표 달성" is the model's call (researchOverview): never for a project without targets
   // or while a target of an ended project is still unmet.
