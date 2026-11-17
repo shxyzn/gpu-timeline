@@ -329,7 +329,8 @@ function distinctNeed(rows) {
 //   target with room whose deadline has not passed. Whatever fits nowhere stays on the last
 //   target, where a surplus shows as over-achievement.
 // - An explicit choice among the targets of an indicator the output already belongs to (picking
-//   the year) changes only that; its other indicators are still filled automatically. Choosing a
+//   the year) changes only that; its other indicators are still filled automatically. For a
+//   patent the choice also fixes the stage: chosen as 등록 it no longer fills 출원, and back. Choosing a
 //   target of a different indicator re-classifies the output: it counts there and nowhere else.
 // - 'none' keeps the output out of the count. '준비 중' work is listed but is not "in progress".
 export function projectProgress(project, outputs, on = today()) {
@@ -348,6 +349,10 @@ export function projectProgress(project, outputs, on = today()) {
       chosen[stageFor(output, chosen.target)].push(output);
       if (!METRICS[chosen.target.metric].accepts(output)) continue;
       metrics = metrics.filter(metric => metric !== chosen.target.metric);
+      // A patent target names a stage: choosing 등록 (or 출원) says which of the two this patent
+      // counts as, so it no longer fills the other stage of the same country automatically.
+      const family = FAMILIES[chosen.target.metric]?.[0];
+      if (family?.startsWith('patent')) metrics = metrics.filter(metric => FAMILIES[metric]?.[0] !== family);
     } else if (!metrics.length) { extra.push(output); continue; }
     for (const metric of metrics) { if (!auto.has(metric)) auto.set(metric, []); auto.get(metric).push(output); }
   }

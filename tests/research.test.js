@@ -137,6 +137,12 @@ test('domestic and international patents are counted apart; older combined targe
   assert.deepEqual([progress.remaining, progress.pending, progress.gap], [1, 1, 0]);
   progress = projectProgress(p, [], on);
   assert.deepEqual([progress.remaining, progress.gap], [2, 2], 'one domestic and one international patent are owed, not four');
+  // A registered patent chosen for the 등록 target is not also this year's application.
+  const regRow = p.targets[1].id, appRow = p.targets[0].id;
+  const registeredOnly = output({kind: 'patent', grade: 'domestic', status: 'registered', title: '등록 특허', acks: [{project_id: p.id, target_id: regRow}]}, [p]);
+  const filedOnly = output({kind: 'patent', grade: 'domestic', status: 'preparing', title: '출원 준비', acks: [{project_id: p.id, target_id: appRow}]}, [p]);
+  progress = projectProgress(p, [registeredOnly, filedOnly], on);
+  assert.deepEqual(progress.rows.slice(0, 2).map(r => [r.done, r.planned]), [[0, 1], [1, 0]]);
   // A target saved before the split counts patents of either country.
   const old = project({targets: [{metric: 'patent_app', count: 2}, {metric: 'patent_reg', count: 1}]});
   progress = projectProgress(old, [{...ko, acks: [{project_id: old.id, target_id: null, text: ''}]}, {...pct, acks: [{project_id: old.id, target_id: null, text: ''}]}], on);
@@ -254,8 +260,9 @@ test('choosing the year keeps the other indicators; choosing another indicator r
     output({kind: 'conference', grade: 'intl', status: 'presented', title: 'conference as journal', acks: [{project_id: p.id, target_id: t[0]}]}, [p]),
   ];
   const progress = projectProgress(p, outputs, on);
-  assert.deepEqual(progress.rows.map(r => r.done), [1, 1, 1, 0, 1, 1, 0]);
-  assert.deepEqual(progress.rows.map(r => r.remaining), [0, 0, 1, 1, 0, 0, 1]);
+  // The patent chosen for the year-2 application row counts as an application only.
+  assert.deepEqual(progress.rows.map(r => r.done), [1, 1, 1, 0, 1, 0, 0]);
+  assert.deepEqual(progress.rows.map(r => r.remaining), [0, 0, 1, 1, 0, 1, 1]);
   assert.deepEqual([progress.extra.length, progress.excluded.length], [0, 0]);
 });
 
