@@ -213,11 +213,13 @@ body[data-workspace] .ws-loading{display:none}
 .rs-dialog .rs-ack-detail label.field{margin:0}
 
 /* ---- Dashboard polish that applies only on the test server ---- */
-/* The workspace bar already carries the name, so the dashboard heading is a compact row. */
-.test-server.cinema-v21 .priority-header{padding:0 4px;margin:8px 0 18px;align-items:center}
-.test-server.cinema-v21 .priority-header h1{font-size:30px}
-.test-server.cinema-v21 .priority-header p{margin-top:6px}
-.test-server.cinema-v21 .priority-tabs{margin-bottom:22px}
+/* The GPU dashboard sits in the same column, with the same heading, as the home and research views. */
+#gpu-workspace{max-width:1180px;margin:0 auto;padding:18px 4px 56px}
+.test-server.cinema-v21 #gpu-workspace .priority-header{padding:0 0 24px;margin:0 0 20px;align-items:flex-end}
+.test-server.cinema-v21 #gpu-workspace .priority-header h1{margin:10px 0 8px;font-size:clamp(28px,4vw,38px);font-weight:650;line-height:1.2;letter-spacing:-.055em}
+.test-server.cinema-v21 #gpu-workspace .priority-header p{margin:0;color:var(--ws-muted);font-size:14px;line-height:1.7}
+.test-server #gpu-workspace .admin-tools{margin:0 0 18px;border-radius:18px}
+.test-server #gpu-workspace .edit-feedback{padding:0 4px 16px}
 /* Orders and deliveries sit at the top of 더보기 instead of a tab of their own. */
 .test-server #panel-more>#parcel{margin-bottom:28px}
 /* A long experiment name used to squeeze its time into a one-character column. */
@@ -234,7 +236,7 @@ body[data-workspace] .ws-loading{display:none}
   .ws-user{margin-left:auto}
 }
 @media (max-width:640px){
-  .ws-view{padding:8px 0 40px}
+  .ws-view,#gpu-workspace{padding:8px 0 40px}
   .ws-cards{grid-template-columns:minmax(0,1fr);gap:12px;margin-top:22px}
   .ws-card{min-height:0;padding:22px 20px;border-radius:22px}
   .ws-upcoming{padding:20px;border-radius:22px}
