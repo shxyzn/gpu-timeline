@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "revision": 1128,
-  "updated_at": "2026-11-17T17:04:12.369Z",
+  "revision": 1129,
+  "updated_at": "2026-11-17T18:04:12.365Z",
   "manual_jobs": [],
   "hidden_jobs": [
     {
@@ -30,7 +30,7 @@
         "limit_reset": null
       },
       "checked_at": "2026-11-13T07:33:47.636Z",
-      "attempted_at": "2026-11-17T17:03:12.125Z",
+      "attempted_at": "2026-11-17T18:04:12.125Z",
       "error": "unauthorized"
     },
     {
@@ -54,17 +54,17 @@
       "id": "or-27c87c3d-731b-42d9-a179-5e77c4caa68f",
       "name": "psh-1",
       "usage": {
-        "usage": 393.42523479,
-        "usage_daily": 9.84179184,
-        "usage_weekly": 28.0527396,
-        "usage_monthly": 393.42523479,
+        "usage": 393.65551179,
+        "usage_daily": 10.07206884,
+        "usage_weekly": 28.2830166,
+        "usage_monthly": 393.65551179,
         "limit": 1000,
-        "limit_remaining": 606.57476521,
+        "limit_remaining": 606.34448821,
         "byok_usage": 0,
         "limit_reset": null
       },
-      "checked_at": "2026-11-17T17:04:12.369Z",
-      "attempted_at": "2026-11-17T17:04:12.113Z",
+      "checked_at": "2026-11-17T18:04:12.365Z",
+      "attempted_at": "2026-11-17T18:04:12.340Z",
       "error": null
     },
     {
