@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "revision": 1212,
-  "updated_at": "2026-11-19T00:26:20.280Z",
+  "revision": 1213,
+  "updated_at": "2026-11-19T01:01:20.230Z",
   "manual_jobs": [],
   "hidden_jobs": [
     {
@@ -71,17 +71,17 @@
       "id": "or-371b0e3d-f95f-4413-b55d-927ee5216922",
       "name": "kmj-2",
       "usage": {
-        "usage": 325.836780398,
-        "usage_daily": 0,
-        "usage_weekly": 262.936470158,
-        "usage_monthly": 325.836780398,
+        "usage": 325.938085478,
+        "usage_daily": 0.0972744,
+        "usage_weekly": 263.037775238,
+        "usage_monthly": 325.938085478,
         "limit": 1000,
-        "limit_remaining": 674.163219602,
+        "limit_remaining": 674.061914522,
         "byok_usage": 0,
         "limit_reset": null
       },
-      "checked_at": "2026-11-19T00:00:20.326Z",
-      "attempted_at": "2026-11-19T00:00:19.995Z",
+      "checked_at": "2026-11-19T01:01:20.230Z",
+      "attempted_at": "2026-11-19T01:01:19.985Z",
       "error": null
     }
   ],
