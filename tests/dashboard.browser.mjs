@@ -1192,6 +1192,10 @@ try {
     assert.equal(await reader.locator('#workspace-research').isVisible(),true);
     assert.equal(await reader.locator('#gpu-workspace').isVisible(),false);
     assert.equal(await reader.locator('.ws-nav [aria-current=page]').innerText(),'연구과제');
+    // The lab's public homepage sits in the bar and opens in a new tab, away from the workspace.
+    const labLink=reader.locator('.ws-nav #workspace-lab-link');
+    assert.deepEqual([await labLink.getAttribute('href'),await labLink.getAttribute('target'),await labLink.getAttribute('rel')],['https://sites.google.com/view/ajoucvml','_blank','noopener noreferrer']);
+    assert.deepEqual(await reader.locator('.ws-nav a').evaluateAll(links=>links.map(link=>link.textContent.replace(/\s+/g,' ').trim())),['홈','연구과제','GPU 대시보드','연구실 홈페이지 ↗']);
     // The page reads its own "today": allow for midnight (KST) passing after the dates were seeded.
     assert.match((await reader.locator('#rs-summary .rs-stat strong').allTextContents()).join(' | '),/^1개 \| 1건 \| D-(20|19) \| 3건$/);
     const card=reader.locator(`[data-rs-project="${running.id}"]`);
@@ -1519,6 +1523,7 @@ try {
       await admin.screenshot({path:path.join(output,`research-proposals-mobile-${width}.png`),fullPage:true});
       await openView(admin,'home');
       assert.ok(await fits(admin),`workspace home overflows at ${width}px`);
+      assert.ok(await admin.locator('.ws-nav').evaluate(nav=>nav.scrollWidth<=nav.clientWidth+1),`the bar's links overflow at ${width}px`);
       await admin.screenshot({path:path.join(output,`workspace-home-mobile-${width}.png`),fullPage:true});
       await openView(admin,'research');
     }

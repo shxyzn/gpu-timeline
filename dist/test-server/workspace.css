@@ -13,6 +13,8 @@
 .ws-nav a{display:inline-flex;align-items:center;min-height:38px;padding:0 17px;border-radius:99px;color:#55555b;font-size:13px;font-weight:500;text-decoration:none;white-space:nowrap}
 .ws-nav a:hover{color:var(--ws-ink);background:#e2e2e7}
 .ws-nav a[aria-current=page]{background:var(--ws-ink);color:#fff;font-weight:600}
+/* The lab's public homepage: leaves the workspace, so it opens in a new tab and says so. */
+.ws-nav-out span[aria-hidden]{margin-left:4px;font-size:12px;opacity:.7}
 .ws-user{display:flex;align-items:center;gap:10px;color:var(--ws-muted);font-size:13px;white-space:nowrap}
 .ws-user span{max-width:14em;overflow:hidden;text-overflow:ellipsis}
 .ws-user button{min-height:38px;padding:0 15px;border:0;border-radius:99px;background:#ececf0;color:var(--ws-ink);font:inherit;font-size:13px;cursor:pointer}
@@ -270,11 +272,14 @@ body[data-workspace] .ws-loading{display:none}
   /* Four tabs do not fit one row on a phone; two rows keep every tab in sight. */
   .rs-tabs{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));width:100%;border-radius:24px;overflow:visible}
   .rs-tabs button{padding:0 8px}
+  .ws-nav-long{display:none}
   /* Five tabs: the last one takes a whole row instead of leaving a gap. */
   .rs-tabs button:last-child:nth-child(odd){grid-column:1/-1}
 }
 @media (max-width:380px){
   .ws-brand span{display:none}
+  .ws-nav{gap:2px}
+  .ws-nav a{padding:0 6px;min-width:34px;font-size:12px}
   .rs-summary{grid-template-columns:minmax(0,1fr)}
   .rs-target-row{grid-template-columns:minmax(0,1fr)}
 }
