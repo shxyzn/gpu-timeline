@@ -278,8 +278,9 @@ body[data-workspace] .ws-loading{display:none}
 }
 @media (max-width:380px){
   .ws-brand span{display:none}
+  /* Widths follow the labels here: equal columns would be narrower than the longest label. */
   .ws-nav{gap:2px}
-  .ws-nav a{padding:0 6px;min-width:34px;font-size:12px}
+  .ws-nav a{flex:1 1 auto;padding:0 5px;font-size:12px}
   .rs-summary{grid-template-columns:minmax(0,1fr)}
   .rs-target-row{grid-template-columns:minmax(0,1fr)}
 }

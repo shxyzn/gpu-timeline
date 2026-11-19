@@ -1523,7 +1523,9 @@ try {
       await admin.screenshot({path:path.join(output,`research-proposals-mobile-${width}.png`),fullPage:true});
       await openView(admin,'home');
       assert.ok(await fits(admin),`workspace home overflows at ${width}px`);
-      assert.ok(await admin.locator('.ws-nav').evaluate(nav=>nav.scrollWidth<=nav.clientWidth+1),`the bar's links overflow at ${width}px`);
+      // Each label fits inside its own link, and the links do not run into each other.
+      const bar=await admin.locator('.ws-nav').evaluate(nav=>({nav:[nav.clientWidth,nav.scrollWidth],links:[...nav.children].map(link=>{const box=link.getBoundingClientRect();return [Math.round(box.left),Math.round(box.right),link.clientWidth,link.scrollWidth];})}));
+      assert.ok(bar.nav[1]<=bar.nav[0]+1&&bar.links.every((link,i)=>link[3]<=link[2]+1&&(i===0||link[0]>=bar.links[i-1][1]-1)),`the bar's links overflow at ${width}px: ${JSON.stringify(bar)}`);
       await admin.screenshot({path:path.join(output,`workspace-home-mobile-${width}.png`),fullPage:true});
       await openView(admin,'research');
     }
