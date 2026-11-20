@@ -1230,6 +1230,20 @@ try {
     assert.equal((await reader.evaluate(()=>navigator.clipboard.readText())).split('\n').length,4);
     // The button itself says what was copied: the status line may be far above it.
     assert.equal(await card.locator('[data-rs-copy-project]').innerText(),'3건 복사됨');
+    // Report tools are on the test server only until the next release.
+    if(site.profile==='test'){
+      // The targets of the listed projects, or of one card, as the table a progress report asks for.
+      await reader.locator('#rs-copy-targets').click();
+      const targetRows=(await reader.evaluate(()=>navigator.clipboard.readText())).split('\n').map(line=>line.split('\t'));
+      assert.deepEqual(targetRows[0],['과제','과제번호','목표','단위','목표 수','달성','진행 중','준비 중','더 필요','기한','상태']);
+      assert.deepEqual(targetRows.slice(1).map(row=>[row[0],row[2],row[4],row[5],row[6],row[8],row[10]]),[
+        ['멀티모달 주행 과제 <b>','SCI(E) 논문 · 2차년도','2','1','1','1','진행 중인 실적 반영 시 달성'],['멀티모달 주행 과제 <b>','국내 특허 출원','1','1','0','0','달성']]);
+      assert.equal(await reader.locator('#rs-copy-targets').innerText(),'2줄 복사됨');
+      await reader.evaluate(()=>navigator.clipboard.writeText(''));
+      await card.locator('[data-rs-copy-targets]').click();
+      assert.equal((await reader.evaluate(()=>navigator.clipboard.readText())).split('\n').length,3);
+      assert.match(await reader.locator('#rs-feedback').innerText(),/‘IITP 멀티모달’의 목표 2줄을 표로 복사했어요/);
+    }else assert.equal(await reader.locator('#rs-copy-targets,[data-rs-copy-targets],#rs-calendar').count(),0);
     await card.locator('summary',{hasText:'사사한 실적 3건'}).click();
     assert.equal(await card.locator('.rs-line').count(),3);
     const customLine=card.locator('.rs-line',{hasText:'Submitted paper'});
@@ -1301,6 +1315,16 @@ try {
     await reader.screenshot({path:path.join(output,'research-outputs-desktop.png'),fullPage:true});
     await reader.locator('#rs-tab-schedule').click();
     assert.match(await reader.locator('#rs-schedule').innerText(),/기한이 지났어요[\s\S]*SW 등록 1건 남음[\s\S]*다가오는 기한[\s\S]*연차보고서 제출[\s\S]*SCI\(E\) 논문 1편 남음[\s\S]*과제 종료/);
+    if(site.profile==='test'){
+      // Upcoming deadlines as a file a calendar app can import; passed ones stay out of it.
+      const [calendarFile]=await Promise.all([reader.waitForEvent('download'),reader.locator('#rs-calendar').click()]);
+      assert.match(calendarFile.suggestedFilename(),/^cvml-research-deadlines-\d{8}\.ics$/);
+      const calendarText=(await fs.readFile(await calendarFile.path(),'utf8')).replace(/\r\n /g,'');
+      assert.match(calendarText,/^BEGIN:VCALENDAR\r\n[\s\S]*SUMMARY:\[IITP 멀티모달\] 연차보고서 제출\r\n[\s\S]*SUMMARY:\[IITP 멀티모달\] SCI\(E\) 논문 1편 남음\r\n[\s\S]*END:VCALENDAR\r\n$/);
+      assert.equal(calendarText.includes('SW 등록'),false);
+      assert.equal((calendarText.match(/BEGIN:VEVENT/g)||[]).length,3);
+      assert.equal(await reader.locator('#rs-calendar').innerText(),'3건 받음');
+    }
     await reader.locator('#rs-tab-acks').click();
     assert.equal(await reader.locator('#rs-acks [data-rs-ack-project]').count(),2);
     await reader.locator(`[data-rs-ack-project="${running.id}"] [data-rs-copied]`).click();
@@ -1329,6 +1353,12 @@ try {
     assert.equal(await reader.title(),'CVML Workspace');
     await reader.waitForFunction(()=>document.getElementById('workspace-home').innerText.includes('여유 GPU'));
     assert.equal(await reader.locator('#workspace-home .ws-card-label').first().innerText(),site.profile==='test'?'연구과제 · 연습용 기록':'연구과제');
+    // The home of the test server lists the latest changes and who made them.
+    if(site.profile==='test'){
+      assert.equal(await reader.locator('.ws-recent .ws-changes li').count(),5);
+      assert.match(await reader.locator('.ws-recent').innerText(),/최근 변경[\s\S]*실적[\s\S]*Published driving paper[\s\S]*홍길동 · [\s\S]*추가/);
+      assert.equal(await reader.locator('.ws-recent script').count(),0);
+    }else assert.equal(await reader.locator('.ws-recent').count(),0);
     assert.match(await reader.locator('#workspace-home').innerText(),/테스트 사용자님, 안녕하세요[\s\S]*실적 1\s*건 더 필요[\s\S]*여유 GPU[\s\S]*챙겨야 할 기한[\s\S]*연차보고서 제출/);
     await reader.screenshot({path:path.join(output,'workspace-home-desktop.png'),fullPage:true});
     await reader.locator('#workspace-home .ws-card').first().click();

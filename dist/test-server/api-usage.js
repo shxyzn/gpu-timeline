@@ -1,7 +1,7 @@
 import {dashboardView,monitoringAccess,runAdminTask} from '../app.js?patch=workspace-4';
 import {dollars,usageStatus} from '../openrouter-model.js?v=1.2.0';
-import {emptyHistory,chartData,needsRecording,samplesFromTokens} from './api-usage-model.js?v=workspace-10';
-import {APIUsageStore} from './api-usage-store.js?v=workspace-10';
+import {emptyHistory,chartData,needsRecording,samplesFromTokens} from './api-usage-model.js?v=workspace-11';
+import {APIUsageStore} from './api-usage-store.js?v=workspace-11';
 
 const $=id=>document.getElementById(id),board=$('api-usage-board');
 const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));

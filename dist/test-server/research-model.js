@@ -534,10 +534,10 @@ export function homepageList(outputs) {
 // '날짜' is the day the kind's own form asks for (a patent's filing day); a registered patent's
 // registration day has its own column.
 export const EXPORT_COLUMNS = Object.freeze(['종류', '구분', '제목', '저자·발명자', '학술지·학술대회·기관', '상태', '날짜', '특허 등록일', '식별 번호', '사사 과제', '과제번호', '사사문구 확인', '링크']);
+// One line per cell. A cell that opens with a double quote would be read as a quoted field by
+// a spreadsheet and swallow the cells after it, so such a cell is quoted properly.
+const cell = value => { const flat = String(value ?? '').replace(/[\t\r\n]+/g, ' ').trim(); return flat.startsWith('"') ? `"${flat.replaceAll('"', '""')}"` : flat; };
 export function outputsTable(outputs, projects) {
-  // One line per cell. A cell that opens with a double quote would be read as a quoted field by
-  // a spreadsheet and swallow the cells after it, so such a cell is quoted properly.
-  const cell = value => { const flat = String(value ?? '').replace(/[\t\r\n]+/g, ' ').trim(); return flat.startsWith('"') ? `"${flat.replaceAll('"', '""')}"` : flat; };
   const rows = outputs.map(output => {
     const kind = OUTPUT_KINDS[output.kind];
     const linked = output.acks.map(a => projects.find(p => p.id === a.project_id)).filter(Boolean);
@@ -548,6 +548,57 @@ export function outputsTable(outputs, projects) {
       !linked.length ? '사사 과제 미지정' : output.kind === 'other' ? '해당 없음' : issues.length ? issues.map(i => i.label).join(', ') : '확인됨', output.link].map(cell).join('\t');
   });
   return [EXPORT_COLUMNS.join('\t'), ...rows].join('\n');
+}
+
+// The target rows of the given projects as tab-separated text: the table a progress report asks
+// for. `progressList` is what projectProgress returns, one entry per project.
+export const TARGET_COLUMNS = Object.freeze(['과제', '과제번호', '목표', '단위', '목표 수', '달성', '진행 중', '준비 중', '더 필요', '기한', '상태']);
+const TARGET_STATES = Object.freeze({met: '달성', covered: '진행 중인 실적 반영 시 달성', short: '실적 더 필요', missed: '기한 지남'});
+export function targetsTable(progressList) {
+  const rows = progressList.flatMap(p => p.rows.map(row => [p.project.name, p.project.number, row.label, row.unit, row.count, row.done, row.pending, row.planned, row.remaining,
+    row.due_on, TARGET_STATES[row.state]].map(cell).join('\t')));
+  return [TARGET_COLUMNS.join('\t'), ...rows].join('\n');
+}
+
+// The latest edits, newest first: who added or changed which record. A deleted record leaves
+// nothing behind and is not listed.
+export function recentChanges(doc, limit = 6) {
+  const entries = [];
+  for (const [type, records, title] of [['project', doc.projects, p => p.name], ['output', doc.outputs, o => o.title], ['proposal', doc.proposals || [], r => r.title]]) {
+    for (const record of records) entries.push({type, id: record.id, title: title(record), by: record.updated_by, at: record.updated_at, created: record.created_at === record.updated_at});
+  }
+  return entries.sort((a, b) => Date.parse(b.at) - Date.parse(a.at) || a.title.localeCompare(b.title, 'ko')).slice(0, limit);
+}
+
+// Upcoming deadlines as an iCalendar file (RFC 5545) of all-day events, for a calendar app.
+// Every event keeps the same identifier from one file to the next, so importing a newer file
+// updates what an earlier one brought in instead of doubling it.
+const icsText = value => String(value).replace(/\\/g, '\\\\').replace(/;/g, '\\;').replace(/,/g, '\\,').replace(/\r?\n/g, '\\n');
+// A line holds at most 75 octets; what is left over continues on lines that open with a space.
+function icsFold(line) {
+  const encoder = new TextEncoder(), parts = [];
+  let current = '', size = 0;
+  for (const character of line) {
+    const width = encoder.encode(character).length;
+    if (size + width > (parts.length ? 74 : 75)) { parts.push(current); current = ''; size = 0; }
+    current += character; size += width;
+  }
+  parts.push(current);
+  return parts.join('\r\n ');
+}
+export function deadlinesCalendar(overview, now = Date.now()) {
+  const compact = date => date.replaceAll('-', '');
+  const nextDay = date => new Date(Date.parse(date + 'T00:00:00Z') + DAY).toISOString().slice(0, 10);
+  const stamp = new Date(now).toISOString().replace(/[-:]/g, '').replace(/\.\d+Z$/, 'Z');
+  const events = overview.deadlines.filter(d => d.days >= 0);
+  const lines = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//CVML Workspace//Research deadlines//KO', 'CALSCALE:GREGORIAN', 'METHOD:PUBLISH', 'X-WR-CALNAME:CVML 연구과제 기한'];
+  for (const d of events) {
+    const subject = d.kind === 'milestone' ? d.id : (d.project || d.proposal).id;
+    lines.push('BEGIN:VEVENT', `UID:${d.kind}-${subject}-${d.date}@cvml-workspace`, `DTSTAMP:${stamp}`, `DTSTART;VALUE=DATE:${compact(d.date)}`, `DTEND;VALUE=DATE:${compact(nextDay(d.date))}`,
+      `SUMMARY:${icsText(`[${d.where}] ${d.title}`)}`, 'TRANSP:TRANSPARENT', 'END:VEVENT');
+  }
+  lines.push('END:VCALENDAR');
+  return {count: events.length, text: lines.map(icsFold).join('\r\n') + '\r\n'};
 }
 
 export const ACK_LABELS = Object.freeze({ack_en: '논문 · 영문', ack_ko: '논문 · 국문', ack_patent: '특허 출원서 표기'});
@@ -577,7 +628,7 @@ export function researchOverview(doc, on = today()) {
         title: items.map(item => `${item.label} ${item.count}${item.unit}`).join(' · ') + ' 남음'});
     }
     const where = p.project.short || p.project.name;
-    for (const m of p.project.milestones) if (!m.done) deadlines.push({kind: 'milestone', project: p.project, where, date: m.date, days: daysUntil(m.date, on), title: m.title});
+    for (const m of p.project.milestones) if (!m.done) deadlines.push({kind: 'milestone', id: m.id, project: p.project, where, date: m.date, days: daysUntil(m.date, on), title: m.title});
     if (!dates.includes(p.project.ends_on) && !p.ended) deadlines.push({kind: 'end', project: p.project, where, date: p.project.ends_on, days: p.days, title: '과제 종료'});
   }
   // A proposal still being written is due on its submission date; one that was sent waits for

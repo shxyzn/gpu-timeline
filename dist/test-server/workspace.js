@@ -1,10 +1,10 @@
 import {dashboardView} from '../app.js?patch=workspace-4';
-import {GATE} from './gate.js?v=workspace-10';
-import {currentSession} from './session.js?v=workspace-10';
-import {researchState} from './research-board.js?v=workspace-10';
-import {availableCurrentView} from './availability-model.js?v=workspace-10';
-import {ddayLabel} from './research-model.js?v=workspace-10';
-import {PROFILE} from './profile.js?v=workspace-10';
+import {GATE} from './gate.js?v=workspace-11';
+import {currentSession} from './session.js?v=workspace-11';
+import {researchState} from './research-board.js?v=workspace-11';
+import {availableCurrentView} from './availability-model.js?v=workspace-11';
+import {ddayLabel,recentChanges} from './research-model.js?v=workspace-11';
+import {PROFILE} from './profile.js?v=workspace-11';
 
 // Shell of the test-server workspace: one bar to move between the home, the research tracker
 // and the GPU dashboard, and a home that summarises both. The URL hash names the view, so the
@@ -12,6 +12,8 @@ import {PROFILE} from './profile.js?v=workspace-10';
 const $=id=>document.getElementById(id);
 const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const day=date=>{const [y,m,d]=date.split('-').map(Number);return `${y}. ${m}. ${d}.`;};
+const stamp=at=>new Intl.DateTimeFormat('ko-KR',{timeZone:'Asia/Seoul',month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit',hourCycle:'h23'}).format(new Date(at));
+const RECORD_KINDS={project:'과제',output:'실적',proposal:'제안서'};
 const GPU_ANCHORS=new Set(['now','timeline','resources','servers','parcel','more','api-usage-board','patch-notes']);
 const TITLES={home:'CVML Workspace',research:'연구과제 · CVML Workspace',gpu:'GPU 대시보드 · CVML Workspace'};
 const session=currentSession(GATE),home=$('workspace-home');
@@ -68,11 +70,15 @@ function card(href,label,content,go){
 }
 function renderHome(){
   if(!home||!session)return;
-  const {overview}=researchState(),upcoming=(overview?.deadlines||[]).filter(d=>d.days>=0).slice(0,5),late=overview?.overdue||[];
+  const {overview,doc,loaded}=researchState(),upcoming=(overview?.deadlines||[]).filter(d=>d.days>=0).slice(0,5),late=overview?.overdue||[];
+  // Who added or changed which record lately: the tracker is shared, so this is how a change by
+  // someone else gets noticed.
+  const changes=loaded?recentChanges(doc,5):[];
   const item=d=>`<li class="${d.days<0?'late':''}"><span class="rs-due ${d.days<0?'late':d.days<=30?'soon':d.days<=90?'near':'far'}"><strong>${esc(ddayLabel(d.days))}</strong>${esc(day(d.date))}</span><div><strong>${esc(d.title)}</strong><span>${esc(d.where)}</span></div></li>`;
   const html=`<span class="ws-eyebrow">CVML WORKSPACE</span><h1 id="ws-home-title">${esc(session.name)}님, 안녕하세요.</h1><p>연구실 과제의 남은 실적과 GPU 현황을 한곳에서 확인해요.</p>
     <div class="ws-cards">${card('#research',PROFILE.practiceOf?'연구과제 · 연습용 기록':'연구과제',researchCard(),'과제별 실적 보기')}${card($('workspace-gpu-link')?.getAttribute('href')||'#now','GPU 대시보드',gpuCard(),'GPU·실험 현황 보기')}</div>
-    ${late.length||upcoming.length?`<section class="ws-upcoming" aria-labelledby="ws-upcoming-title"><h2 id="ws-upcoming-title">챙겨야 할 기한</h2><ul class="rs-deadlines">${[...late.slice(0,3),...upcoming].map(item).join('')}</ul></section>`:''}`;
+    ${late.length||upcoming.length?`<section class="ws-upcoming" aria-labelledby="ws-upcoming-title"><h2 id="ws-upcoming-title">챙겨야 할 기한</h2><ul class="rs-deadlines">${[...late.slice(0,3),...upcoming].map(item).join('')}</ul></section>`:''}
+    ${changes.length?`<section class="ws-upcoming ws-recent" aria-labelledby="ws-recent-title"><h2 id="ws-recent-title">최근 변경</h2><ul class="ws-changes">${changes.map(c=>`<li><span class="ws-change-kind">${RECORD_KINDS[c.type]}</span><strong>${esc(c.title)}</strong><span class="ws-change-by">${esc(c.by)} · ${esc(stamp(c.at))} ${c.created?'추가':'수정'}</span></li>`).join('')}</ul></section>`:''}`;
   if(drawnHome!==html){home.innerHTML=html;drawnHome=html;}
 }
 

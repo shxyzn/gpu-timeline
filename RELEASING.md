@@ -16,6 +16,8 @@
 6. 배포한 뒤 Pages 산출물을 `node scripts/verify_deployed.mjs <site-dir> --notice … --production-notice visible --revision <sha>`로 확인합니다.
 7. 확인이 끝나면 정식 점검 공지에 `hidden`을 다시 넣어 배포하고 `--production-notice hidden`으로 확인합니다.
 
+`scripts/promote_release.mjs`를 고친 커밋은 배포가 5분쯤 더 걸립니다. CI가 릴리스 영상 캐시의 열쇠를 `scripts/*promo*` 파일들로 만들기 때문에, 이름이 여기에 걸리는 이 스크립트가 바뀌면 영상을 다시 만듭니다. 문제는 아니며 다음 배포부터는 다시 빨라집니다.
+
 연구과제 기록은 화면마다 다른 파일에 있습니다(`dashboard/research.json` / `dashboard/research-test.json`). 정식 배포는 저장된 기록을 옮기거나 바꾸지 않습니다. 3.0.0 때만 테스트 서버의 기록을 정식 파일로 한 번 복사했습니다.
 
 ## v1.1.8 자원 통계

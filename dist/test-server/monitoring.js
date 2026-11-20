@@ -1,8 +1,8 @@
 import {dashboardView,monitoringAccess,openDashboardLogin,runAdminTask} from '../app.js?patch=workspace-4';
-import {PROFILE} from './profile.js?v=workspace-10';
-import {CHECKS,DAYS,monitoringID,defaultConfig,emptyMonitoring,makeSchedule,validateConfig,validateSchedule,scheduleLabel,nextRun} from './monitoring-model.js?v=workspace-10';
-import {MonitoringStore} from './monitoring-store.js?v=workspace-10';
-import {isUnavailable} from './availability-model.js?v=workspace-10';
+import {PROFILE} from './profile.js?v=workspace-11';
+import {CHECKS,DAYS,monitoringID,defaultConfig,emptyMonitoring,makeSchedule,validateConfig,validateSchedule,scheduleLabel,nextRun} from './monitoring-model.js?v=workspace-11';
+import {MonitoringStore} from './monitoring-store.js?v=workspace-11';
+import {isUnavailable} from './availability-model.js?v=workspace-11';
 import {health} from '../model.js';
 
 const $=id=>document.getElementById(id);

@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {LIMITS, EXPORT_COLUMNS, emptyResearch, validateResearch, validDate, makeProject, makeOutput, makeProposal, applyResearchOperation, projectProgress, METRICS,
+import {LIMITS, EXPORT_COLUMNS, TARGET_COLUMNS, targetsTable, deadlinesCalendar, recentChanges, emptyResearch, validateResearch, validDate, makeProject, makeOutput, makeProposal, applyResearchOperation, projectProgress, METRICS,
   remainingText, researchOverview, outputWarnings, outputDate, ackText, ackIssues, outputsTable, homepageList, targetLabel, statusLabel, today, daysUntil, ddayLabel} from '../dist/test-server/research-model.js';
 import {sealGate, openGate, validGate, importDocumentKey, sealRetiredKey, documentKeys, sealJSON, openJSON, isEnvelope, toBase64, fromBase64} from '../dist/test-server/workspace-crypto.js';
 import {ResearchStore, RESEARCH_PATH} from '../dist/test-server/research-store.js';
@@ -513,6 +513,57 @@ test('the document has room for a few hundred outputs and still fits a readable 
   // Sealed, the file is base64 of the text: it has to stay under the 1 MB a contents read returns.
   assert.ok(Math.ceil(LIMITS.bytes / 3) * 4 + 400 < 1000000);
   assert.throws(() => doc(projects, Array.from({length: 900}, (_, i) => paper(i))), /저장 한도/);
+});
+
+test('report tools: the target table, the calendar file and the latest changes', () => {
+  const long = '목표 없는 과제 ' + '가'.repeat(50);
+  const p = project({name: '멀티모달, 주행; 과제', short: 'IITP', number: 'RS-2025-1', ends_on: '2027-12-31',
+    targets: [{metric: 'paper_sci', count: 2, due_on: '2026-12-31', label: '2차년도'}, {metric: 'patent_app_dom', count: 1}],
+    milestones: [{title: '보고서, 제출; A\\B', date: '2026-12-10'}, {title: '끝낸 일정', date: '2026-12-01', done: true}]});
+  const bare = project({name: long});
+  const papers = [output({title: 'Published', date: '2026-05-01', acks: [{project_id: p.id}]}, [p], {at: '2026-11-03T00:00:00.000Z'}),
+    output({status: 'submitted', title: 'Submitted', acks: [{project_id: p.id}]}, [p], {at: '2026-11-05T00:00:00.000Z'})];
+  const r = makeProposal({title: '신규 과제', agency: 'IITP', due_on: '2026-11-30'}, {by: '김철수', at: '2026-11-04T00:00:00.000Z'});
+  const data = validateResearch({...emptyResearch(), projects: [p, bare], outputs: papers, proposals: [r]});
+  const overview = researchOverview(data, on);
+
+  // The table a progress report asks for: one row per target, numbers as numbers.
+  const table = targetsTable(overview.progress).split('\n').map(line => line.split('\t'));
+  assert.deepEqual(table[0], TARGET_COLUMNS);
+  assert.deepEqual(table.slice(1), [
+    ['멀티모달, 주행; 과제', 'RS-2025-1', 'SCI(E) 논문 · 2차년도', '편', '2', '1', '1', '0', '1', '2026-12-31', '진행 중인 실적 반영 시 달성'],
+    ['멀티모달, 주행; 과제', 'RS-2025-1', '국내 특허 출원', '건', '1', '0', '0', '0', '1', '2027-12-31', '실적 더 필요']]);
+  assert.equal(targetsTable([]), TARGET_COLUMNS.join('\t'));
+
+  // The calendar file: all-day events, CRLF, lines of at most 75 octets, text escaped.
+  const calendar = deadlinesCalendar(overview, Date.parse('2026-11-13T03:00:00Z'));
+  assert.equal(calendar.count, 5);
+  assert.ok(calendar.text.startsWith('BEGIN:VCALENDAR\r\nVERSION:2.0\r\n') && calendar.text.endsWith('END:VCALENDAR\r\n'));
+  assert.equal(calendar.text.replaceAll('\r\n', '').includes('\n'), false, 'every line ends with CRLF');
+  const folded = calendar.text.split('\r\n');
+  assert.ok(folded.every(line => new TextEncoder().encode(line).length <= 75), 'a line is at most 75 octets');
+  assert.ok(folded.some(line => line.startsWith(' ')), 'the long title is folded');
+  const lines = calendar.text.replace(/\r\n /g, '').split('\r\n');
+  assert.deepEqual(lines.filter(line => line.startsWith('SUMMARY:')), ['SUMMARY:[제안서 · IITP] 제출 마감 · 신규 과제', 'SUMMARY:[IITP] 보고서\\, 제출\\; A\\\\B',
+    'SUMMARY:[IITP] SCI(E) 논문 1편 남음', 'SUMMARY:[IITP] 국내 특허 출원 1건 남음', `SUMMARY:[${long}] 과제 종료`]);
+  assert.deepEqual(lines.filter(line => /^DT(START|END);/.test(line)).slice(0, 2), ['DTSTART;VALUE=DATE:20261130', 'DTEND;VALUE=DATE:20261201']);
+  assert.ok(lines.includes('DTSTART;VALUE=DATE:20261231') && lines.includes('DTEND;VALUE=DATE:20270101'), 'an all-day event ends on the next day, across a year too');
+  assert.equal(lines.filter(line => line === 'DTSTAMP:20261113T030000Z').length, 5);
+  const uids = text => text.replace(/\r\n /g, '').split('\r\n').filter(line => line.startsWith('UID:'));
+  assert.equal(new Set(uids(calendar.text)).size, 5);
+  // Importing next week's file updates the same events.
+  assert.deepEqual(uids(deadlinesCalendar(researchOverview(data, '2026-11-20')).text), uids(calendar.text));
+  // Passed deadlines are not put into a calendar.
+  const later = deadlinesCalendar(researchOverview(data, '2028-01-05'));
+  assert.deepEqual([later.count, later.text.includes('BEGIN:VEVENT')], [0, false]);
+
+  // The latest changes, newest first, with who made them.
+  const edited = project({name: '목표 없는 과제 (수정)'}, {previous: bare, at: '2026-11-06T00:00:00.000Z', by: '이영희'});
+  const changed = validateResearch({...data, projects: [p, edited]});
+  assert.deepEqual(recentChanges(changed, 3).map(c => [c.type, c.title, c.by, c.created]),
+    [['project', '목표 없는 과제 (수정)', '이영희', false], ['output', 'Submitted', '홍길동', true], ['proposal', '신규 과제', '김철수', true]]);
+  assert.equal(recentChanges(changed).length, 5);
+  assert.deepEqual(recentChanges(emptyResearch()), []);
 });
 
 test('edits apply to the latest document with optimistic concurrency', () => {

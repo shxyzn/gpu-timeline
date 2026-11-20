@@ -1,10 +1,10 @@
 import {dashboardView,monitoringAccess,openDashboardLogin,runAdminTask} from '../app.js?patch=workspace-4';
-import {GATE} from './gate.js?v=workspace-10';
-import {currentSession} from './session.js?v=workspace-10';
-import {documentKeys,fromBase64} from './workspace-crypto.js?v=workspace-10';
-import {ResearchStore} from './research-store.js?v=workspace-10';
-import {PROFILE} from './profile.js?v=workspace-10';
-import {OUTPUT_KINDS,METRICS,PROPOSAL_STATUSES,PROPOSAL_OPEN,PROPOSAL_ROLES,emptyResearch,makeProject,makeOutput,makeProposal,projectProgress,researchOverview,remainingText,outputWarnings,ackIssues,outputsTable,homepageList,ackText,ACK_LABELS,statusLabel,outputDate,targetLabel,today,daysUntil,ddayLabel,newID} from './research-model.js?v=workspace-10';
+import {GATE} from './gate.js?v=workspace-11';
+import {currentSession} from './session.js?v=workspace-11';
+import {documentKeys,fromBase64} from './workspace-crypto.js?v=workspace-11';
+import {ResearchStore} from './research-store.js?v=workspace-11';
+import {PROFILE} from './profile.js?v=workspace-11';
+import {OUTPUT_KINDS,METRICS,PROPOSAL_STATUSES,PROPOSAL_OPEN,PROPOSAL_ROLES,emptyResearch,makeProject,makeOutput,makeProposal,projectProgress,researchOverview,remainingText,outputWarnings,ackIssues,outputsTable,targetsTable,deadlinesCalendar,homepageList,ackText,ACK_LABELS,statusLabel,outputDate,targetLabel,today,daysUntil,ddayLabel,newID} from './research-model.js?v=workspace-11';
 
 // Research-project tracker of the test-server workspace: what each project owes, by when,
 // what already counts, and which acknowledgement (사사) every output carries.
@@ -15,7 +15,7 @@ const stamp=at=>at?new Intl.DateTimeFormat('ko-KR',{timeZone:'Asia/Seoul',month:
 const root=$('workspace-research'),session=currentSession(GATE);
 let doc=emptyResearch(),store=null,loaded=false,loading=false,loadError='',lastRead=0,lastTry=0,saving=false;
 let tab='projects',phase='active',kind='all',projectFilter='all',query='',proposalPhase='open';
-let editing=null,pending=null,confirming=null,refocus=null,busyCheck=null,shownOutputs=[],stale=false;
+let editing=null,pending=null,confirming=null,refocus=null,busyCheck=null,shownOutputs=[],shownProgress=[],stale=false;
 const open=new Set(),drawn=new WeakMap(),flashes=new WeakMap();
 
 export function researchState(){return {doc,loaded,loading,loadError,overview:loaded?researchOverview(doc):null};}
@@ -31,10 +31,10 @@ if(root&&session){
   <p id="rs-feedback" class="rs-feedback" role="status" aria-live="polite"></p><p id="rs-error" class="rs-error" role="alert"></p>
   <div id="rs-summary" class="rs-summary" aria-label="연구과제 요약"></div>
   <div class="rs-tabs" role="tablist" aria-label="연구과제 보기"><button type="button" role="tab" id="rs-tab-projects" aria-controls="rs-panel-projects" data-rs-tab="projects">과제별 현황</button><button type="button" role="tab" id="rs-tab-proposals" aria-controls="rs-panel-proposals" data-rs-tab="proposals">제안서 <span id="rs-count-proposals"></span></button><button type="button" role="tab" id="rs-tab-outputs" aria-controls="rs-panel-outputs" data-rs-tab="outputs">실적 목록 <span id="rs-count-outputs"></span></button><button type="button" role="tab" id="rs-tab-schedule" aria-controls="rs-panel-schedule" data-rs-tab="schedule">기한·일정 <span id="rs-count-schedule"></span></button><button type="button" role="tab" id="rs-tab-acks" aria-controls="rs-panel-acks" data-rs-tab="acks">사사문구</button></div>
-  <section id="rs-panel-projects" role="tabpanel" aria-labelledby="rs-tab-projects"><div class="rs-chips" role="group" aria-label="과제 상태"><button type="button" data-rs-phase="active">진행 중 <span id="rs-count-active">0</span></button><button type="button" data-rs-phase="ended">종료 <span id="rs-count-ended">0</span></button><button type="button" data-rs-phase="archived">보관 <span id="rs-count-archived">0</span></button></div><div id="rs-projects" class="rs-projects"></div></section>
+  <section id="rs-panel-projects" role="tabpanel" aria-labelledby="rs-tab-projects"><div class="rs-filters"><div class="rs-chips" role="group" aria-label="과제 상태"><button type="button" data-rs-phase="active">진행 중 <span id="rs-count-active">0</span></button><button type="button" data-rs-phase="ended">종료 <span id="rs-count-ended">0</span></button><button type="button" data-rs-phase="archived">보관 <span id="rs-count-archived">0</span></button></div><button type="button" id="rs-copy-targets" class="rs-button" title="보이는 과제의 목표·달성·남은 수를 엑셀에 붙여 넣을 수 있는 표로 복사해요">목표 표 복사</button></div><div id="rs-projects" class="rs-projects"></div></section>
   <section id="rs-panel-outputs" role="tabpanel" aria-labelledby="rs-tab-outputs" hidden><div class="rs-filters"><div id="rs-kinds" class="rs-chips" role="group" aria-label="실적 종류"></div><label class="rs-select">과제<select id="rs-project-filter" aria-label="과제로 걸러 보기"></select></label><label class="rs-search">검색<input id="rs-query" type="search" maxlength="80" placeholder="제목·저자·학술지" autocomplete="off"></label><button type="button" id="rs-copy-outputs" class="rs-button" title="보이는 실적을 엑셀에 붙여 넣을 수 있는 표로 복사해요">표로 복사</button><button type="button" id="rs-copy-homepage" class="rs-button" title="보이는 실적 중 게재·발표가 확정된 논문과 출원·등록된 특허를 연구실 홈페이지 목록 형식으로 복사해요">홈페이지용 복사</button></div><div id="rs-outputs" class="rs-outputs"></div></section>
   <section id="rs-panel-proposals" role="tabpanel" aria-labelledby="rs-tab-proposals" hidden><div class="rs-chips" role="group" aria-label="제안서 상태"><button type="button" data-rs-proposal-phase="open">진행 중 <span id="rs-count-proposals-open">0</span></button><button type="button" data-rs-proposal-phase="closed">결과 <span id="rs-count-proposals-closed">0</span></button></div><div id="rs-proposals" class="rs-outputs"></div></section>
-  <section id="rs-panel-schedule" role="tabpanel" aria-labelledby="rs-tab-schedule" hidden><div id="rs-schedule" class="rs-schedule"></div></section>
+  <section id="rs-panel-schedule" role="tabpanel" aria-labelledby="rs-tab-schedule" hidden><div class="rs-filters rs-tools"><p class="rs-muted rs-panel-lead">다가오는 기한을 구글 캘린더·아웃룩 같은 캘린더 앱에 종일 일정으로 가져올 수 있어요. 받은 파일에는 과제명과 기한이 그대로 들어 있어요.</p><button type="button" id="rs-calendar" class="rs-button" title="다가오는 기한을 캘린더 앱에서 가져올 수 있는 파일(.ics)로 받아요">캘린더 파일 받기</button></div><div id="rs-schedule" class="rs-schedule"></div></section>
   <section id="rs-panel-acks" role="tabpanel" aria-labelledby="rs-tab-acks" hidden><p class="rs-muted rs-panel-lead">논문·특허를 쓸 때 그대로 붙여 넣을 과제별 표준 사사문구예요.</p><div id="rs-acks" class="rs-outputs"></div></section>
   <p class="rs-note">로그인한 연구실 구성원이 함께 보는 기록이에요. 연구비 금액, 출원 전 특허의 내용, 심사 중인 논문의 익명성이 필요한 정보, 개인정보는 적지 마세요.</p>`;
   document.body.insertAdjacentHTML('beforeend',`<dialog id="rs-project-dialog" class="admin-dialog rs-dialog" aria-labelledby="rs-project-title">
@@ -207,7 +207,7 @@ function projectCard(p,view){
     <details class="rs-fold" data-rs-open="${ackKey}"><summary>이 과제의 사사문구</summary>${standardAcks(project)}</details>
     ${pendingMilestones.length?`<ul class="rs-milestones" aria-label="남은 일정">${pendingMilestones.map(m=>`<li>${dueBadge(m.date,daysOf(m.date))}<span>${esc(m.title)}</span></li>`).join('')}</ul>`:''}
     ${project.note?`<p class="rs-project-note">${esc(project.note)}</p>`:''}
-    <div class="rs-card-foot"><span>${esc(project.updated_by)} · ${esc(stamp(project.updated_at))} 수정</span><span class="rs-card-actions">${p.linked.length?`<button type="button" class="rs-button" data-rs-copy-project="${project.id}">실적 표 복사</button>`:''}${view.unlocked?`<button type="button" class="rs-button" data-rs-action="output-for" data-rs-id="${project.id}"${view.busy?' disabled':''}>이 과제에 실적 추가</button><button type="button" class="rs-button" data-rs-action="project-edit" data-rs-id="${project.id}"${view.busy?' disabled':''}>과제 수정</button>`:''}</span></div></article>`;
+    <div class="rs-card-foot"><span>${esc(project.updated_by)} · ${esc(stamp(project.updated_at))} 수정</span><span class="rs-card-actions">${p.rows.length?`<button type="button" class="rs-button" data-rs-copy-targets="${project.id}">목표 표 복사</button>`:''}${p.linked.length?`<button type="button" class="rs-button" data-rs-copy-project="${project.id}">실적 표 복사</button>`:''}${view.unlocked?`<button type="button" class="rs-button" data-rs-action="output-for" data-rs-id="${project.id}"${view.busy?' disabled':''}>이 과제에 실적 추가</button><button type="button" class="rs-button" data-rs-action="project-edit" data-rs-id="${project.id}"${view.busy?' disabled':''}>과제 수정</button>`:''}</span></div></article>`;
 }
 const daysOf=date=>daysUntil(date,today());
 // Whether the outputs tab lists this output under the chosen kind, project and search words.
@@ -274,11 +274,12 @@ function render(){
   $('rs-error').textContent=loadError;
   for(const id of ['rs-add-project','rs-add-proposal','rs-add-output'])$(id).disabled=!ready||busy;
   // Nothing to copy until the records are here; the outputs tab sets this again from its list.
-  if(!loaded){shownOutputs=[];$('rs-copy-outputs').disabled=$('rs-copy-homepage').disabled=true;}
+  if(!loaded){shownOutputs=[];shownProgress=[];$('rs-copy-outputs').disabled=$('rs-copy-homepage').disabled=$('rs-copy-targets').disabled=true;}
   $('rs-refresh').disabled=loading||busy||!store||!!store.pending;$('rs-refresh').textContent=loading?'불러오는 중…':'새로고침';
   for(const button of root.querySelectorAll('[data-rs-tab]')){const on=button.dataset.rsTab===tab;button.setAttribute('aria-selected',String(on));button.tabIndex=on?0:-1;$(button.getAttribute('aria-controls')).hidden=!on;}
   const overview=researchOverview(doc),c=overview.counts;
   const next=overview.next,late=overview.overdue.length;
+  $('rs-calendar').disabled=!loaded||!overview.deadlines.some(d=>d.days>=0);
   // Zero left over is good news only when the model calls it "met": see researchOverview.
   const need={need:[c.remaining,'건',c.pending?`그중 ${c.pending}건은 진행 중 · ${c.gap?`새로 시작할 실적 ${c.gap}건`:'새로 시작할 실적은 없어요'}`:'목표에서 달성 수를 뺀 합계','need'],
     met:[0,'건',c.untargeted?`남은 목표가 없어요 · 목표 미등록 과제 ${c.untargeted}개`:'남은 목표가 없어요','ok'],
@@ -302,6 +303,7 @@ function render(){
   if(!loaded)return;
   if(tab==='projects'){
     const list=phase==='archived'?researchOverview({...doc,projects:groups.archived.map(p=>({...p,archived:false}))}).progress.map(p=>({...p,project:{...p.project,archived:true}})):groups[phase];
+    shownProgress=list;$('rs-copy-targets').disabled=!list.some(p=>p.rows.length);
     setHTML($('rs-projects'),list.map(p=>projectCard(p,{...view,busy})).join('')||`<div class="rs-empty"><strong>${phase==='active'?(doc.projects.length?'진행 중인 과제가 없어요.':'아직 등록된 과제가 없어요.'):phase==='ended'?'종료된 과제가 없어요.':'보관한 과제가 없어요.'}</strong><p>${phase==='active'?(view.unlocked?'‘＋ 과제 추가’로 과제와 목표 실적을 등록해 보세요.':'관리자가 과제를 등록하면 이곳에 목표와 달성 현황이 표시돼요.'):phase==='ended'?'종료일이 지난 과제가 이곳에 모여요.':'과제 수정에서 보관하면 이곳으로 옮겨져요.'}</p></div>`);
   }else if(tab==='outputs'){
     const counts=Object.fromEntries(Object.keys(OUTPUT_KINDS).map(id=>[id,doc.outputs.filter(o=>o.kind===id).length]));
@@ -389,6 +391,24 @@ async function copyTable(outputs,what,button){
   if(!outputs.length){flash(button,'복사할 실적 없음');feedback('복사할 실적이 없어요.');return;}
   try{await navigator.clipboard.writeText(outputsTable(outputs,doc.projects));flash(button,`${outputs.length}건 복사됨`);feedback(`${what} 실적 ${outputs.length}건을 표로 복사했어요. 엑셀이나 한글 표에 붙여 넣으세요.`);}
   catch{flash(button,'복사 실패');feedback('복사하지 못했어요. 브라우저의 클립보드 권한을 확인해 주세요.');}
+}
+// The target rows of the given projects, as the table a progress report asks for.
+async function copyTargets(list,what,button){
+  const rows=list.reduce((sum,p)=>sum+p.rows.length,0);
+  if(!rows){flash(button,'복사할 목표 없음');feedback('복사할 목표가 없어요.');return;}
+  try{await navigator.clipboard.writeText(targetsTable(list));flash(button,`${rows}줄 복사됨`);feedback(`${what}의 목표 ${rows}줄을 표로 복사했어요. 엑셀이나 한글 표에 붙여 넣으세요.`);}
+  catch{flash(button,'복사 실패');feedback('복사하지 못했어요. 브라우저의 클립보드 권한을 확인해 주세요.');}
+}
+// Upcoming deadlines as a file a calendar app can import. The file is made in the browser and
+// goes nowhere else.
+function saveCalendar(button){
+  const calendar=deadlinesCalendar(researchOverview(doc));
+  if(!calendar.count){flash(button,'받을 기한 없음');feedback('다가오는 기한이 없어요.');return;}
+  const url=URL.createObjectURL(new Blob([calendar.text],{type:'text/calendar;charset=utf-8'}));
+  const link=document.createElement('a');link.href=url;link.download=`cvml-research-deadlines-${today().replaceAll('-','')}.ics`;link.hidden=true;
+  document.body.append(link);link.click();link.remove();setTimeout(()=>URL.revokeObjectURL(url),30000);
+  flash(button,`${calendar.count}건 받음`);
+  feedback(`다가오는 기한 ${calendar.count}건을 캘린더 파일로 받았어요. 캘린더 앱에서 이 파일을 가져오면 종일 일정으로 들어가요.`);
 }
 // The homepage list goes to the clipboard as rich text too, so "[paper]" stays a link when it
 // is pasted into Google Sites; a plain-text paste gets the address written out instead.
@@ -536,6 +556,10 @@ function bind(){
     const kindButton=event.target.closest('[data-rs-kind]');if(kindButton){kind=kindButton.dataset.rsKind;render();return;}
     const copyProject=event.target.closest('[data-rs-copy-project]');
     if(copyProject){const project=doc.projects.find(p=>p.id===copyProject.dataset.rsCopyProject);if(project)await copyTable(doc.outputs.filter(o=>o.acks.some(a=>a.project_id===project.id)),`‘${projectName(project)}’`,copyProject);return;}
+    const targetsButton=event.target.closest('#rs-copy-targets');if(targetsButton){await copyTargets(shownProgress,'보이는 과제',targetsButton);return;}
+    const cardTargets=event.target.closest('[data-rs-copy-targets]');
+    if(cardTargets){const p=shownProgress.find(item=>item.project.id===cardTargets.dataset.rsCopyTargets);if(p)await copyTargets([p],`‘${projectName(p.project)}’`,cardTargets);return;}
+    const calendarButton=event.target.closest('#rs-calendar');if(calendarButton){saveCalendar(calendarButton);return;}
     const tableButton=event.target.closest('#rs-copy-outputs');if(tableButton){await copyTable(shownOutputs,'보이는',tableButton);return;}
     const homepageButton=event.target.closest('#rs-copy-homepage');if(homepageButton){await copyHomepage(shownOutputs,homepageButton);return;}
     const copy=event.target.closest('[data-rs-copy]');
