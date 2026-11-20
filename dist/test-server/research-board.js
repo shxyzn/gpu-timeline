@@ -1,9 +1,9 @@
 import {dashboardView,monitoringAccess,openDashboardLogin,runAdminTask} from '../app.js?patch=workspace-3';
-import {GATE} from './gate.js?v=workspace-8';
-import {currentSession} from './session.js?v=workspace-8';
-import {documentKeys,fromBase64} from './workspace-crypto.js?v=workspace-8';
-import {ResearchStore} from './research-store.js?v=workspace-8';
-import {OUTPUT_KINDS,METRICS,PROPOSAL_STATUSES,PROPOSAL_OPEN,PROPOSAL_ROLES,emptyResearch,makeProject,makeOutput,makeProposal,projectProgress,researchOverview,remainingText,outputWarnings,ackIssues,outputsTable,homepageList,ackText,ACK_LABELS,statusLabel,outputDate,targetLabel,today,daysUntil,ddayLabel,newID} from './research-model.js?v=workspace-8';
+import {GATE} from './gate.js?v=workspace-9';
+import {currentSession} from './session.js?v=workspace-9';
+import {documentKeys,fromBase64} from './workspace-crypto.js?v=workspace-9';
+import {ResearchStore} from './research-store.js?v=workspace-9';
+import {OUTPUT_KINDS,METRICS,PROPOSAL_STATUSES,PROPOSAL_OPEN,PROPOSAL_ROLES,emptyResearch,makeProject,makeOutput,makeProposal,projectProgress,researchOverview,remainingText,outputWarnings,ackIssues,outputsTable,homepageList,ackText,ACK_LABELS,statusLabel,outputDate,targetLabel,today,daysUntil,ddayLabel,newID} from './research-model.js?v=workspace-9';
 
 // Research-project tracker of the test-server workspace: what each project owes, by when,
 // what already counts, and which acknowledgement (사사) every output carries.

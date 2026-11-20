@@ -1,9 +1,9 @@
 import {dashboardView} from '../app.js?patch=workspace-3';
-import {GATE} from './gate.js?v=workspace-8';
-import {currentSession} from './session.js?v=workspace-8';
-import {researchState} from './research-board.js?v=workspace-8';
-import {availableCurrentView} from './availability-model.js?v=2.1-as';
-import {ddayLabel} from './research-model.js?v=workspace-8';
+import {GATE} from './gate.js?v=workspace-9';
+import {currentSession} from './session.js?v=workspace-9';
+import {researchState} from './research-board.js?v=workspace-9';
+import {availableCurrentView} from './availability-model.js?v=workspace-9';
+import {ddayLabel} from './research-model.js?v=workspace-9';
 
 // Shell of the test-server workspace: one bar to move between the home, the research tracker
 // and the GPU dashboard, and a home that summarises both. The URL hash names the view, so the

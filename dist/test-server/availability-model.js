@@ -1,6 +1,6 @@
-import {currentView} from './current-model.js?v=1.2.0';
+import {currentView} from './current-model.js?v=workspace-9';
 
-// Test-only manual availability. Clear the entry when Kimi returns from repair;
+// Manual availability, kept by hand. Clear the entry when Kimi returns from repair;
 // receiving telemetry does not make a server available for new experiments.
 export const REPAIR_SERVERS=Object.freeze({
   'server-a':Object.freeze({label:'A/S 중',title:'사용 일시 중단',returnText:'복귀 일정 미정',gpuCount:1})

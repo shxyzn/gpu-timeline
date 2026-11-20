@@ -1,11 +1,14 @@
-import {dashboardView,monitoringAccess,openDashboardLogin,saveTestMonitoringConfig} from '../app.js?patch=workspace-3';
-import {CHECKS,DAYS,monitoringID,defaultConfig,emptyMonitoring,makeSchedule,validateConfig,validateSchedule,scheduleLabel,nextRun} from './monitoring-model.js?v=2.1';
-import {MonitoringStore} from './monitoring-store.js?v=2.1';
-import {isUnavailable} from './availability-model.js?v=2.1-as';
+import {dashboardView,monitoringAccess,openDashboardLogin,saveMonitoringConfig,saveTestMonitoringConfig} from '../app.js?patch=workspace-3';
+import {PROFILE} from './profile.js?v=workspace-9';
+import {CHECKS,DAYS,monitoringID,defaultConfig,emptyMonitoring,makeSchedule,validateConfig,validateSchedule,scheduleLabel,nextRun} from './monitoring-model.js?v=workspace-9';
+import {MonitoringStore} from './monitoring-store.js?v=workspace-9';
+import {isUnavailable} from './availability-model.js?v=workspace-9';
 import {health} from '../model.js';
 
 const $=id=>document.getElementById(id);
-const reportFor=s=>s?.monitoring?.profile==='test'?s.monitoring:null;
+// Schedules are kept, saved and acknowledged per site: a collector reports which profile it runs.
+const production=PROFILE.name==='production',saveConfig=production?saveMonitoringConfig:saveTestMonitoringConfig;
+const reportFor=s=>s?.monitoring?.profile===PROFILE.name?s.monitoring:null;
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const stamp=t=>t&&Number.isFinite(new Date(t).getTime())?new Intl.DateTimeFormat('ko-KR',{timeZone:'Asia/Seoul',month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit',hourCycle:'h23'}).format(new Date(t))+' KST':'아직 없음';
 const checkName=id=>CHECKS.find(c=>c.id===id)?.name||id;
@@ -42,7 +45,7 @@ function state(s,c){
   if(!loaded)return {label:loading?'설정 불러오는 중':'설정 확인 필요',tone:'muted'};
   if(!c)return {label:'일정 미설정',tone:'muted'};
   if(!ok)return {label:'서버 수신 지연 · 적용 확인 필요',tone:'warning'};
-  if(!m||m.profile!=='test')return {label:'적용 대기 · 수집기 연결 필요',tone:'warning'};
+  if(!m||m.profile!==PROFILE.name)return {label:'적용 대기 · 수집기 연결 필요',tone:'warning'};
   if(m.config_error)return {label:'서버 설정 확인 필요',tone:'warning'};
   if(m.applied_revision!==c.revision)return {label:'서버 적용 대기',tone:'warning'};
   if(!c.enabled)return {label:'모니터링 중지됨',tone:'muted'};
@@ -51,10 +54,8 @@ function state(s,c){
 function renderCards(){
   const view=dashboardView();if(!view.config)return;
   if(!store&&view.config.dashboard){store=new MonitoringStore(view.config.dashboard);void refreshPublic();}
-  const patch=document.body.dataset.stagingVersion||'2.1';
-  // The workspace bar already names the test server and its version.
-  const note=document.querySelector('.priority-header p');if(note)note.textContent='GPU·API 실험과 서버 상태를 한눈에 확인해요.';
-  if(view.build&&$('dashboard-version'))$('dashboard-version').textContent='테스트 v'+patch+(/^[a-f0-9]{40}$/.test(view.build.revision||'')?'+'+view.build.revision.slice(0,7):'');
+  // Production keeps the release version the core wrote in the footer; the test server names its snapshot.
+  if(!production&&view.build&&$('dashboard-version'))$('dashboard-version').textContent='테스트 v'+(document.body.dataset.stagingVersion||'')+(/^[a-f0-9]{40}$/.test(view.build.revision||'')?'+'+view.build.revision.slice(0,7):'');
   document.querySelectorAll('#servers .server-card').forEach((card,index)=>{
     const s=view.servers[index];if(!s)return;const c=savedConfig(s.server_id),st=state(s,c);
     card.querySelector('.monitor-card')?.remove();
@@ -143,7 +144,7 @@ async function save(event){
   try{
     const candidate={...draft,enabled:$('monitor-enabled').checked,expected_gpu_count:Number($('monitor-gpu-count').value),timeout_seconds:Number($('monitor-timeout').value),temperature_warn_c:Number($('monitor-temperature').value)};validateConfig(candidate);
     const signature=JSON.stringify(candidate);if(pending?.signature!==signature)pending={signature,id:monitoringID()};
-    saving=true;updateAuth();const saved=await saveTestMonitoringConfig(candidate,baseRevision,pending.id);data=saved;loaded=true;loadError='';draft=structuredClone(savedConfig(serverID));baseRevision=draft.revision;pending=null;
+    saving=true;updateAuth();const saved=await saveConfig(candidate,baseRevision,pending.id);data=saved;loaded=true;loadError='';draft=structuredClone(savedConfig(serverID));baseRevision=draft.revision;pending=null;
     renderCards();renderSchedules();$('monitor-feedback').textContent='공용 설정을 저장했어요. 서버의 적용 응답을 기다립니다.';
   }catch(error){$('monitor-config-error').textContent=error.message;}
   finally{saving=false;updateAuth();}

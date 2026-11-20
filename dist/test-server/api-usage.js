@@ -1,7 +1,9 @@
-import {dashboardView,monitoringAccess,saveTestAPIUsageHistory} from '../app.js?patch=workspace-3';
+import {dashboardView,monitoringAccess,saveAPIUsageHistory,saveTestAPIUsageHistory} from '../app.js?patch=workspace-3';
+import {PROFILE} from './profile.js?v=workspace-9';
+const saveHistory=PROFILE.name==='production'?saveAPIUsageHistory:saveTestAPIUsageHistory;
 import {dollars,usageStatus} from '../openrouter-model.js?v=1.2.0';
-import {emptyHistory,chartData,needsRecording} from './api-usage-model.js?v=2.1.1';
-import {APIUsageStore} from './api-usage-store.js?v=2.1.1';
+import {emptyHistory,chartData,needsRecording} from './api-usage-model.js?v=workspace-9';
+import {APIUsageStore} from './api-usage-store.js?v=workspace-9';
 
 const $=id=>document.getElementById(id),board=$('api-usage-board');
 const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -13,11 +15,11 @@ let history=emptyHistory(),store=null,loaded=false,loading=false,recording=false
 let key='all',days=7,metric='daily',plotWidth=0,optionsSignature='';
 
 if(board){
-  board.innerHTML=`<div class="api-usage-heading"><div><div class="api-usage-title-line"><h3 id="api-usage-title">API 사용량 추이</h3><span>v2.1.1</span></div><p>키별 사용액의 흐름을 확인하세요.</p></div><button type="button" id="api-usage-reload">이력 새로고침</button></div>
+  board.innerHTML=`<div class="api-usage-heading"><div><div class="api-usage-title-line"><h3 id="api-usage-title">API 사용량 추이</h3></div><p>키별 사용액의 흐름을 확인하세요.</p></div><button type="button" id="api-usage-reload">이력 새로고침</button></div>
   <div class="api-usage-controls"><label>API 키<select id="api-usage-key" aria-label="그래프 API 키"><option value="all">전체 API 키</option></select></label><label>표시<select id="api-usage-metric" aria-label="사용량 그래프 종류"><option value="daily">일별 사용액</option><option value="cumulative">누적 사용액</option></select></label><div class="api-usage-period" role="group" aria-label="사용량 그래프 기간">${[7,30,90].map(d=>`<button type="button" data-usage-days="${d}" aria-pressed="${d===7}">${d}일</button>`).join('')}</div></div>
   <div class="api-usage-summary"><div><span id="api-usage-amount-label">기록된 일별 사용액</span><strong id="api-usage-amount">—</strong><p id="api-usage-basis"></p></div><div class="api-usage-coverage"><span id="api-usage-coverage"></span><small id="api-usage-updated"></small></div></div>
   <div id="api-usage-legend" class="api-usage-legend"></div><div id="api-usage-plot" class="api-usage-plot"></div><p id="api-usage-chart-note" class="api-usage-chart-note"></p>
-  <p id="api-usage-state" class="api-usage-state" role="status" aria-live="polite"></p><details class="api-usage-records"><summary>관측 기록 보기</summary><div id="api-usage-table" class="api-usage-table"></div></details><p class="api-usage-help">USD · 일별 사용액은 UTC 날짜별 마지막 조회값이며 하루 최종 정산액이 아닙니다. 미관측 기간은 0으로 채우지 않습니다.<br>테스트 페이지에서 관리자 로그인 중일 때 조회 이력을 저장합니다. 최대 90일 이력 · BYOK 사용액은 별도입니다.</p>`;
+  <p id="api-usage-state" class="api-usage-state" role="status" aria-live="polite"></p><details class="api-usage-records"><summary>관측 기록 보기</summary><div id="api-usage-table" class="api-usage-table"></div></details><p class="api-usage-help">USD · 일별 사용액은 UTC 날짜별 마지막 조회값이며 하루 최종 정산액이 아닙니다. 미관측 기간은 0으로 채우지 않습니다.<br>관리자 로그인 중일 때 조회 이력을 저장합니다. 최대 90일 이력 · BYOK 사용액은 별도입니다.</p>`;
   $('api-usage-key').onchange=()=>{key=$('api-usage-key').value;render();};
   $('api-usage-metric').onchange=()=>{metric=$('api-usage-metric').value;render();};
   board.addEventListener('click',event=>{const button=event.target.closest('[data-usage-days]');if(button){days=Number(button.dataset.usageDays);render();}});
@@ -85,7 +87,7 @@ async function record(){
   const access=monitoringAccess();
   if(!store||!loaded||loadError||recording||!access.unlocked||access.busy||Date.now()<retryAt||!needsRecording(history,dashboardView().tokens))return;
   recording=true;render();
-  try{const next=await saveTestAPIUsageHistory();if(next.revision>=history.revision)history=next;saveError='';}
+  try{const next=await saveHistory();if(next.revision>=history.revision)history=next;saveError='';}
   catch{saveError='이력을 저장하지 못했어요. 표시 중인 조회값은 유지됩니다. 이력 새로고침으로 다시 시도할 수 있어요.';retryAt=Date.now()+60000;}
   finally{recording=false;render();}
 }

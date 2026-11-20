@@ -1,6 +1,6 @@
 import {dashboardView} from '../app.js?patch=workspace-3';
-import {isUnavailable,repairState} from './availability-model.js?v=2.1-as';
-import {repairPanel,escapeAvailability as esc} from './availability-ui.js?v=2.1-as';
+import {isUnavailable,repairState} from './availability-model.js?v=workspace-9';
+import {repairPanel,escapeAvailability as esc} from './availability-ui.js?v=workspace-9';
 
 const $=id=>document.getElementById(id);
 const setText=(element,value)=>{if(element&&element.textContent!==value)element.textContent=value;};

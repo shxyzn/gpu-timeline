@@ -1,11 +1,11 @@
 import {dashboardView,openExperiment,refreshDashboard} from '../app.js?patch=workspace-3';
-import {progressValue,experimentPresentation,humanDuration,gpuReadings} from './current-model.js?v=1.2.0';
+import {progressValue,experimentPresentation,humanDuration,gpuReadings} from './current-model.js?v=workspace-9';
 import {health,jobETA,timestamp,apiSlot} from '../model.js';
 import {budgetUsage,dollars,usageStatus} from '../openrouter-model.js?v=1.2.0';
-import {availableCurrentView,isUnavailable} from './availability-model.js?v=2.1-as';
-import {repairPanel} from './availability-ui.js?v=2.1-as';
-import './parcel.js?v=1.2.0';
-import './parcel-board.js?patch=workspace-3';
+import {availableCurrentView,isUnavailable} from './availability-model.js?v=workspace-9';
+import {repairPanel} from './availability-ui.js?v=workspace-9';
+import './parcel.js?v=workspace-9';
+import './parcel-board.js?v=workspace-9';
 
 const $=id=>document.getElementById(id);
 const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -138,7 +138,7 @@ document.querySelector('.priority-tabs').addEventListener('keydown',event=>{
 routeHash();
 renderCurrent();
 
-import './monitoring.js?patch=workspace-5';
-import './availability.js?patch=workspace-3';
+import './monitoring.js?v=workspace-9';
+import './availability.js?v=workspace-9';
 
-import './api-usage.js?patch=workspace-3';
+import './api-usage.js?v=workspace-9';

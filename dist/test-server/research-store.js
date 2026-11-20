@@ -1,11 +1,12 @@
 import {GitHubEditsStore,encodeJSON,decodeJSON} from '../edits.js?v=1.2.0';
-import {emptyResearch,validateResearch,applyResearchOperation} from './research-model.js?v=workspace-8';
-import {isEnvelope,sealJSON,openJSON} from './workspace-crypto.js?v=workspace-8';
+import {emptyResearch,validateResearch,applyResearchOperation} from './research-model.js?v=workspace-9';
+import {isEnvelope,sealJSON,openJSON} from './workspace-crypto.js?v=workspace-9';
+import {PROFILE} from './profile.js?v=workspace-9';
 
-// The research document of the test server. It is stored sealed with the workspace key, so the
+// The research document of this site (see profile.js). It is stored sealed with the workspace key, so the
 // file on the public status branch is unreadable without the shared login password. Commit
 // messages stay generic for the same reason.
-export const RESEARCH_PATH='dashboard/research-test.json';
+export const RESEARCH_PATH=PROFILE.files.research;
 const CONTEXT='cvml-workspace/research/v1';
 
 export class ResearchStore{
