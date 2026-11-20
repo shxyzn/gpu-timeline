@@ -1,4 +1,4 @@
-import {currentView} from './current-model.js?v=workspace-11';
+import {currentView} from './current-model.js?v=workspace-12';
 
 // Manual availability, kept by hand. Clear the entry when Kimi returns from repair;
 // receiving telemetry does not make a server available for new experiments.

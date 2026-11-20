@@ -4,6 +4,7 @@ import {LIMITS, EXPORT_COLUMNS, TARGET_COLUMNS, targetsTable, deadlinesCalendar,
   remainingText, researchOverview, outputWarnings, outputDate, ackText, ackIssues, outputsTable, homepageList, targetLabel, statusLabel, today, daysUntil, ddayLabel} from '../dist/test-server/research-model.js';
 import {sealGate, openGate, validGate, importDocumentKey, sealRetiredKey, documentKeys, sealJSON, openJSON, isEnvelope, toBase64, fromBase64} from '../dist/test-server/workspace-crypto.js';
 import {ResearchStore, RESEARCH_PATH} from '../dist/test-server/research-store.js';
+import {PROFILE} from '../dist/test-server/profile.js';
 import {currentSession, startSession, endSession, cleanName, lastName} from '../dist/test-server/session.js';
 import {GATE} from '../dist/test-server/gate.js';
 import {encodeJSON, decodeJSON} from '../dist/edits.js';
@@ -724,6 +725,50 @@ test('the research store keeps the public file sealed and retries conflicts', as
   conflicts = 9; branch = true;
   await assert.rejects(store.save('token', operation), /겹쳤습니다/);
   assert.equal(store.saving, false);
+});
+
+test('the practice copy can be replaced with the real records, which are only read', async () => {
+  const key = await importDocumentKey(crypto.getRandomValues(new Uint8Array(32))), session = {key, keyID: 'k1'}, context = 'cvml-workspace/research/v1';
+  const files = new Map(), puts = [];
+  const reply = (status, body = {}) => ({ok: status >= 200 && status < 300, status, json: async () => body});
+  const fetcher = async (url, options = {}) => {
+    const address = new URL(url);
+    if (address.hostname === 'raw.githubusercontent.com') {
+      assert.equal(options.headers, undefined);
+      const name = address.pathname.replace('/shxyzn/gpu-timeline/status/', '');
+      return files.has(name) ? reply(200, files.get(name).content) : reply(404);
+    }
+    if (address.pathname.endsWith('/git/ref/heads/status')) return reply(200, {ref: 'refs/heads/status'});
+    const name = address.pathname.replace('/repos/shxyzn/gpu-timeline/contents/', '');
+    if (options.method === 'PUT') {
+      const body = JSON.parse(options.body);
+      assert.equal(body.sha, files.get(name)?.sha);
+      puts.push([name, body.message]);
+      files.set(name, {content: decodeJSON(body.content), sha: 'sha-' + puts.length});
+      return reply(200, {content: {sha: 'sha-' + puts.length}});
+    }
+    return files.has(name) ? reply(200, {type: 'file', encoding: 'base64', sha: files.get(name).sha, content: encodeJSON(files.get(name).content)}) : reply(404);
+  };
+  const store = new ResearchStore({repository: 'shxyzn/gpu-timeline', branch: 'status', path: 'dashboard/edits.json'}, session, fetcher);
+  store.client.pause = async () => {};
+  const practice = validateResearch({...emptyResearch(), revision: 9, updated_at: at, projects: [project({name: '연습으로 넣은 과제'})]});
+  const real = validateResearch({...emptyResearch(), revision: 3, updated_at: at, projects: [project({name: '실제 과제', number: 'RS-2026-REAL'})]});
+  files.set(RESEARCH_PATH, {content: await sealJSON(key, 'k1', practice, context), sha: 'practice-0'});
+  files.set(PROFILE.practiceSource, {content: await sealJSON(key, 'k1', real, context), sha: 'real-0'});
+  const source = await store.readPublic(PROFILE.practiceSource);
+  assert.deepEqual(source.projects.map(p => p.name), ['실제 과제']);
+  const next = await store.replaceWith('token', source, '2026-11-20T00:00:00.000Z');
+  // The revision moves past both documents, so a tab that holds revision 9 accepts the result.
+  assert.deepEqual([next.revision, next.updated_at, next.projects.map(p => p.name)], [10, '2026-11-20T00:00:00.000Z', ['실제 과제']]);
+  assert.deepEqual(puts, [[RESEARCH_PATH, 'research-test: replace with the production records']]);
+  assert.equal(files.get(PROFILE.practiceSource).sha, 'real-0', 'the real records are only read');
+  assert.equal(isEnvelope(files.get(RESEARCH_PATH).content) && !JSON.stringify(files.get(RESEARCH_PATH).content).includes('RS-2026-REAL'), true);
+  assert.deepEqual((await store.readPublic()).projects.map(p => p.name), ['실제 과제']);
+  await assert.rejects(store.replaceWith('', source, at), /관리자/);
+  // Nothing real has been stored yet: the practice copy is not emptied.
+  files.delete(PROFILE.practiceSource);
+  await assert.rejects(async () => store.replaceWith('token', await store.readPublic(PROFILE.practiceSource), at), /아직 없어요/);
+  assert.equal(puts.length, 1);
 });
 
 test('replacing the document key keeps older documents readable and re-seals them on save', async () => {

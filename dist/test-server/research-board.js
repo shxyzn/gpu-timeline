@@ -1,10 +1,10 @@
 import {dashboardView,monitoringAccess,openDashboardLogin,runAdminTask} from '../app.js?patch=workspace-4';
-import {GATE} from './gate.js?v=workspace-11';
-import {currentSession} from './session.js?v=workspace-11';
-import {documentKeys,fromBase64} from './workspace-crypto.js?v=workspace-11';
-import {ResearchStore} from './research-store.js?v=workspace-11';
-import {PROFILE} from './profile.js?v=workspace-11';
-import {OUTPUT_KINDS,METRICS,PROPOSAL_STATUSES,PROPOSAL_OPEN,PROPOSAL_ROLES,emptyResearch,makeProject,makeOutput,makeProposal,projectProgress,researchOverview,remainingText,outputWarnings,ackIssues,outputsTable,targetsTable,deadlinesCalendar,homepageList,ackText,ACK_LABELS,statusLabel,outputDate,targetLabel,today,daysUntil,ddayLabel,newID} from './research-model.js?v=workspace-11';
+import {GATE} from './gate.js?v=workspace-12';
+import {currentSession} from './session.js?v=workspace-12';
+import {documentKeys,fromBase64} from './workspace-crypto.js?v=workspace-12';
+import {ResearchStore} from './research-store.js?v=workspace-12';
+import {PROFILE} from './profile.js?v=workspace-12';
+import {OUTPUT_KINDS,METRICS,PROPOSAL_STATUSES,PROPOSAL_OPEN,PROPOSAL_ROLES,emptyResearch,makeProject,makeOutput,makeProposal,projectProgress,researchOverview,remainingText,outputWarnings,ackIssues,outputsTable,targetsTable,deadlinesCalendar,homepageList,ackText,ACK_LABELS,statusLabel,outputDate,targetLabel,today,daysUntil,ddayLabel,newID} from './research-model.js?v=workspace-12';
 
 // Research-project tracker of the test-server workspace: what each project owes, by when,
 // what already counts, and which acknowledgement (사사) every output carries.
@@ -26,7 +26,7 @@ const tone=days=>days<0?'late':days<=30?'soon':days<=90?'near':'far';
 if(root&&session){
   root.innerHTML=`<div class="rs-head"><div><span class="ws-eyebrow">RESEARCH</span><h1 id="rs-title">연구과제</h1><p>과제마다 목표 실적이 몇 개이고, 언제까지이며, 무엇으로 채웠는지 확인해요. 준비 중인 제안서의 마감도 함께 챙겨요.</p></div>
     <div class="rs-actions"><button type="button" id="rs-refresh" class="rs-button">새로고침</button><button type="button" id="rs-add-proposal" class="rs-button">＋ 제안서 추가</button><button type="button" id="rs-add-output" class="rs-button">＋ 실적 추가</button><button type="button" id="rs-add-project" class="rs-button primary">＋ 과제 추가</button></div></div>
-  ${PROFILE.practiceOf?`<p class="rs-practice" role="note"><strong>연습용 기록</strong><span>테스트 서버의 연구과제 기록은 정식 화면과 따로 저장되는 연습용 사본이에요. 여기서 고친 내용은 정식 화면에 반영되지 않아요. 실제 과제·실적은 <a href="${esc(new URL(PROFILE.practiceOf,import.meta.url).href)}">정식 화면의 연구과제</a>에서 추가·수정해 주세요.</span></p>`:''}
+  ${PROFILE.practiceOf?`<p class="rs-practice" role="note"><strong>연습용 기록</strong><span>테스트 서버의 연구과제 기록은 정식 화면과 따로 저장되는 연습용 사본이에요. 여기서 고친 내용은 정식 화면에 반영되지 않아요. 실제 과제·실적은 <a href="${esc(new URL(PROFILE.practiceOf,import.meta.url).href)}">정식 화면의 연구과제</a>에서 추가·수정해 주세요.</span>${PROFILE.practiceSource?'<button type="button" id="rs-pull-live" class="rs-button" hidden>정식 기록 가져오기</button>':''}</p>`:''}
   <div class="rs-access"><span id="rs-access"></span><button type="button" id="rs-admin" class="rs-link" hidden>관리자 연결</button></div>
   <p id="rs-feedback" class="rs-feedback" role="status" aria-live="polite"></p><p id="rs-error" class="rs-error" role="alert"></p>
   <div id="rs-summary" class="rs-summary" aria-label="연구과제 요약"></div>
@@ -273,6 +273,7 @@ function render(){
   $('rs-admin').hidden=view.unlocked||!view.enabled;
   $('rs-error').textContent=loadError;
   for(const id of ['rs-add-project','rs-add-proposal','rs-add-output'])$(id).disabled=!ready||busy;
+  if($('rs-pull-live')){$('rs-pull-live').hidden=!view.unlocked;$('rs-pull-live').disabled=!ready||busy;}
   // Nothing to copy until the records are here; the outputs tab sets this again from its list.
   if(!loaded){shownOutputs=[];shownProgress=[];$('rs-copy-outputs').disabled=$('rs-copy-homepage').disabled=$('rs-copy-targets').disabled=true;}
   $('rs-refresh').disabled=loading||busy||!store||!!store.pending;$('rs-refresh').textContent=loading?'불러오는 중…':'새로고침';
@@ -529,13 +530,35 @@ async function saveRecord(event,type){
 }
 function askDelete(type){
   const record=editing?.record;if(!record)return;
-  confirming={type,record};$('rs-confirm-error').textContent='';
+  confirming={type,record};$('rs-confirm-error').textContent='';$('rs-confirm-ok').textContent='삭제';
   $('rs-confirm-title').textContent=`${NOUN[type]}${type==='output'?'을':'를'} 삭제할까요?`;
   $('rs-confirm-text').textContent=`‘${type==='project'?record.name:record.title}’ 기록을 삭제해요. 삭제한 기록은 이 화면에서 되돌릴 수 없어요.${type==='project'?' 잠시 숨기려면 과제 수정의 ‘보관’을 이용해 주세요.':''}`;
   $('rs-confirm-dialog').showModal();$('rs-confirm-cancel').focus();
 }
+// The test server's practice copy takes over the real records as they are now. The real records
+// are only read; what was tried on the test server since the last refresh is replaced.
+function askPull(){
+  if(!PROFILE.practiceSource||!requireAdmin())return;
+  confirming={pull:true};$('rs-confirm-error').textContent='';$('rs-confirm-ok').textContent='가져오기';
+  $('rs-confirm-title').textContent='정식 기록을 가져올까요?';
+  $('rs-confirm-text').textContent='테스트 서버의 연습용 기록 전체를 지금의 정식 기록으로 바꿔요. 테스트 서버에서 연습으로 추가·수정한 내용은 사라져요. 정식 화면의 기록은 바뀌지 않아요.';
+  $('rs-confirm-dialog').showModal();$('rs-confirm-cancel').focus();
+}
+async function pullLive(){
+  if(saving||access().busy){$('rs-confirm-error').textContent='앞선 저장이 끝난 뒤 다시 시도해 주세요.';return;}
+  saving=true;render();
+  try{
+    const source=await store.readPublic(PROFILE.practiceSource);
+    const next=await runAdminTask(token=>store.replaceWith(token,source,new Date().toISOString()));
+    doc=next;loaded=true;loadError='';lastRead=Date.now();stale=false;
+    $('rs-confirm-dialog').close();confirming=null;refocus=[null,null,'rs-pull-live'];
+    feedback(`정식 기록을 가져왔어요. 과제 ${next.projects.length}개 · 실적 ${next.outputs.length}건 · 제안서 ${next.proposals.length}건이에요.`);
+  }catch(error){$('rs-confirm-error').textContent=error.message||'가져오지 못했어요. 다시 시도해 주세요.';}
+  finally{saving=false;render();notify();}
+}
 async function confirmDelete(){
   if(!confirming)return;
+  if(confirming.pull)return pullLive();
   const {type,record}=confirming;
   await commit({type:type+'_delete',id:record.id,base:record.updated_at,at:new Date().toISOString()},'rs-confirm-error',()=>{
     $('rs-confirm-dialog').close();$(`rs-${type}-dialog`).close();confirming=null;editing=null;refocus=[null,null,'rs-tab-'+tab];
@@ -549,6 +572,7 @@ function bind(){
   $('rs-add-project').onclick=()=>openProject();
   $('rs-add-output').onclick=()=>openOutput();
   $('rs-add-proposal').onclick=()=>openProposal();
+  if($('rs-pull-live'))$('rs-pull-live').onclick=()=>askPull();
   root.addEventListener('click',async event=>{
     const tabButton=event.target.closest('[data-rs-tab]');if(tabButton){tab=tabButton.dataset.rsTab;render();return;}
     const phaseButton=event.target.closest('[data-rs-phase]');if(phaseButton){phase=phaseButton.dataset.rsPhase;render();return;}

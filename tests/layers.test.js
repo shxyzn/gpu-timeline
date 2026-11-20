@@ -107,8 +107,14 @@ test('the two sites keep separate documents and offer the same profile fields', 
   assert.equal(PRODUCTION.name, 'production');
   assert.deepEqual(PRODUCTION.pages, {entry: '../login.html', workspace: '../'});
   assert.deepEqual(PRODUCTION.files, {research: 'dashboard/research.json', monitoring: 'dashboard/monitoring.json', usage: 'dashboard/openrouter-usage.json'});
+  // Production offers every field its modules read. The test server may be a field ahead, for a
+  // feature that is not released yet; scripts/promote_release.mjs demands the same fields again
+  // before the next release can be made.
   const shape = value => value && typeof value === 'object' ? Object.fromEntries(Object.keys(value).sort().map(key => [key, shape(value[key])])) : typeof value;
-  assert.deepEqual(shape(PRODUCTION), shape(STAGING));
+  const covers = (wide, narrow) => typeof narrow === 'string' ? wide === narrow : !!wide && typeof wide === 'object' && Object.keys(narrow).every(key => covers(wide[key], narrow[key]));
+  assert.ok(covers(shape(STAGING), shape(PRODUCTION)), 'the test-server profile lost a field production still has');
+  assert.deepEqual(Object.keys(shape(STAGING)).filter(key => !(key in PRODUCTION)), ['practiceSource'], 'fields the next release must add to dist/release/profile.js');
+  assert.equal(STAGING.practiceSource, PRODUCTION.files.research, 'the practice copy is refreshed from production\'s own research document');
   for (const key of Object.keys(STAGING.files)) assert.notEqual(PRODUCTION.files[key], STAGING.files[key], `both sites would write ${STAGING.files[key]}`);
   // The history of the status branch tells the two sites' writes apart by their first word.
   assert.deepEqual(PRODUCTION.commits, {research: 'research', monitoring: 'monitoring', usage: 'usage charts'});

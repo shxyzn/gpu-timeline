@@ -16,4 +16,8 @@ export const PROFILE = Object.freeze({
   // server holds a practice copy. This is the address of the research view that holds the real
   // ones, relative to this module; '' on the site that holds them itself.
   practiceOf: '../#research',
+  // The document that holds those real records, which the practice copy can be refreshed from
+  // (연구과제 → 정식 기록 가져오기). It is only ever read here. '' on the site that holds the
+  // real records itself: that site's document is never replaced as a whole.
+  practiceSource: 'dashboard/research.json',
 });

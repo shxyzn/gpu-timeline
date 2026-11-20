@@ -1,6 +1,6 @@
 import {GitHubEditsStore,encodeJSON,decodeJSON} from '../edits.js?v=1.2.0';
-import {emptyHistory,validateHistory,mergeSamples} from './api-usage-model.js?v=workspace-11';
-import {PROFILE} from './profile.js?v=workspace-11';
+import {emptyHistory,validateHistory,mergeSamples} from './api-usage-model.js?v=workspace-12';
+import {PROFILE} from './profile.js?v=workspace-12';
 
 export class APIUsageStore{
   constructor(dashboard,fetcher=(...args)=>fetch(...args)){

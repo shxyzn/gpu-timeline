@@ -1,6 +1,6 @@
 import {GitHubEditsStore,encodeJSON,decodeJSON} from '../edits.js?v=1.2.0';
-import {emptyMonitoring,validateMonitoring,validateConfig} from './monitoring-model.js?v=workspace-11';
-import {PROFILE} from './profile.js?v=workspace-11';
+import {emptyMonitoring,validateMonitoring,validateConfig} from './monitoring-model.js?v=workspace-12';
+import {PROFILE} from './profile.js?v=workspace-12';
 
 export class MonitoringStore {
   constructor(dashboard,fetcher=(...args)=>fetch(...args)){

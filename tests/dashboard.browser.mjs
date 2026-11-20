@@ -67,7 +67,7 @@ try {
   const workspacePassword='browser-test-workspace',workspaceKeyBytes=crypto.getRandomValues(new Uint8Array(32));
   const workspaceGate=await sealGate(workspacePassword,workspaceKeyBytes,{iterations:100000});
   const workspaceKey=await importDocumentKey(workspaceKeyBytes),researchContext='cvml-workspace/research/v1';
-  let researchDoc=null,researchSealed=null,researchWrites=0,researchForbidden=false,researchUnavailable=false,researchPublic=null,researchProfile='test';
+  let researchDoc=null,researchSealed=null,researchWrites=0,researchForbidden=false,researchUnavailable=false,researchPublic=null,researchLive=null,researchProfile='test';
   const researchOf=pathname=>pathname.endsWith('/dashboard/research-test.json')?'test':pathname.endsWith('/dashboard/research.json')?'production':null;
   const sealResearch=async doc=>{researchDoc=doc;researchSealed=await sealJSON(workspaceKey,workspaceGate.key_id,doc,researchContext);};
   const telemetry = id => ({server_id: id, name: `Server ${id.slice(-1).toUpperCase()}`, updated_at: iso(id === 'server-c' && serverCStale ? -2 : 0), collector_ok: true,
@@ -107,6 +107,8 @@ try {
     if (url.pathname.endsWith('/hardware-prices/prices.json')) return fulfill(route, JSON.parse(await fs.readFile(path.join(root, 'dist/hardware-prices.json'), 'utf8')));
     if(/\/dashboard\/monitoring(?:-test)?\.json$/.test(url.pathname))return fulfill(route,monitoringProfiles[url.pathname.endsWith('monitoring-test.json')?'test':'production']);
     if(researchOf(url.pathname)){
+      // One exception: the test server reads production's document to refresh its practice copy.
+      if(researchLive&&researchProfile==='test'&&researchOf(url.pathname)==='production'){assert.equal(route.request().headers().authorization,undefined);return fulfill(route,researchLive);}
       assert.equal(researchOf(url.pathname),researchProfile,'each site reads only its own research document');
       assert.equal(route.request().headers().authorization,undefined);
       if(researchUnavailable)return fulfill(route,{},503);
@@ -155,7 +157,7 @@ try {
       assert.equal(researchOf(url.pathname),researchProfile,'each site writes only its own research document');
       if(request.method()==='PUT'){
         if(researchForbidden)return fulfill(route,{},403);
-        const body=request.postDataJSON();assert.equal(body.branch,'status');assert.equal(body.message,(researchProfile==='test'?'research-test':'research')+': update workspace records');
+        const body=request.postDataJSON();assert.equal(body.branch,'status');assert.equal(body.message,(researchProfile==='test'?'research-test':'research')+(researchLive?': replace with the production records':': update workspace records'));
         assert.equal(body.sha,researchSealed?'research-'+researchDoc.revision:undefined);
         const sealed=decodeJSON(body.content);assert.equal(isEnvelope(sealed),true,'research records must be stored sealed');
         researchDoc=await openJSON(workspaceKey,workspaceGate.key_id,sealed,researchContext);researchSealed=sealed;researchWrites++;
@@ -1209,7 +1211,8 @@ try {
     if(site.profile==='test'){
       assert.match(await reader.locator('.rs-practice').innerText(),/연습용 기록[\s\S]*정식 화면에 반영되지 않아요[\s\S]*정식 화면의 연구과제/);
       assert.equal(await reader.locator('.rs-practice a').evaluate(link=>link.href),base+'/#research');
-    }else assert.equal(await reader.locator('.rs-practice').count(),0);
+      assert.equal(await reader.locator('#rs-pull-live').isVisible(),false,'refreshing the practice copy is for the administrator');
+    }else assert.equal(await reader.locator('.rs-practice,#rs-pull-live').count(),0);
     assert.equal(await reader.locator('#gpu-workspace').isVisible(),false);
     assert.equal(await reader.locator('.ws-nav [aria-current=page]').innerText(),'연구과제');
     // The lab's public homepage sits in the bar and opens in a new tab, away from the workspace.
@@ -1633,6 +1636,34 @@ try {
     assert.equal(await proposal.locator('[data-rs-action=proposal-project]').count(),0);
     await admin.screenshot({path:path.join(output,'research-proposals-desktop.png'),fullPage:true});
     assert.deepEqual(researchErrors,[]);
+
+    if(site.profile==='test'){
+      // The practice copy takes over the real records as they are now. Production's document is
+      // read without the administrator's token and is never written from here.
+      const liveDoc=validateResearch({...structuredClone(researchDoc),revision:2,projects:[...structuredClone(researchDoc.projects),makeProject({name:'정식에만 있는 과제',ends_on:kst(500),targets:[]},made)]});
+      researchLive=await sealJSON(workspaceKey,workspaceGate.key_id,liveDoc,researchContext);
+      const revisionBefore=researchDoc.revision,writesBefore=researchWrites;
+      await admin.locator('#rs-tab-projects').click();
+      await admin.locator('#rs-pull-live').click();
+      assert.match(await admin.locator('#rs-confirm-text').innerText(),/연습용 기록 전체를 지금의 정식 기록으로 바꿔요[\s\S]*정식 화면의 기록은 바뀌지 않아요/);
+      assert.equal(await admin.locator('#rs-confirm-ok').innerText(),'가져오기');
+      await admin.locator('#rs-confirm-ok').click();
+      await admin.locator('#rs-confirm-dialog').waitFor({state:'hidden'});
+      // The revision moves past the practice copy's own, whatever production's was.
+      assert.deepEqual([researchWrites,researchDoc.revision,researchDoc.projects.some(project=>project.name==='정식에만 있는 과제')],[writesBefore+1,revisionBefore+1,true]);
+      assert.match(await admin.locator('#rs-feedback').innerText(),/^정식 기록을 가져왔어요\. 과제 \d+개 · 실적 \d+건 · 제안서 \d+건이에요\.$/);
+      researchLive=null;
+      // Focus returns to the button that started it.
+      assert.equal(await admin.evaluate(()=>document.activeElement.id),'rs-pull-live');
+      await admin.locator('[data-rs-phase=active]').click();
+      await admin.locator('.rs-project',{hasText:'정식에만 있는 과제'}).waitFor();
+      // The shared confirm dialog asks to delete again when a record is deleted.
+      await admin.locator('.rs-project',{hasText:'정식에만 있는 과제'}).locator('[data-rs-action=project-edit]').click();
+      await admin.locator('#rs-project-delete').click();
+      assert.equal(await admin.locator('#rs-confirm-ok').innerText(),'삭제');
+      await admin.locator('#rs-confirm-cancel').click();
+      await admin.locator('#rs-project-dialog [data-rs-close]').first().click();
+    }else assert.equal(await admin.locator('#rs-pull-live').count(),0);
 
     for(const width of [390,320]){
       await admin.setViewportSize({width,height:844});
