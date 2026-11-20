@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "revision": 1231,
-  "updated_at": "2026-11-20T12:13:10.168Z",
+  "revision": 1232,
+  "updated_at": "2026-11-20T13:13:10.371Z",
   "manual_jobs": [],
   "hidden_jobs": [
     {
@@ -30,7 +30,7 @@
         "limit_reset": null
       },
       "checked_at": "2026-11-13T07:33:47.636Z",
-      "attempted_at": "2026-11-20T12:12:09.935Z",
+      "attempted_at": "2026-11-20T13:13:09.933Z",
       "error": "unauthorized"
     },
     {
@@ -47,7 +47,7 @@
         "limit_reset": null
       },
       "checked_at": "2026-11-13T07:59:47.629Z",
-      "attempted_at": "2026-11-20T12:12:10.165Z",
+      "attempted_at": "2026-11-20T13:13:10.161Z",
       "error": "unauthorized"
     },
     {
