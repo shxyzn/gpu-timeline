@@ -794,7 +794,7 @@ try {
     await preview.waitForFunction(()=>document.getElementById('api-usage-state').textContent.includes('개 키의 관측 기록'));
     assert.ok(usageHistoryReads>historyReadsBefore);
     assert.equal(await preview.locator('#api-usage-board').evaluate(e=>e.previousElementSibling.id),'openrouter-grid');
-    if(environment.profile==='test')assert.match(await preview.locator('#dashboard-version').innerText(),/테스트 v3.0 snapshot 6/);
+    if(environment.profile==='test')assert.match(await preview.locator('#dashboard-version').innerText(),/테스트 v3.0 snapshot 7/);
     assert.equal(await preview.locator('#api-usage-key option').count(),3);
     assert.ok(await preview.locator('#api-usage-plot [data-usage-day]').count()>0);
     assert.equal(await preview.locator('#api-usage-board script').count(),0);
@@ -1248,6 +1248,15 @@ try {
     assert.match(copiedTable[0],/^종류\t구분\t제목/);
     assert.match(copiedTable.find(line=>line.includes('Published driving paper')),/IITP 멀티모달\tRS-2025-00123456\t확인됨/);
     assert.match(await reader.locator('#rs-feedback').innerText(),/실적 4건을 표로 복사했어요/);
+    // The same list in the lab homepage's format: published papers and filed patents only.
+    await reader.locator('#rs-copy-homepage').click();
+    // The rich copy is written asynchronously; the status line appears once it is on the clipboard.
+    await reader.waitForFunction(()=>document.getElementById('rs-feedback').textContent.includes('홈페이지 목록 형식'));
+    const homepageCopy=await reader.evaluate(()=>navigator.clipboard.readText());
+    assert.match(homepageCopy,/^International Publications\n"Published driving paper," IEEE TIV, \d{4}\n\nDomestic Publications\n[\s\S]*국내 논문[\s\S]*\n\nDomestic Patents\n"출원한 특허," \(출원\) 10-2026-0012345$/);
+    assert.equal(homepageCopy.includes('Submitted paper'),false);
+    assert.ok((await reader.evaluate(async()=>(await navigator.clipboard.read())[0].types)).includes('text/html'));
+    assert.match(await reader.locator('#rs-feedback').innerText(),/실적 3건을 홈페이지 목록 형식으로 복사했어요[\s\S]*1건은 뺐어요/);
     await reader.locator('[data-rs-kind=patent]').click();
     assert.equal(await reader.locator('.rs-output').count(),1);
     assert.equal(await reader.evaluate(()=>document.activeElement.dataset.rsKind),'patent','choosing a kind keeps keyboard focus on its chip');

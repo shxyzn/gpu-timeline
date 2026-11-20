@@ -436,6 +436,54 @@ export function outputWarnings(output, projects) {
   return [...warnings, ...ackIssues(output, projects)];
 }
 
+// Outputs written the way the lab's public homepage lists them, for pasting into its
+// Publications and Patents pages:
+//   Authors, "Title," Venue, 2026 [paper]
+//   구형일 외 2인, "제목," (출원) 10-2025-0000000
+//   Authors, "Title," US 18/929,690, Oct. 2024 [Grant]
+// Only work that belongs on a public list is included: papers and talks from acceptance on,
+// patents from filing on. The rest is counted in `skipped`.
+const MONTHS = Object.freeze(['Jan.', 'Feb.', 'Mar.', 'Apr.', 'May', 'Jun.', 'Jul.', 'Aug.', 'Sep.', 'Oct.', 'Nov.', 'Dec.']);
+const HOMEPAGE_GROUPS = Object.freeze([['pub_intl', 'International Publications'], ['pub_dom', 'Domestic Publications'],
+  ['pat_intl', 'International Patents'], ['pat_dom', 'Domestic Patents']]);
+const markup = value => String(value).replace(/[&<>"']/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[c]));
+function homepageEntry(output) {
+  const lead = output.authors ? output.authors + ', ' : '', year = output.date ? output.date.slice(0, 4) : '';
+  if (output.kind === 'patent') {
+    if (!['filed', 'registered'].includes(output.status)) return null;
+    if (output.grade === 'domestic') {
+      return {group: 'pat_dom', line: `${lead}"${output.title}," (${output.status === 'registered' ? '등록' : '출원'})${output.identifier ? ' ' + output.identifier : ''}`};
+    }
+    const where = [output.venue, output.identifier].filter(Boolean).join(' ');
+    const when = output.date ? `${MONTHS[Number(output.date.slice(5, 7)) - 1]} ${year}` : '';
+    return {group: 'pat_intl', line: `${lead}"${output.title},"${[where, when].filter(Boolean).map(part => ' ' + part).join(',')}${output.status === 'registered' ? ' [Grant]' : ''}`};
+  }
+  if (output.kind !== 'paper' && output.kind !== 'conference') return null;
+  if (!['accepted', 'published', 'presented'].includes(output.status)) return null;
+  const domestic = output.grade === 'kci' || output.grade === 'domestic';
+  const tail = [output.venue, year && !output.venue.includes(year) ? year : ''].filter(Boolean).map(part => ' ' + part).join(',');
+  return {group: domestic ? 'pub_dom' : 'pub_intl', line: `${lead}"${output.title},"${tail}`};
+}
+export function homepageList(outputs) {
+  const groups = new Map(HOMEPAGE_GROUPS.map(([id]) => [id, []]));
+  let skipped = 0;
+  // Newest first, as on the homepage; undated work is the newest.
+  for (const output of [...outputs].sort((a, b) => (b.date || '9999').localeCompare(a.date || '9999') || b.created_at.localeCompare(a.created_at))) {
+    const entry = homepageEntry(output);
+    if (entry) groups.get(entry.group).push({...entry, link: output.link}); else skipped++;
+  }
+  const text = [], html = [];
+  let count = 0;
+  for (const [id, heading] of HOMEPAGE_GROUPS) {
+    const entries = groups.get(id);
+    if (!entries.length) continue;
+    count += entries.length;
+    text.push(heading, ...entries.map(e => e.line + (e.link ? ` [${id.startsWith('pub') ? 'paper' : 'link'}] ${e.link}` : '')), '');
+    html.push(`<p><b>${heading}</b></p>`, ...entries.map(e => `<p>${markup(e.line)}${e.link ? ` <a href="${markup(e.link)}">[${id.startsWith('pub') ? 'paper' : 'link'}]</a>` : ''}</p>`));
+  }
+  return {count, skipped, text: text.join('\n').trim(), html: html.join('')};
+}
+
 // The output list as tab-separated text, ready to paste into a spreadsheet for a report.
 export const EXPORT_COLUMNS = Object.freeze(['종류', '구분', '제목', '저자·발명자', '학술지·학술대회·기관', '상태', '날짜', '식별 번호', '사사 과제', '과제번호', '사사문구 확인', '링크']);
 export function outputsTable(outputs, projects) {

@@ -1,9 +1,9 @@
 import {dashboardView,monitoringAccess,openDashboardLogin,runAdminTask} from '../app.js?patch=workspace-3';
-import {GATE} from './gate.js?v=workspace-7';
-import {currentSession} from './session.js?v=workspace-7';
-import {documentKeys,fromBase64} from './workspace-crypto.js?v=workspace-7';
-import {ResearchStore} from './research-store.js?v=workspace-7';
-import {OUTPUT_KINDS,METRICS,PROPOSAL_STATUSES,PROPOSAL_OPEN,PROPOSAL_ROLES,emptyResearch,makeProject,makeOutput,makeProposal,projectProgress,researchOverview,remainingText,outputWarnings,ackIssues,outputsTable,ackText,ACK_LABELS,statusLabel,targetLabel,today,daysUntil,ddayLabel,newID} from './research-model.js?v=workspace-7';
+import {GATE} from './gate.js?v=workspace-8';
+import {currentSession} from './session.js?v=workspace-8';
+import {documentKeys,fromBase64} from './workspace-crypto.js?v=workspace-8';
+import {ResearchStore} from './research-store.js?v=workspace-8';
+import {OUTPUT_KINDS,METRICS,PROPOSAL_STATUSES,PROPOSAL_OPEN,PROPOSAL_ROLES,emptyResearch,makeProject,makeOutput,makeProposal,projectProgress,researchOverview,remainingText,outputWarnings,ackIssues,outputsTable,homepageList,ackText,ACK_LABELS,statusLabel,targetLabel,today,daysUntil,ddayLabel,newID} from './research-model.js?v=workspace-8';
 
 // Research-project tracker of the test-server workspace: what each project owes, by when,
 // what already counts, and which acknowledgement (사사) every output carries.
@@ -30,7 +30,7 @@ if(root&&session){
   <div id="rs-summary" class="rs-summary" aria-label="연구과제 요약"></div>
   <div class="rs-tabs" role="tablist" aria-label="연구과제 보기"><button type="button" role="tab" id="rs-tab-projects" aria-controls="rs-panel-projects" data-rs-tab="projects">과제별 현황</button><button type="button" role="tab" id="rs-tab-proposals" aria-controls="rs-panel-proposals" data-rs-tab="proposals">제안서 <span id="rs-count-proposals"></span></button><button type="button" role="tab" id="rs-tab-outputs" aria-controls="rs-panel-outputs" data-rs-tab="outputs">실적 목록 <span id="rs-count-outputs"></span></button><button type="button" role="tab" id="rs-tab-schedule" aria-controls="rs-panel-schedule" data-rs-tab="schedule">기한·일정 <span id="rs-count-schedule"></span></button><button type="button" role="tab" id="rs-tab-acks" aria-controls="rs-panel-acks" data-rs-tab="acks">사사문구</button></div>
   <section id="rs-panel-projects" role="tabpanel" aria-labelledby="rs-tab-projects"><div class="rs-chips" role="group" aria-label="과제 상태"><button type="button" data-rs-phase="active">진행 중 <span id="rs-count-active">0</span></button><button type="button" data-rs-phase="ended">종료 <span id="rs-count-ended">0</span></button><button type="button" data-rs-phase="archived">보관 <span id="rs-count-archived">0</span></button></div><div id="rs-projects" class="rs-projects"></div></section>
-  <section id="rs-panel-outputs" role="tabpanel" aria-labelledby="rs-tab-outputs" hidden><div class="rs-filters"><div id="rs-kinds" class="rs-chips" role="group" aria-label="실적 종류"></div><label class="rs-select">과제<select id="rs-project-filter" aria-label="과제로 걸러 보기"></select></label><label class="rs-search">검색<input id="rs-query" type="search" maxlength="80" placeholder="제목·저자·학술지" autocomplete="off"></label><button type="button" id="rs-copy-outputs" class="rs-button" title="보이는 실적을 엑셀에 붙여 넣을 수 있는 표로 복사해요">표로 복사</button></div><div id="rs-outputs" class="rs-outputs"></div></section>
+  <section id="rs-panel-outputs" role="tabpanel" aria-labelledby="rs-tab-outputs" hidden><div class="rs-filters"><div id="rs-kinds" class="rs-chips" role="group" aria-label="실적 종류"></div><label class="rs-select">과제<select id="rs-project-filter" aria-label="과제로 걸러 보기"></select></label><label class="rs-search">검색<input id="rs-query" type="search" maxlength="80" placeholder="제목·저자·학술지" autocomplete="off"></label><button type="button" id="rs-copy-outputs" class="rs-button" title="보이는 실적을 엑셀에 붙여 넣을 수 있는 표로 복사해요">표로 복사</button><button type="button" id="rs-copy-homepage" class="rs-button" title="보이는 실적 중 게재·발표가 확정된 논문과 출원·등록된 특허를 연구실 홈페이지 목록 형식으로 복사해요">홈페이지용 복사</button></div><div id="rs-outputs" class="rs-outputs"></div></section>
   <section id="rs-panel-proposals" role="tabpanel" aria-labelledby="rs-tab-proposals" hidden><div class="rs-chips" role="group" aria-label="제안서 상태"><button type="button" data-rs-proposal-phase="open">진행 중 <span id="rs-count-proposals-open">0</span></button><button type="button" data-rs-proposal-phase="closed">결과 <span id="rs-count-proposals-closed">0</span></button></div><div id="rs-proposals" class="rs-outputs"></div></section>
   <section id="rs-panel-schedule" role="tabpanel" aria-labelledby="rs-tab-schedule" hidden><div id="rs-schedule" class="rs-schedule"></div></section>
   <section id="rs-panel-acks" role="tabpanel" aria-labelledby="rs-tab-acks" hidden><p class="rs-muted rs-panel-lead">논문·특허를 쓸 때 그대로 붙여 넣을 과제별 표준 사사문구예요.</p><div id="rs-acks" class="rs-outputs"></div></section>
@@ -284,7 +284,7 @@ function render(){
     const needle=query.trim().toLowerCase();
     const list=doc.outputs.filter(o=>(kind==='all'||o.kind===kind)&&(projectFilter==='all'||(projectFilter==='none'?!o.acks.some(a=>doc.projects.some(p=>p.id===a.project_id)):o.acks.some(a=>a.project_id===projectFilter)))&&(!needle||[o.title,o.authors,o.venue,o.identifier].some(v=>v.toLowerCase().includes(needle))))
       .sort((a,b)=>(b.date||'').localeCompare(a.date||'')||b.updated_at.localeCompare(a.updated_at));
-    shownOutputs=list;$('rs-copy-outputs').disabled=!list.length;
+    shownOutputs=list;$('rs-copy-outputs').disabled=!list.length;$('rs-copy-homepage').disabled=!list.length;
     const placed=placements();
     setHTML($('rs-outputs'),list.map(o=>outputCard(o,{...view,busy,placements:placed})).join('')||`<div class="rs-empty"><strong>${doc.outputs.length?'조건에 맞는 실적이 없어요.':'아직 등록된 실적이 없어요.'}</strong><p>${doc.outputs.length?'종류·과제·검색어를 바꿔 보세요.':view.unlocked?'‘＋ 실적 추가’로 논문·특허를 등록하고 사사한 과제를 골라 주세요.':'관리자가 논문·특허를 등록하면 이곳에 표시돼요.'}</p></div>`);
   }else if(tab==='proposals'){
@@ -353,6 +353,17 @@ function openProjectFrom(proposal){
 async function copyTable(outputs,what){
   try{await navigator.clipboard.writeText(outputsTable(outputs,doc.projects));feedback(`${what} 실적 ${outputs.length}건을 표로 복사했어요. 엑셀이나 한글 표에 붙여 넣으세요.`);}
   catch{feedback('복사하지 못했어요. 브라우저의 클립보드 권한을 확인해 주세요.');}
+}
+// The homepage list goes to the clipboard as rich text too, so "[paper]" stays a link when it
+// is pasted into Google Sites; a plain-text paste gets the address written out instead.
+async function copyHomepage(outputs){
+  const list=homepageList(outputs),left=list.skipped?` 준비·심사 중이거나 목록에 올리지 않는 ${list.skipped}건은 뺐어요.`:'';
+  if(!list.count){feedback('홈페이지에 올릴 실적이 없어요. 게재·발표가 확정된 논문과 출원·등록된 특허만 복사해요.');return;}
+  try{
+    if(window.ClipboardItem&&navigator.clipboard.write)await navigator.clipboard.write([new ClipboardItem({'text/plain':new Blob([list.text],{type:'text/plain'}),'text/html':new Blob([list.html],{type:'text/html'})})]);
+    else await navigator.clipboard.writeText(list.text);
+    feedback(`실적 ${list.count}건을 홈페이지 목록 형식으로 복사했어요. 구글 사이트의 Publications·Patents에 붙여 넣으세요.${left}`);
+  }catch{feedback('복사하지 못했어요. 브라우저의 클립보드 권한을 확인해 주세요.');}
 }
 function readProject(){
   const value=(row,name)=>row.querySelector(`[data-f=${name}]`);
@@ -480,6 +491,7 @@ function bind(){
     const copyProject=event.target.closest('[data-rs-copy-project]');
     if(copyProject){const project=doc.projects.find(p=>p.id===copyProject.dataset.rsCopyProject);if(project)await copyTable(doc.outputs.filter(o=>o.acks.some(a=>a.project_id===project.id)),`‘${projectName(project)}’`);return;}
     if(event.target.closest('#rs-copy-outputs')){await copyTable(shownOutputs,'보이는');return;}
+    if(event.target.closest('#rs-copy-homepage')){await copyHomepage(shownOutputs);return;}
     const copy=event.target.closest('[data-rs-copy]');
     if(copy){try{await navigator.clipboard.writeText(copy.dataset.rsCopy);feedback(copy.dataset.rsCopied||'사사문구를 복사했어요.');const label=copy.textContent;copy.textContent='복사됨';setTimeout(()=>{if(copy.isConnected)copy.textContent=label;},2000);}catch{feedback('복사하지 못했어요. 문구를 직접 선택해서 복사해 주세요.');}return;}
     const action=event.target.closest('[data-rs-action]');if(!action)return;

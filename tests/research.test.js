@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {LIMITS, emptyResearch, validateResearch, validDate, makeProject, makeOutput, makeProposal, applyResearchOperation, projectProgress, METRICS,
-  remainingText, researchOverview, outputWarnings, ackText, ackIssues, outputsTable, targetLabel, statusLabel, today, daysUntil, ddayLabel} from '../dist/test-server/research-model.js';
+  remainingText, researchOverview, outputWarnings, ackText, ackIssues, outputsTable, homepageList, targetLabel, statusLabel, today, daysUntil, ddayLabel} from '../dist/test-server/research-model.js';
 import {sealGate, openGate, validGate, importDocumentKey, sealRetiredKey, documentKeys, sealJSON, openJSON, isEnvelope, toBase64, fromBase64} from '../dist/test-server/workspace-crypto.js';
 import {ResearchStore, RESEARCH_PATH} from '../dist/test-server/research-store.js';
 import {currentSession, startSession, endSession, cleanName, lastName} from '../dist/test-server/session.js';
@@ -172,6 +172,31 @@ test('acknowledgements are checked for the project number and exported as a tabl
   assert.deepEqual(table[2].split('\t').slice(2, 4), ['Tab here', '홍길동, 김철수']);
   assert.match(table[1], /\tIITP\tRS-2025-00123456\t확인됨\t/);
   assert.match(table[2], /사사문구에 과제번호 없음 · IITP/);
+});
+
+test('outputs are listed the way the lab homepage writes them', () => {
+  const list = homepageList([
+    output({title: 'Journal <A>', authors: 'S. Park, H. I. Koo', venue: 'IEEE Access', date: '2026-05-02', link: 'https://example.org/a?x=1&y=2'}, []),
+    output({kind: 'conference', grade: 'intl', status: 'accepted', title: 'Talk', authors: 'W. Kang', venue: 'NeurIPS 2026', date: '2026-12-01'}, []),
+    output({kind: 'conference', grade: 'domestic', status: 'presented', title: '국내 발표', authors: '홍길동, 구형일'}, []),
+    output({status: 'submitted', title: 'Under review'}, []),
+    output({kind: 'patent', grade: 'domestic', status: 'filed', title: '국내 특허', authors: '구형일 외 2인', identifier: '10-2025-0201345', date: '2025-11-03'}, []),
+    output({kind: 'patent', grade: 'intl', status: 'registered', title: 'US patent', authors: 'Hyung Il Koo et. al.', venue: 'US', identifier: '18/929,690', date: '2024-10-28'}, []),
+    output({kind: 'patent', grade: 'intl', status: 'preparing', title: 'Not filed'}, []),
+    output({kind: 'software', grade: '', status: 'registered', title: 'SW'}, []),
+  ]);
+  assert.deepEqual([list.count, list.skipped], [5, 3]);
+  assert.deepEqual(list.text.split('\n'), [
+    'International Publications',
+    'W. Kang, "Talk," NeurIPS 2026',
+    'S. Park, H. I. Koo, "Journal <A>," IEEE Access, 2026 [paper] https://example.org/a?x=1&y=2',
+    '', 'Domestic Publications', '홍길동, 구형일, "국내 발표,"',
+    '', 'International Patents', 'Hyung Il Koo et. al., "US patent," US 18/929,690, Oct. 2024 [Grant]',
+    '', 'Domestic Patents', '구형일 외 2인, "국내 특허," (출원) 10-2025-0201345']);
+  // The rich copy keeps the link and escapes whatever a title carries.
+  assert.match(list.html, /<p>S\. Park, H\. I\. Koo, &quot;Journal &lt;A&gt;,&quot; IEEE Access, 2026 <a href="https:\/\/example\.org\/a\?x=1&amp;y=2">\[paper\]<\/a><\/p>/);
+  assert.equal(/<A>/.test(list.html), false);
+  assert.deepEqual(homepageList([output({status: 'submitted'}, [])]), {count: 0, skipped: 1, text: '', html: ''});
 });
 
 test('proposals: validation, edits, deadlines and documents saved before them', () => {
