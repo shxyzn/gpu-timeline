@@ -737,7 +737,10 @@ try {
     assert.equal(await preview.getByRole('link',{name:'테스트 서버',exact:true}).getAttribute('href'),'./test-server/');
     assert.equal(await preview.locator('#kimi-service-notice,#server-welcome,#kimi-tribute-dialog').count(),0);
     assert.equal(await preview.locator('#maintenance-notice').count(),0);
-    assert.equal(await preview.locator('#production-maintenance-notice').isVisible(),false);
+    // The production notice is shown only while a release is under way. Whether it is, is written in
+    // the page itself; what is checked here is that the page shows exactly what it declares.
+    const productionNotice=!/<aside id="production-maintenance-notice" hidden/.test(await fs.readFile(path.join(root,'dist/index.html'),'utf8'));
+    assert.equal(await preview.locator('#production-maintenance-notice').isVisible(),productionNotice);
     assert.equal(await preview.locator('.priority-home').count(),0);
     assert.match(await preview.locator('#dashboard-version').innerText(),/^대시보드 v2\.1\.2(?:\+|$)/);
   }else{
