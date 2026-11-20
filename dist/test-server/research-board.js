@@ -3,7 +3,7 @@ import {GATE} from './gate.js?v=workspace-8';
 import {currentSession} from './session.js?v=workspace-8';
 import {documentKeys,fromBase64} from './workspace-crypto.js?v=workspace-8';
 import {ResearchStore} from './research-store.js?v=workspace-8';
-import {OUTPUT_KINDS,METRICS,PROPOSAL_STATUSES,PROPOSAL_OPEN,PROPOSAL_ROLES,emptyResearch,makeProject,makeOutput,makeProposal,projectProgress,researchOverview,remainingText,outputWarnings,ackIssues,outputsTable,homepageList,ackText,ACK_LABELS,statusLabel,targetLabel,today,daysUntil,ddayLabel,newID} from './research-model.js?v=workspace-8';
+import {OUTPUT_KINDS,METRICS,PROPOSAL_STATUSES,PROPOSAL_OPEN,PROPOSAL_ROLES,emptyResearch,makeProject,makeOutput,makeProposal,projectProgress,researchOverview,remainingText,outputWarnings,ackIssues,outputsTable,homepageList,ackText,ACK_LABELS,statusLabel,outputDate,targetLabel,today,daysUntil,ddayLabel,newID} from './research-model.js?v=workspace-8';
 
 // Research-project tracker of the test-server workspace: what each project owes, by when,
 // what already counts, and which acknowledgement (사사) every output carries.
@@ -14,8 +14,8 @@ const stamp=at=>at?new Intl.DateTimeFormat('ko-KR',{timeZone:'Asia/Seoul',month:
 const root=$('workspace-research'),session=currentSession(GATE);
 let doc=emptyResearch(),store=null,loaded=false,loading=false,loadError='',lastRead=0,lastTry=0,saving=false;
 let tab='projects',phase='active',kind='all',projectFilter='all',query='',proposalPhase='open';
-let editing=null,pending=null,confirming=null,refocus=null,busyCheck=null,shownOutputs=[];
-const open=new Set(),drawn=new WeakMap();
+let editing=null,pending=null,confirming=null,refocus=null,busyCheck=null,shownOutputs=[],stale=false;
+const open=new Set(),drawn=new WeakMap(),flashes=new WeakMap();
 
 export function researchState(){return {doc,loaded,loading,loadError,overview:loaded?researchOverview(doc):null};}
 const access=()=>monitoringAccess();
@@ -43,7 +43,7 @@ if(root&&session){
       <div class="field-grid"><label class="field">약칭 · 선택<input id="rs-p-short" maxlength="24" placeholder="예: IITP 멀티모달"></label><label class="field">과제번호 · 선택<input id="rs-p-number" maxlength="60" placeholder="예: RS-2026-00000000" spellcheck="false"></label></div>
       <label class="field">지원기관·사업명 · 선택<input id="rs-p-agency" maxlength="120" placeholder="예: 한국연구재단 · 중견연구"></label>
       <div class="field-grid"><label class="field">시작일 · 선택<input id="rs-p-start" type="date"></label><label class="field">종료일<input id="rs-p-end" type="date" required></label></div>
-      <fieldset class="rs-fieldset"><legend>목표 실적</legend><p class="admin-help">지표와 목표 수를 적어 주세요. 기한을 비우면 과제 종료일이 기한이에요. 같은 지표를 연차별로 나누려면 줄을 추가하고 기한을 다르게 적으면 돼요.</p><div id="rs-p-targets" class="rs-rows"></div><button type="button" id="rs-p-target-add" class="edit-button">＋ 목표 추가</button></fieldset>
+      <fieldset class="rs-fieldset"><legend>목표 실적</legend><p class="admin-help">‘＋ 목표 추가’를 눌러 지표와 목표 수를 적어 주세요. 기한을 비우면 과제 종료일이 기한이에요. 같은 지표를 연차별로 나누려면 줄을 추가하고 기한을 다르게 적으면 돼요.</p><div id="rs-p-targets" class="rs-rows"></div><button type="button" id="rs-p-target-add" class="edit-button">＋ 목표 추가</button></fieldset>
       <fieldset class="rs-fieldset"><legend>사사문구</legend><p class="admin-help">논문·특허에 그대로 붙여 쓸 이 과제의 표준 문구예요. 실적마다 다른 문구를 썼다면 실적에서 따로 적을 수 있어요.</p><label class="field">논문 · 영문<textarea id="rs-p-ack-en" maxlength="1200" rows="3" placeholder="This work was supported by ..."></textarea></label><label class="field">논문 · 국문<textarea id="rs-p-ack-ko" maxlength="1200" rows="3" placeholder="이 논문은 ...의 지원을 받아 수행된 연구임 (과제번호)."></textarea></label><label class="field">특허 출원서 표기 · 선택<textarea id="rs-p-ack-patent" maxlength="1200" rows="3" placeholder="과제고유번호, 부처명, 과제관리(전문)기관명, 연구사업명, 연구과제명, 기여율 ..."></textarea></label></fieldset>
       <fieldset class="rs-fieldset"><legend>일정 · 선택</legend><p class="admin-help">연차보고서, 평가처럼 기억해야 할 날짜를 적어 주세요.</p><div id="rs-p-milestones" class="rs-rows"></div><button type="button" id="rs-p-milestone-add" class="edit-button">＋ 일정 추가</button></fieldset>
       <label class="field">메모 · 선택<textarea id="rs-p-note" maxlength="1000" rows="2"></textarea></label>
@@ -59,6 +59,7 @@ if(root&&session){
       <label class="field">제목<input id="rs-o-title" maxlength="300" required placeholder="논문·특허 제목"></label>
       <p class="admin-help">심사 중인 논문과 출원 전 특허는 내용이 드러나지 않는 가제로 적어 주세요.</p>
       <div class="field-grid"><label class="field">상태<select id="rs-o-status"></select></label><label class="field"><span id="rs-o-date-label">날짜 · 선택</span><input id="rs-o-date" type="date"></label></div>
+      <div class="field-grid" id="rs-o-registered-field" hidden><label class="field">등록일 · 선택<input id="rs-o-registered" type="date"></label><p class="admin-help rs-field-note">출원일은 그대로 두고 등록일을 따로 적어 주세요. 출원 목표는 출원일로, 등록 목표는 등록일로 연차를 나눠요.</p></div>
       <div class="field-grid"><label class="field">저자·발명자 · 선택<input id="rs-o-authors" maxlength="300" placeholder="예: 홍길동, 김철수"></label><label class="field"><span id="rs-o-venue-label">학술지 · 선택</span><input id="rs-o-venue" maxlength="160"></label></div>
       <div class="field-grid"><label class="field"><span id="rs-o-identifier-label">DOI · 선택</span><input id="rs-o-identifier" maxlength="120" spellcheck="false"></label><label class="field">링크 · 선택<input id="rs-o-link" type="url" maxlength="500" placeholder="https://" spellcheck="false"></label></div>
       <fieldset class="rs-fieldset"><legend>사사한 과제</legend><p class="admin-help">이 실적에 사사를 표기한 과제를 모두 골라 주세요. 고른 과제의 목표에 자동으로 반영돼요. 반영할 목표를 직접 고르면 같은 지표 안에서는 그 줄(연차)에 놓고, 다른 지표를 고르면 그 지표로만 세요.</p><div id="rs-o-acks" class="rs-ack-options"></div></fieldset>
@@ -77,7 +78,7 @@ if(root&&session){
       <label class="field">작성 담당 · 선택<input id="rs-r-members" maxlength="200" placeholder="예: 홍길동(총괄), 김철수"></label>
       <label class="field">공고 링크 · 선택<input id="rs-r-link" type="url" maxlength="500" placeholder="https://" spellcheck="false"></label>
       <label class="field">메모 · 선택<textarea id="rs-r-note" maxlength="1000" rows="3" placeholder="준비 서류, 협력 기관, 남은 작업 등"></textarea></label>
-      <p class="admin-help">연구비 금액과 제안서 본문의 아이디어는 적지 마세요. 선정되면 ‘＋ 과제 추가’로 과제를 등록해 목표 실적을 관리해요.</p>
+      <p class="admin-help">연구비 금액과 제안서 본문의 아이디어는 적지 마세요. 상태를 ‘선정’으로 저장하면 과제로 등록하는 창이 이어서 열려요.</p>
       <p id="rs-proposal-error" class="admin-error" role="alert"></p>
       <div class="dialog-actions"><button type="button" id="rs-proposal-delete" class="edit-button danger" hidden>제안서 삭제</button><button type="button" class="edit-button" data-rs-close>취소</button><button type="submit" id="rs-proposal-save" class="edit-button primary">제안서 저장</button></div>
     </form></dialog>
@@ -131,12 +132,29 @@ function onDashboard(){
   render();
 }
 
+// A save that did not go through leaves the screen behind what is stored: someone else saved
+// first, or the write landed and only its reply was lost. The public copy can trail a write by
+// minutes, so the next read then asks for the stored file itself, as the administrator.
 async function read(){
   if(!store||store.pending||loading||saving)return;
   loading=true;lastTry=Date.now();render();
-  try{const next=await store.readPublic();if(next.revision>=doc.revision)doc=next;loaded=true;loadError='';lastRead=Date.now();}
+  try{
+    let next=null;
+    const view=access();
+    if(stale&&view.unlocked&&!view.busy){try{next=(await runAdminTask(token=>store.readLatest(token))).data;stale=false;}catch{next=null;}}
+    if(!next)next=await store.readPublic();
+    if(next.revision>=doc.revision)doc=next;loaded=true;loadError='';lastRead=Date.now();
+  }
   catch(error){loadError=error.message;}
   finally{loading=false;render();notify();}
+}
+// A copy button answers where it was pressed: for two seconds its own label says what happened.
+// The label it started with is kept on the button, so a second press cannot make the answer stick.
+function flash(button,text){
+  if(!button)return;
+  if(!button.dataset.rsLabel)button.dataset.rsLabel=button.textContent;
+  button.textContent=text;clearTimeout(flashes.get(button));
+  flashes.set(button,setTimeout(()=>{if(button.isConnected)button.textContent=button.dataset.rsLabel;},2000));
 }
 
 // ---- Rendering ------------------------------------------------------------------------------
@@ -157,7 +175,7 @@ function standardAcks(project){
 function outputLine(output,project,achieved){
   const ack=output.acks.find(a=>a.project_id===project.id),applied=ackText(ack,project,output),k=OUTPUT_KINDS[output.kind],key='ack:'+project.id+':'+output.id;
   const issue=ackIssues({...output,acks:[ack]},[project])[0];
-  return `<li class="rs-line"><div class="rs-line-main"><span class="rs-dot ${achieved?'done':'pending'}" aria-hidden="true"></span><div><strong>${esc(output.title)}</strong><span>${esc([k.label+(output.grade?' · '+k.grades[output.grade]:''),output.venue,statusLabel(output)+(output.date?' '+day(output.date):'')].filter(Boolean).join(' · '))}</span></div></div>
+  return `<li class="rs-line"><div class="rs-line-main"><span class="rs-dot ${achieved?'done':'pending'}" aria-hidden="true"></span><div><strong>${esc(output.title)}</strong><span>${esc([k.label+(output.grade?' · '+k.grades[output.grade]:''),output.venue,statusLabel(output)+(outputDate(output)?' '+day(outputDate(output)):'')].filter(Boolean).join(' · '))}</span></div></div>
     <details class="rs-inline" data-rs-open="${key}"><summary${issue?' class="rs-ack-warn"':''}>${issue?esc(issue.code==='ack-number'?'사사문구에 과제번호 없음':'사사문구 없음'):ackSummary(applied)}</summary>${ackBlock(applied.text,applied.label)}</details></li>`;
 }
 function targetRow(row){
@@ -190,6 +208,11 @@ function projectCard(p,view){
     <div class="rs-card-foot"><span>${esc(project.updated_by)} · ${esc(stamp(project.updated_at))} 수정</span><span class="rs-card-actions">${p.linked.length?`<button type="button" class="rs-button" data-rs-copy-project="${project.id}">실적 표 복사</button>`:''}${view.unlocked?`<button type="button" class="rs-button" data-rs-action="output-for" data-rs-id="${project.id}"${view.busy?' disabled':''}>이 과제에 실적 추가</button><button type="button" class="rs-button" data-rs-action="project-edit" data-rs-id="${project.id}"${view.busy?' disabled':''}>과제 수정</button>`:''}</span></div></article>`;
 }
 const daysOf=date=>daysUntil(date,today());
+// Whether the outputs tab lists this output under the chosen kind, project and search words.
+function shown(o){
+  const needle=query.trim().toLowerCase();
+  return (kind==='all'||o.kind===kind)&&(projectFilter==='all'||(projectFilter==='none'?!o.acks.some(a=>doc.projects.some(p=>p.id===a.project_id)):o.acks.some(a=>a.project_id===projectFilter)))&&(!needle||[o.title,o.authors,o.venue,o.identifier].some(v=>v.toLowerCase().includes(needle)));
+}
 
 // Where each output landed: "project|output" -> the target rows it fills, or why it fills none.
 function placements(){
@@ -205,7 +228,9 @@ function placements(){
 function outputCard(output,view){
   const k=OUTPUT_KINDS[output.kind],achieved=k.achieved.includes(output.status),warnings=outputWarnings(output,doc.projects);
   const links=output.acks.map(ack=>({ack,project:doc.projects.find(p=>p.id===ack.project_id)})).filter(item=>item.project);
-  const meta=[output.authors,output.venue,output.date?day(output.date):''].filter(Boolean).map(esc);
+  // A registered patent shows both of its days; everything else has one.
+  const dates=output.kind==='patent'&&output.registered_on?[output.date?'출원 '+day(output.date):'','등록 '+day(output.registered_on)]:[output.date?day(output.date):''];
+  const meta=[output.authors,output.venue,...dates].filter(Boolean).map(esc);
   if(output.identifier)meta.push(`${esc(k.identifierLabel)} ${esc(output.identifier)}`);
   return `<article class="rs-output" data-rs-output="${output.id}" aria-label="${esc(output.title)}"><div class="rs-output-top">${pill(k.label+(output.grade?' · '+k.grades[output.grade]:''),'kind')}${pill(statusLabel(output),'status '+(achieved?'done':'pending'))}${warnings.map(w=>pill(w.label,'warn')).join('')}</div>
     <h3>${esc(output.title)}</h3>${meta.length?`<p class="rs-output-meta">${meta.join(' · ')}</p>`:''}${output.link?`<p class="rs-output-meta"><a href="${esc(output.link)}" target="_blank" rel="noopener noreferrer">링크 열기 ↗</a></p>`:''}
@@ -216,20 +241,22 @@ function outputCard(output,view){
     <div class="rs-card-foot"><span>${esc(output.updated_by)} · ${esc(stamp(output.updated_at))} 수정</span>${view.unlocked?`<span class="rs-card-actions"><button type="button" class="rs-button" data-rs-action="output-edit" data-rs-id="${output.id}"${view.busy?' disabled':''}>실적 수정</button></span>`:''}</div></article>`;
 }
 
-// A selected proposal counts as registered once a project of the same name exists.
-const registered=r=>doc.projects.some(p=>p.name===r.title);
+// A selected proposal is registered once a project was saved from it. The project keeps the
+// proposal's id, so renaming either of them changes nothing.
+const registered=r=>doc.projects.some(p=>p.proposal_id===r.id);
 const proposalTone=status=>status==='selected'?'done':status==='submitted'?'pending':status==='preparing'?'writing':'closed';
 function proposalCard(r,view){
   const days=daysOf(r.due_on),meta=[r.agency,r.call].filter(Boolean).map(esc);
   const when=r.status==='preparing'?`<span class="rs-due ${tone(days)}"><strong>${esc(ddayLabel(days))}</strong>제출 마감 ${esc(day(r.due_on))}${days<0?' · 마감 지남':''}</span>`
     :`<span class="rs-due done">제출 마감 ${esc(day(r.due_on))}</span>`;
-  const result=r.result_on?`<span class="rs-due ${r.status==='submitted'?tone(daysOf(r.result_on)):'done'}">${r.status==='submitted'&&daysOf(r.result_on)>=0?`<strong>${esc(ddayLabel(daysOf(r.result_on)))}</strong>`:''}결과 발표 ${esc(day(r.result_on))}</span>`:'';
+  const waiting=r.status==='submitted'&&!!r.result_on,resultDays=r.result_on?daysOf(r.result_on):0;
+  const result=r.result_on?`<span class="rs-due ${waiting?tone(resultDays):'done'}">${waiting&&resultDays>=0?`<strong>${esc(ddayLabel(resultDays))}</strong>`:''}결과 발표 ${esc(day(r.result_on))}${waiting&&resultDays<0?' · 결과를 기록해 주세요':''}</span>`:'';
   return `<article class="rs-output rs-proposal" data-rs-proposal="${r.id}" data-status="${r.status}" aria-label="${esc(r.title)}"><div class="rs-output-top">${pill(PROPOSAL_STATUSES[r.status],'proposal '+proposalTone(r.status))}${r.role?pill(PROPOSAL_ROLES[r.role],'kind'):''}</div>
     <h3>${esc(r.title)}</h3>${meta.length?`<p class="rs-output-meta">${meta.join(' · ')}</p>`:''}
     <div class="rs-proposal-dates">${when}${result}</div>
     ${r.members?`<p class="rs-output-meta">작성 담당 · ${esc(r.members)}</p>`:''}${r.link?`<p class="rs-output-meta"><a href="${esc(r.link)}" target="_blank" rel="noopener noreferrer">공고 열기 ↗</a></p>`:''}
     ${r.note?`<p class="rs-project-note">${esc(r.note)}</p>`:''}
-    ${r.status==='selected'?`<p class="rs-output-meta">${registered(r)?'과제로 등록됨 · ‘과제별 현황’에서 목표 실적을 관리해요.':'선정됐어요. ‘과제로 등록’을 누르면 과제명·기관이 채워진 과제 추가 창이 열려요.'}</p>`:''}
+    ${r.status==='selected'?`<p class="rs-output-meta">${registered(r)?'과제로 등록됨 · ‘과제별 현황’에서 목표 실적을 관리해요.':view.unlocked?'선정됐어요. ‘과제로 등록’을 누르면 과제명·기관이 채워진 과제 추가 창이 열려요.':'선정됐어요. 관리자가 과제로 등록하면 ‘과제별 현황’에 표시돼요.'}</p>`:''}
     <div class="rs-card-foot"><span>${esc(r.updated_by)} · ${esc(stamp(r.updated_at))} 수정</span>${view.unlocked?`<span class="rs-card-actions">${r.status==='selected'&&!registered(r)?`<button type="button" class="rs-button primary" data-rs-action="proposal-project" data-rs-id="${r.id}"${view.busy?' disabled':''}>과제로 등록</button>`:''}<button type="button" class="rs-button" data-rs-action="proposal-edit" data-rs-id="${r.id}"${view.busy?' disabled':''}>제안서 수정</button></span>`:''}</div></article>`;
 }
 
@@ -244,6 +271,8 @@ function render(){
   $('rs-admin').hidden=view.unlocked||!view.enabled;
   $('rs-error').textContent=loadError;
   for(const id of ['rs-add-project','rs-add-proposal','rs-add-output'])$(id).disabled=!ready||busy;
+  // Nothing to copy until the records are here; the outputs tab sets this again from its list.
+  if(!loaded){shownOutputs=[];$('rs-copy-outputs').disabled=$('rs-copy-homepage').disabled=true;}
   $('rs-refresh').disabled=loading||busy||!store||!!store.pending;$('rs-refresh').textContent=loading?'불러오는 중…':'새로고침';
   for(const button of root.querySelectorAll('[data-rs-tab]')){const on=button.dataset.rsTab===tab;button.setAttribute('aria-selected',String(on));button.tabIndex=on?0:-1;$(button.getAttribute('aria-controls')).hidden=!on;}
   const overview=researchOverview(doc),c=overview.counts;
@@ -281,9 +310,8 @@ function render(){
     const options='<option value="all">모든 과제</option><option value="none">사사 과제 미지정</option>'+doc.projects.map(p=>`<option value="${p.id}">${esc(projectName(p))}</option>`).join('');
     setHTML($('rs-project-filter'),options);
     $('rs-project-filter').value=projectFilter;
-    const needle=query.trim().toLowerCase();
-    const list=doc.outputs.filter(o=>(kind==='all'||o.kind===kind)&&(projectFilter==='all'||(projectFilter==='none'?!o.acks.some(a=>doc.projects.some(p=>p.id===a.project_id)):o.acks.some(a=>a.project_id===projectFilter)))&&(!needle||[o.title,o.authors,o.venue,o.identifier].some(v=>v.toLowerCase().includes(needle))))
-      .sort((a,b)=>(b.date||'').localeCompare(a.date||'')||b.updated_at.localeCompare(a.updated_at));
+    const list=doc.outputs.filter(shown)
+      .sort((a,b)=>(outputDate(b)||'').localeCompare(outputDate(a)||'')||b.updated_at.localeCompare(a.updated_at));
     shownOutputs=list;$('rs-copy-outputs').disabled=!list.length;$('rs-copy-homepage').disabled=!list.length;
     const placed=placements();
     setHTML($('rs-outputs'),list.map(o=>outputCard(o,{...view,busy,placements:placed})).join('')||`<div class="rs-empty"><strong>${doc.outputs.length?'조건에 맞는 실적이 없어요.':'아직 등록된 실적이 없어요.'}</strong><p>${doc.outputs.length?'종류·과제·검색어를 바꿔 보세요.':view.unlocked?'‘＋ 실적 추가’로 논문·특허를 등록하고 사사한 과제를 골라 주세요.':'관리자가 논문·특허를 등록하면 이곳에 표시돼요.'}</p></div>`);
@@ -297,15 +325,19 @@ function render(){
     const list=doc.projects.filter(p=>!p.archived).sort((a,b)=>a.ends_on.localeCompare(b.ends_on));
     setHTML($('rs-acks'),list.map(p=>`<article class="rs-output" data-rs-ack-project="${p.id}" aria-label="${esc(p.name)} 사사문구"><div class="rs-project-meta">${p.agency?`<span>${esc(p.agency)}</span>`:''}${p.number?`<code>${esc(p.number)}</code><button type="button" class="rs-link" data-rs-copy="${esc(p.number)}" data-rs-copied="과제번호를 복사했어요.">과제번호 복사</button>`:''}</div><h3>${esc(p.name)}</h3>${standardAcks(p)}</article>`).join('')||'<div class="rs-empty"><strong>등록된 과제가 없어요.</strong><p>과제에 표준 사사문구를 적어 두면 이곳에서 바로 복사할 수 있어요.</p></div>');
   }else{
-    const item=d=>`<li class="${d.days<0?'late':''}">${dueBadge(d.date,d.days)}<div><strong>${esc(d.title)}</strong><span>${esc(d.where)}${d.kind==='milestone'?' · 일정':d.kind==='target'?' · 목표 실적':''}</span></div></li>`;
+    const item=d=>`<li class="${d.days<0?'late':''}">${dueBadge(d.date,d.days)}<div><strong>${esc(d.title)}</strong><span>${esc(d.where)}${d.kind==='milestone'?' · 일정':d.kind==='target'?' · 목표 실적':d.kind==='result'&&d.days<0?' · 결과를 기록해 주세요':''}</span></div></li>`;
     const upcoming=overview.deadlines.filter(d=>d.days>=0);
     setHTML($('rs-schedule'),(overview.overdue.length?`<h3>기한이 지났어요 <span>${overview.overdue.length}</span></h3><ul class="rs-deadlines">${overview.overdue.map(item).join('')}</ul>`:'')+(upcoming.length?`<h3>다가오는 기한 <span>${upcoming.length}</span></h3><ul class="rs-deadlines">${upcoming.map(item).join('')}</ul>`:'')||'<div class="rs-empty"><strong>남은 기한이 없어요.</strong><p>과제의 종료일, 목표 기한, 일정이 이곳에 날짜순으로 모여요.</p></div>');
   }
-  // After a save, focus goes to the saved record's button; otherwise back to the control that
-  // had it, when redrawing a list took that control away.
-  const target=refocus?`[data-rs-action="${refocus[0]}"][data-rs-id="${refocus[1]}"]`:focused;
-  if(target&&!document.querySelector('dialog[open]')){
-    if(refocus||!root.contains(document.activeElement))root.querySelector(target+':not(:disabled)')?.focus({preventScroll:true});
+  // After a save, focus goes to the saved record's button, or to the named control when the
+  // open list does not show that record (and after a delete, which leaves no record); otherwise
+  // back to the control that had it, when redrawing a list took that control away.
+  const target=refocus?(refocus[0]?`[data-rs-action="${refocus[0]}"][data-rs-id="${refocus[1]}"]`:null):focused;
+  if((target||refocus)&&!document.querySelector('dialog[open]')){
+    if(refocus||!root.contains(document.activeElement)){
+      const element=(target&&root.querySelector(target+':not(:disabled)'))||(refocus?.[2]?$(refocus[2]):null);
+      if(element&&!element.disabled)element.focus({preventScroll:true});
+    }
     refocus=null;
   }
   for(const id of ['rs-project-form','rs-output-form','rs-proposal-form'])for(const field of $(id).querySelectorAll('input,select,textarea,button'))field.disabled=busy;
@@ -335,40 +367,43 @@ function milestoneRowForm(m={}){
 }
 function openProject(project=null,prefill=null){
   if(!requireAdmin())return;
-  editing=project?{type:'project',record:structuredClone(project)}:{type:'project',record:null};pending=null;
+  editing=project?{type:'project',record:structuredClone(project)}:{type:'project',record:null,proposal:prefill?.proposal_id||null};pending=null;
   $('rs-project-form').reset();$('rs-project-error').textContent='';
   $('rs-project-title').textContent=project?'과제 수정':'과제 추가';$('rs-project-save').textContent=project?'변경 저장':'과제 저장';
   $('rs-project-delete').hidden=!project;$('rs-p-archived-row').hidden=!project;
   const p=project||prefill||{};
   for(const [id,key] of [['name','name'],['short','short'],['number','number'],['agency','agency'],['start','starts_on'],['end','ends_on'],['ack-en','ack_en'],['ack-ko','ack_ko'],['ack-patent','ack_patent'],['note','note']])$('rs-p-'+id).value=p[key]??'';
   $('rs-p-archived').checked=!!p.archived;
-  $('rs-p-targets').replaceChildren(...(p.targets?.length?p.targets:[{}]).map(targetRowForm));
+  // Exactly the stored targets: a made-up first row would be saved with any other change.
+  $('rs-p-targets').replaceChildren(...(p.targets||[]).map(targetRowForm));
   $('rs-p-milestones').replaceChildren(...(p.milestones||[]).map(milestoneRowForm));
   $('rs-project-dialog').showModal();$('rs-p-name').focus();
 }
 function openProjectFrom(proposal){
-  openProject(null,{name:proposal.title,agency:[proposal.agency,proposal.call].filter(Boolean).join(' · ').slice(0,120),
+  openProject(null,{proposal_id:proposal.id,name:proposal.title,agency:[proposal.agency,proposal.call].filter(Boolean).join(' · ').slice(0,120),
     note:`제안서에서 등록${proposal.members?` · 작성 담당 ${proposal.members}`:''}`.slice(0,1000)});
 }
-async function copyTable(outputs,what){
-  try{await navigator.clipboard.writeText(outputsTable(outputs,doc.projects));feedback(`${what} 실적 ${outputs.length}건을 표로 복사했어요. 엑셀이나 한글 표에 붙여 넣으세요.`);}
-  catch{feedback('복사하지 못했어요. 브라우저의 클립보드 권한을 확인해 주세요.');}
+async function copyTable(outputs,what,button){
+  if(!outputs.length){flash(button,'복사할 실적 없음');feedback('복사할 실적이 없어요.');return;}
+  try{await navigator.clipboard.writeText(outputsTable(outputs,doc.projects));flash(button,`${outputs.length}건 복사됨`);feedback(`${what} 실적 ${outputs.length}건을 표로 복사했어요. 엑셀이나 한글 표에 붙여 넣으세요.`);}
+  catch{flash(button,'복사 실패');feedback('복사하지 못했어요. 브라우저의 클립보드 권한을 확인해 주세요.');}
 }
 // The homepage list goes to the clipboard as rich text too, so "[paper]" stays a link when it
 // is pasted into Google Sites; a plain-text paste gets the address written out instead.
-async function copyHomepage(outputs){
+async function copyHomepage(outputs,button){
   const list=homepageList(outputs),left=list.skipped?` 준비·심사 중이거나 목록에 올리지 않는 ${list.skipped}건은 뺐어요.`:'';
-  if(!list.count){feedback('홈페이지에 올릴 실적이 없어요. 게재·발표가 확정된 논문과 출원·등록된 특허만 복사해요.');return;}
+  if(!list.count){flash(button,'복사할 실적 없음');feedback('홈페이지에 올릴 실적이 없어요. 게재·발표가 확정된 논문과 출원·등록된 특허만 복사해요.');return;}
   try{
     if(window.ClipboardItem&&navigator.clipboard.write)await navigator.clipboard.write([new ClipboardItem({'text/plain':new Blob([list.text],{type:'text/plain'}),'text/html':new Blob([list.html],{type:'text/html'})})]);
     else await navigator.clipboard.writeText(list.text);
+    flash(button,`${list.count}건 복사됨`);
     feedback(`실적 ${list.count}건을 홈페이지 목록 형식으로 복사했어요. 구글 사이트의 Publications·Patents에 붙여 넣으세요.${left}`);
-  }catch{feedback('복사하지 못했어요. 브라우저의 클립보드 권한을 확인해 주세요.');}
+  }catch{flash(button,'복사 실패');feedback('복사하지 못했어요. 브라우저의 클립보드 권한을 확인해 주세요.');}
 }
 function readProject(){
   const value=(row,name)=>row.querySelector(`[data-f=${name}]`);
   return {name:$('rs-p-name').value,short:$('rs-p-short').value,number:$('rs-p-number').value,agency:$('rs-p-agency').value,starts_on:$('rs-p-start').value,ends_on:$('rs-p-end').value,
-    ack_en:$('rs-p-ack-en').value,ack_ko:$('rs-p-ack-ko').value,ack_patent:$('rs-p-ack-patent').value,note:$('rs-p-note').value,archived:$('rs-p-archived').checked,
+    ack_en:$('rs-p-ack-en').value,ack_ko:$('rs-p-ack-ko').value,ack_patent:$('rs-p-ack-patent').value,note:$('rs-p-note').value,archived:$('rs-p-archived').checked,proposal_id:editing?.proposal||null,
     targets:[...$('rs-p-targets').children].map(row=>({id:row.dataset.id,metric:value(row,'metric').value,label:value(row,'label').value,count:value(row,'count').value,due_on:value(row,'due_on').value,unit:row.dataset.unit,note:row.dataset.note})),
     milestones:[...$('rs-p-milestones').children].map(row=>({id:row.dataset.id,title:value(row,'title').value,date:value(row,'date').value,done:value(row,'done').checked})).filter(m=>m.title.trim()||m.date)};
 }
@@ -379,15 +414,18 @@ function syncOutputKind(output=null){
   $('rs-o-status').innerHTML=k.statuses.map(s=>`<option value="${s}">${esc(statusLabel({...sample,status:s}))}</option>`).join('');
   if(output){if(grades.length)$('rs-o-grade').value=output.grade;$('rs-o-status').value=output.status;}
   $('rs-o-date-label').textContent=k.dateLabel+' · 선택';$('rs-o-venue-label').textContent=k.venueLabel+' · 선택';$('rs-o-identifier-label').textContent=k.identifierLabel+' · 선택';
+  syncOutputStatus();
 }
+// Only a registered patent has a second day, the registration, next to its filing day.
+function syncOutputStatus(){$('rs-o-registered-field').hidden=!($('rs-o-kind').value==='patent'&&$('rs-o-status').value==='registered');}
 function openOutput(output=null,projectID=null){
   if(!requireAdmin())return;
-  editing={type:'output',record:output?structuredClone(output):null};pending=null;
+  editing={type:'output',record:output?structuredClone(output):null,from:output?null:projectID};pending=null;
   $('rs-output-form').reset();$('rs-output-error').textContent='';
   $('rs-output-title').textContent=output?'실적 수정':'실적 추가';$('rs-output-save').textContent=output?'변경 저장':'실적 저장';$('rs-output-delete').hidden=!output;
   const o=output||{kind:'paper',acks:projectID?[{project_id:projectID,target_id:null,text:''}]:[]};
   $('rs-o-kind').value=o.kind;syncOutputKind(output);
-  for(const [id,key] of [['title','title'],['date','date'],['authors','authors'],['venue','venue'],['identifier','identifier'],['link','link'],['note','note']])$('rs-o-'+id).value=o[key]??'';
+  for(const [id,key] of [['title','title'],['date','date'],['registered','registered_on'],['authors','authors'],['venue','venue'],['identifier','identifier'],['link','link'],['note','note']])$('rs-o-'+id).value=o[key]??'';
   const choices=doc.projects.filter(p=>!p.archived||o.acks.some(a=>a.project_id===p.id)).sort((a,b)=>a.ends_on.localeCompare(b.ends_on));
   $('rs-o-acks').innerHTML=choices.map(p=>{
     const ack=o.acks.find(a=>a.project_id===p.id);
@@ -413,7 +451,7 @@ function readProposal(){
     due_on:$('rs-r-due').value,result_on:$('rs-r-result').value,members:$('rs-r-members').value,link:$('rs-r-link').value,note:$('rs-r-note').value};
 }
 function readOutput(){
-  return {kind:$('rs-o-kind').value,grade:$('rs-o-grade').value,status:$('rs-o-status').value,title:$('rs-o-title').value,date:$('rs-o-date').value,authors:$('rs-o-authors').value,venue:$('rs-o-venue').value,
+  return {kind:$('rs-o-kind').value,grade:$('rs-o-grade').value,status:$('rs-o-status').value,title:$('rs-o-title').value,date:$('rs-o-date').value,registered_on:$('rs-o-registered-field').hidden?'':$('rs-o-registered').value,authors:$('rs-o-authors').value,venue:$('rs-o-venue').value,
     identifier:$('rs-o-identifier').value,link:$('rs-o-link').value,note:$('rs-o-note').value,
     acks:[...$('rs-o-acks').querySelectorAll('[data-rs-ack]')].filter(option=>option.querySelector('[data-f=on]').checked).map(option=>({project_id:option.dataset.rsAck,target_id:option.querySelector('[data-f=target]').value||null,text:option.querySelector('[data-f=text]').value}))};
 }
@@ -423,8 +461,8 @@ async function commit(operation,errorID,done){
   try{
     const next=await runAdminTask(token=>store.save(token,operation));
     if(next.revision>=doc.revision)doc=next;
-    loaded=true;loadError='';lastRead=Date.now();done?.();return true;
-  }catch(error){$(errorID).textContent=error.message||'저장하지 못했어요. 다시 시도해 주세요.';return false;}
+    loaded=true;loadError='';lastRead=Date.now();stale=false;done?.();return true;
+  }catch(error){stale=true;$(errorID).textContent=error.message||'저장하지 못했어요. 다시 시도해 주세요.';return false;}
   finally{saving=false;render();notify();}
 }
 const NOUN={project:'과제',output:'실적',proposal:'제안서'};
@@ -444,15 +482,21 @@ async function saveRecord(event,type){
       if(!previous)editing.draft={id:record.id,created_at:record.created_at};
       pending={signature,operation:{type:type+'_save',[type]:record,base:previous?.updated_at??null,prior:[...(editing.attempts||[])],at}};
     }
-    const created=!previous,attempt=pending.operation;
+    const created=!previous,attempt=pending.operation,from=editing.from||null;
     const savedID=attempt[type].id;
     if(!editing.attempts?.includes(attempt.at))editing.attempts=[...(editing.attempts||[]),attempt.at];
     await commit(attempt,errorID,()=>{
-      $(`rs-${type}-dialog`).close();pending=null;editing=null;refocus=[type+'-edit',savedID];
-      feedback(`${NOUN[type]}${type==='output'?'을':'를'} ${created?'추가':'수정'}했어요.`);
+      $(`rs-${type}-dialog`).close();pending=null;editing=null;
+      let note='';
       // Show the list the saved record now lives in.
       if(type==='project'){tab='projects';phase=input.archived?'archived':input.ends_on<today()?'ended':'active';}
       if(type==='proposal'){tab='proposals';proposalPhase=PROPOSAL_OPEN.includes(input.status)?'open':'closed';}
+      // An output saved into a list that is filtered down to something else is brought into view.
+      if(type==='output'&&tab==='outputs'&&!shown(attempt.output)){kind='all';projectFilter='all';query='';$('rs-query').value='';note=' 목록에 보이도록 걸러 보기 조건을 풀었어요.';}
+      // Focus returns to the saved record: its own button, the card it was added from, or the
+      // add button when the open tab does not list it.
+      refocus=type==='output'&&tab==='projects'&&from?['output-for',from,'rs-add-output']:[type+'-edit',savedID,'rs-add-'+type];
+      feedback(`${NOUN[type]}${type==='output'?'을':'를'} ${created?'추가':'수정'}했어요.${note}`);
       // A proposal that has just been selected goes straight on to become a project.
       if(type==='proposal'&&input.status==='selected'&&previous?.status!=='selected'&&!registered(attempt.proposal)){
         const selected=attempt.proposal;
@@ -472,7 +516,7 @@ async function confirmDelete(){
   if(!confirming)return;
   const {type,record}=confirming;
   await commit({type:type+'_delete',id:record.id,base:record.updated_at,at:new Date().toISOString()},'rs-confirm-error',()=>{
-    $('rs-confirm-dialog').close();$(`rs-${type}-dialog`).close();confirming=null;editing=null;
+    $('rs-confirm-dialog').close();$(`rs-${type}-dialog`).close();confirming=null;editing=null;refocus=[null,null,'rs-tab-'+tab];
     feedback(`${NOUN[type]}${type==='output'?'을':'를'} 삭제했어요.`);
   });
 }
@@ -489,11 +533,11 @@ function bind(){
     const proposalButton=event.target.closest('[data-rs-proposal-phase]');if(proposalButton){proposalPhase=proposalButton.dataset.rsProposalPhase;render();return;}
     const kindButton=event.target.closest('[data-rs-kind]');if(kindButton){kind=kindButton.dataset.rsKind;render();return;}
     const copyProject=event.target.closest('[data-rs-copy-project]');
-    if(copyProject){const project=doc.projects.find(p=>p.id===copyProject.dataset.rsCopyProject);if(project)await copyTable(doc.outputs.filter(o=>o.acks.some(a=>a.project_id===project.id)),`‘${projectName(project)}’`);return;}
-    if(event.target.closest('#rs-copy-outputs')){await copyTable(shownOutputs,'보이는');return;}
-    if(event.target.closest('#rs-copy-homepage')){await copyHomepage(shownOutputs);return;}
+    if(copyProject){const project=doc.projects.find(p=>p.id===copyProject.dataset.rsCopyProject);if(project)await copyTable(doc.outputs.filter(o=>o.acks.some(a=>a.project_id===project.id)),`‘${projectName(project)}’`,copyProject);return;}
+    const tableButton=event.target.closest('#rs-copy-outputs');if(tableButton){await copyTable(shownOutputs,'보이는',tableButton);return;}
+    const homepageButton=event.target.closest('#rs-copy-homepage');if(homepageButton){await copyHomepage(shownOutputs,homepageButton);return;}
     const copy=event.target.closest('[data-rs-copy]');
-    if(copy){try{await navigator.clipboard.writeText(copy.dataset.rsCopy);feedback(copy.dataset.rsCopied||'사사문구를 복사했어요.');const label=copy.textContent;copy.textContent='복사됨';setTimeout(()=>{if(copy.isConnected)copy.textContent=label;},2000);}catch{feedback('복사하지 못했어요. 문구를 직접 선택해서 복사해 주세요.');}return;}
+    if(copy){try{await navigator.clipboard.writeText(copy.dataset.rsCopy);feedback(copy.dataset.rsCopied||'사사문구를 복사했어요.');flash(copy,'복사됨');}catch{feedback('복사하지 못했어요. 문구를 직접 선택해서 복사해 주세요.');}return;}
     const action=event.target.closest('[data-rs-action]');if(!action)return;
     const id=action.dataset.rsId;
     if(action.dataset.rsAction==='project-edit')openProject(doc.projects.find(p=>p.id===id));
@@ -517,6 +561,7 @@ function bind(){
   for(const id of ['rs-p-targets','rs-p-milestones'])$(id).addEventListener('click',event=>{const button=event.target.closest('[data-rs-remove]');if(button)button.closest('.rs-row').remove();});
   $('rs-p-targets').addEventListener('change',event=>{if(event.target.dataset.f==='metric')syncTargetRow(event.target.closest('.rs-row'));});
   $('rs-o-kind').onchange=()=>syncOutputKind();
+  $('rs-o-status').onchange=()=>syncOutputStatus();
   $('rs-o-acks').addEventListener('change',event=>{if(event.target.dataset.f==='on')event.target.closest('[data-rs-ack]').querySelector('.rs-ack-detail').hidden=!event.target.checked;});
   $('rs-project-form').addEventListener('submit',event=>void saveRecord(event,'project'));
   $('rs-output-form').addEventListener('submit',event=>void saveRecord(event,'output'));
@@ -529,6 +574,8 @@ function bind(){
   for(const id of ['rs-project-dialog','rs-output-dialog','rs-proposal-dialog','rs-confirm-dialog']){
     const dialog=$(id);
     dialog.addEventListener('cancel',event=>{if(saving)event.preventDefault();});
+    // Closing a form whose save did not go through brings the latest records in.
+    dialog.addEventListener('close',()=>{if(stale&&!document.querySelector('dialog[open]'))void read();});
     for(const button of dialog.querySelectorAll('[data-rs-close]'))button.addEventListener('click',()=>{if(!saving)dialog.close();});
   }
 }

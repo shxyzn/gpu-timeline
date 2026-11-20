@@ -104,7 +104,7 @@ body[data-workspace] .ws-loading{display:none}
 .rs-pill{display:inline-flex;align-items:center;min-height:24px;padding:0 10px;border-radius:99px;background:var(--ws-soft);color:#48484d;font-size:12px;font-weight:600;white-space:nowrap}
 .rs-pill.phase.active,.rs-pill.status.done{background:var(--ws-green-soft);color:var(--ws-green)}
 .rs-pill.phase.upcoming,.rs-pill.status.pending{background:var(--ws-blue-soft);color:#0058b0}
-.rs-pill.warn{background:var(--ws-amber-soft);color:var(--ws-amber)}
+.rs-pill.warn{background:var(--ws-amber-soft);color:var(--ws-amber);white-space:normal;max-width:100%;min-width:0;padding:3px 10px;border-radius:12px;line-height:1.35;overflow-wrap:anywhere}
 .rs-due{display:inline-flex;align-items:baseline;gap:7px;color:var(--ws-muted);font-size:12px;white-space:nowrap}
 .rs-due strong{padding:3px 9px;border-radius:99px;background:var(--ws-soft);color:#48484d;font-size:12px;font-weight:650}
 .rs-due.near strong{background:var(--ws-amber-soft);color:var(--ws-amber)}
@@ -199,6 +199,7 @@ body[data-workspace] .ws-loading{display:none}
 .rs-fieldset{min-width:0;margin:18px 0 0;padding:16px;border:1px solid var(--ws-line);border-radius:16px}
 .rs-fieldset legend{padding:0 6px;font-size:13px;font-weight:650}
 .rs-fieldset .admin-help{margin:0 0 10px}
+.rs-dialog .rs-field-note{margin:0;align-self:center}
 .rs-rows{display:grid;gap:10px;margin-bottom:10px}
 .rs-rows:empty{display:none}
 .rs-row{position:relative;display:grid;grid-template-columns:minmax(0,1.5fr) minmax(0,.7fr) minmax(0,1fr);gap:12px 10px;padding:12px 44px 12px 12px;border-radius:13px;background:var(--ws-soft)}

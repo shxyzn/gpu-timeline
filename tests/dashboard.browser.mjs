@@ -9,7 +9,7 @@ import {resourceFixture} from './resources-fixture.mjs';
 import {emptyMonitoring} from '../dist/test-server/monitoring-model.js';
 import {emptyHistory,mergeSamples,samplesFromTokens,DAY} from '../dist/test-server/api-usage-model.js';
 import {sealGate,importDocumentKey,sealJSON,openJSON,isEnvelope} from '../dist/test-server/workspace-crypto.js';
-import {makeProject,makeOutput,validateResearch} from '../dist/test-server/research-model.js';
+import {makeProject,makeOutput,makeProposal,validateResearch} from '../dist/test-server/research-model.js';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 // A preinstalled Playwright can be used instead of node_modules by naming its folder.
@@ -67,7 +67,7 @@ try {
   const workspacePassword='browser-test-workspace',workspaceKeyBytes=crypto.getRandomValues(new Uint8Array(32));
   const workspaceGate=await sealGate(workspacePassword,workspaceKeyBytes,{iterations:100000});
   const workspaceKey=await importDocumentKey(workspaceKeyBytes),researchContext='cvml-workspace/research/v1';
-  let researchDoc=null,researchSealed=null,researchWrites=0,researchForbidden=false,researchUnavailable=false;
+  let researchDoc=null,researchSealed=null,researchWrites=0,researchForbidden=false,researchUnavailable=false,researchPublic=null;
   const sealResearch=async doc=>{researchDoc=doc;researchSealed=await sealJSON(workspaceKey,workspaceGate.key_id,doc,researchContext);};
   const telemetry = id => ({server_id: id, name: `Server ${id.slice(-1).toUpperCase()}`, updated_at: iso(id === 'server-c' && serverCStale ? -2 : 0), collector_ok: true,
     resources: resourceEnabled && id !== 'server-c' ? resourceFixture(Date.now(),resourceFailed) : undefined,
@@ -108,7 +108,8 @@ try {
     if(url.pathname.endsWith('/dashboard/research-test.json')){
       assert.equal(route.request().headers().authorization,undefined);
       if(researchUnavailable)return fulfill(route,{},503);
-      return researchSealed?fulfill(route,researchSealed):fulfill(route,{},404);
+      // `researchPublic` stands for a public copy that still trails the stored file after a write.
+      return researchSealed?fulfill(route,researchPublic||researchSealed):fulfill(route,{},404);
     }
     if (url.pathname.endsWith('/dashboard/edits.json')) {
       assert.equal(route.request().headers().authorization, undefined);
@@ -794,7 +795,7 @@ try {
     await preview.waitForFunction(()=>document.getElementById('api-usage-state').textContent.includes('개 키의 관측 기록'));
     assert.ok(usageHistoryReads>historyReadsBefore);
     assert.equal(await preview.locator('#api-usage-board').evaluate(e=>e.previousElementSibling.id),'openrouter-grid');
-    if(environment.profile==='test')assert.match(await preview.locator('#dashboard-version').innerText(),/테스트 v3.0 snapshot 7/);
+    if(environment.profile==='test')assert.match(await preview.locator('#dashboard-version').innerText(),/테스트 v3.0 snapshot 8/);
     assert.equal(await preview.locator('#api-usage-key option').count(),3);
     assert.ok(await preview.locator('#api-usage-plot [data-usage-day]').count()>0);
     assert.equal(await preview.locator('#api-usage-board script').count(),0);
@@ -1208,6 +1209,8 @@ try {
     assert.match(await card.locator('tr[data-rs-target]').nth(1).innerText(),/국내 특허 출원[\s\S]*1\s*\/ 1건[\s\S]*달성/);
     await card.locator('[data-rs-copy-project]').click();
     assert.equal((await reader.evaluate(()=>navigator.clipboard.readText())).split('\n').length,4);
+    // The button itself says what was copied: the status line may be far above it.
+    assert.equal(await card.locator('[data-rs-copy-project]').innerText(),'3건 복사됨');
     await card.locator('summary',{hasText:'사사한 실적 3건'}).click();
     assert.equal(await card.locator('.rs-line').count(),3);
     const customLine=card.locator('.rs-line',{hasText:'Submitted paper'});
@@ -1221,6 +1224,11 @@ try {
     await card.locator('.rs-fold').nth(1).locator('[data-rs-copy]').first().click();
     assert.equal(await reader.evaluate(()=>navigator.clipboard.readText()),'This work was supported by IITP (No. RS-2025-00123456).');
     assert.equal(await reader.locator('#rs-feedback').innerText(),'사사문구를 복사했어요.');
+    // A second press while it still says "복사됨" must not make that the button's name for good.
+    const ackCopy=card.locator('.rs-fold').nth(1).locator('[data-rs-copy]').first();
+    assert.equal(await ackCopy.innerText(),'복사됨');
+    await ackCopy.click();
+    await reader.waitForFunction(button=>button.textContent==='복사',await ackCopy.elementHandle(),{timeout:5000});
     // Opening a fold is not a change: the next periodic render leaves the card, and so keyboard
     // focus and a text selection inside it, alone.
     await reader.evaluate(()=>{window.__card=document.querySelector('.rs-project');document.dispatchEvent(new CustomEvent('dashboard:render'));});
@@ -1248,6 +1256,8 @@ try {
     assert.match(copiedTable[0],/^종류\t구분\t제목/);
     assert.match(copiedTable.find(line=>line.includes('Published driving paper')),/IITP 멀티모달\tRS-2025-00123456\t확인됨/);
     assert.match(await reader.locator('#rs-feedback').innerText(),/실적 4건을 표로 복사했어요/);
+    assert.equal(await reader.locator('#rs-copy-outputs').innerText(),'4건 복사됨');
+    assert.equal(copiedTable[0].split('\t').length,13);
     // The same list in the lab homepage's format: published papers and filed patents only.
     await reader.locator('#rs-copy-homepage').click();
     // The rich copy is written asynchronously; the status line appears once it is on the clipboard.
@@ -1257,6 +1267,7 @@ try {
     assert.equal(homepageCopy.includes('Submitted paper'),false);
     assert.ok((await reader.evaluate(async()=>(await navigator.clipboard.read())[0].types)).includes('text/html'));
     assert.match(await reader.locator('#rs-feedback').innerText(),/실적 3건을 홈페이지 목록 형식으로 복사했어요[\s\S]*1건은 뺐어요/);
+    assert.equal(await reader.locator('#rs-copy-homepage').innerText(),'3건 복사됨');
     await reader.locator('[data-rs-kind=patent]').click();
     assert.equal(await reader.locator('.rs-output').count(),1);
     assert.equal(await reader.evaluate(()=>document.activeElement.dataset.rsKind),'patent','choosing a kind keeps keyboard focus on its chip');
@@ -1327,6 +1338,19 @@ try {
     assert.equal(await reader.locator('#tab-timeline').getAttribute('aria-selected'),'true');
     await reader.close();
 
+    // When the very first read fails there is nothing to copy, and the copy buttons say so.
+    researchUnavailable=true;
+    const early=await context.newPage();early.on('pageerror',error=>researchErrors.push(error.message));
+    await enterStaging(early,'research');
+    await early.waitForFunction(()=>document.getElementById('rs-error').textContent.includes('불러오지 못했어요'));
+    await early.locator('#rs-tab-outputs').click();
+    assert.deepEqual(await early.evaluate(()=>['rs-copy-outputs','rs-copy-homepage'].map(id=>document.getElementById(id).disabled)),[true,true]);
+    researchUnavailable=false;
+    await early.locator('#rs-refresh').click();
+    await early.locator('.rs-output').first().waitFor();
+    assert.deepEqual(await early.evaluate(()=>['rs-copy-outputs','rs-copy-homepage'].map(id=>document.getElementById(id).disabled)),[false,false]);
+    await early.close();
+
     // The administrator adds and corrects records; every write goes out sealed.
     const admin=await context.newPage();admin.on('pageerror',error=>researchErrors.push(error.message));
     await enterStaging(admin,'research');
@@ -1345,6 +1369,10 @@ try {
     await admin.locator('#rs-p-end').fill(kst(200));
     await admin.locator('#rs-p-number').fill('RS-2026-00000001');
     await admin.locator('#rs-p-ack-en').fill('Supported by NRF (No. RS-2026-00000001).');
+    // Nothing is filled in that nobody chose: a new project starts without a target row.
+    assert.equal(await admin.locator('#rs-p-targets .rs-row').count(),0);
+    await admin.locator('#rs-p-target-add').click();
+    assert.equal(await admin.locator('#rs-p-targets [data-f=metric]').first().inputValue(),'paper_sci');
     await admin.locator('#rs-p-targets [data-f=count]').first().fill('2');
     await admin.locator('#rs-p-target-add').click();
     const customTarget=admin.locator('#rs-p-targets .rs-row').nth(1);
@@ -1370,6 +1398,8 @@ try {
     await admin.locator('#rs-output-save').click();
     await admin.locator('#rs-output-dialog').waitFor({state:'hidden'});
     assert.equal(researchWrites,2);
+    // Focus returns to the card the output was added from.
+    assert.deepEqual(await admin.evaluate(()=>[document.activeElement.dataset.rsAction,document.activeElement.dataset.rsId]),['output-for',added.id]);
     // 게재 확정 is still on the way; it counts once it is published.
     assert.match(await fresh.locator('tr[data-rs-target]').first().innerText(),/0\s*\/ 2편[\s\S]*게재 확정 1[\s\S]*2편 더 필요/);
     await admin.locator('#rs-tab-outputs').click();
@@ -1388,14 +1418,21 @@ try {
     await tiny.locator('[data-rs-action=output-edit]').click();
     const elsewhere=structuredClone(researchDoc),touched=elsewhere.outputs.find(item=>item.title==='Tiny ViT 논문');
     touched.note='다른 관리자가 먼저 수정';touched.updated_at=new Date().toISOString();elsewhere.revision++;
+    // The public copy keeps the old records for a while after the other administrator's write.
+    researchPublic=researchSealed;
     await sealResearch(validateResearch(elsewhere));
     await admin.locator('#rs-o-title').fill('Tiny ViT 논문 (덮어쓰기 시도)');
     await admin.locator('#rs-output-save').click();
-    await admin.getByText('다른 사람이 먼저 수정했어요. 창을 닫고 최신 내용을 확인한 뒤 다시 저장해 주세요.',{exact:true}).waitFor();
+    await admin.getByText('다른 사람이 먼저 수정했어요. 창을 닫으면 최신 내용을 다시 불러와요. 확인한 뒤 다시 저장해 주세요.',{exact:true}).waitFor();
     assert.equal(researchWrites,3);
+    // Closing the form brings the stored records in, without "새로고침" and ahead of the public copy.
     await admin.locator('#rs-output-dialog [data-rs-close]').first().click();
-    await admin.locator('#rs-refresh').click();
     await admin.locator('.rs-output',{hasText:'다른 관리자가 먼저 수정'}).waitFor();
+    researchPublic=null;
+    // The record opens with what is stored now, so the next save goes through.
+    await tiny.locator('[data-rs-action=output-edit]').click();
+    assert.equal(await admin.locator('#rs-o-note').inputValue(),'다른 관리자가 먼저 수정');
+    await admin.locator('#rs-output-dialog [data-rs-close]').first().click();
     // A refused write keeps the form open, and the same save succeeds once it is allowed.
     researchForbidden=true;
     await tiny.locator('[data-rs-action=output-edit]').click();
@@ -1415,6 +1452,8 @@ try {
     assert.equal(researchWrites,5);
     assert.equal(researchDoc.outputs.some(item=>item.title==='Submitted paper'),false);
     assert.equal(await admin.locator('.rs-output').count(),4);
+    // The deleted record's button is gone; focus lands on the open tab, not on the page.
+    assert.equal(await admin.evaluate(()=>document.activeElement.id),'rs-tab-outputs');
     // A project that outputs acknowledge cannot be deleted, only archived.
     await admin.locator('#rs-tab-projects').click();
     await admin.locator(`[data-rs-project="${running.id}"] [data-rs-action=project-edit]`).click();
@@ -1431,8 +1470,44 @@ try {
     assert.equal(await admin.locator('[data-rs-phase=archived]').getAttribute('aria-pressed'),'true');
     assert.equal(await admin.locator('.rs-project').count(),1);
     assert.equal(await admin.locator('#rs-count-active').innerText(),'1');
+    // A registered patent has two days. Saved while the list shows papers only, it is brought into
+    // view instead of vanishing behind the filter.
+    await admin.locator('#rs-tab-outputs').click();
+    await admin.locator('[data-rs-kind=paper]').click();
+    await admin.locator('#rs-add-output').click();
+    assert.equal(await admin.locator('#rs-o-registered-field').isVisible(),false);
+    await admin.locator('#rs-o-kind').selectOption('patent');
+    assert.equal(await admin.locator('#rs-o-date-label').innerText(),'출원일 · 선택');
+    await admin.locator('#rs-o-status').selectOption('registered');
+    assert.equal(await admin.locator('#rs-o-registered-field').isVisible(),true);
+    await admin.locator('#rs-o-title').fill('등록된 특허');
+    await admin.locator('#rs-o-date').fill(kst(-400));
+    await admin.locator('#rs-o-registered').fill(kst(-401));
+    await admin.locator('#rs-output-save').click();
+    assert.equal(await admin.locator('#rs-output-error').innerText(),'등록일은 출원일보다 빠를 수 없어요.');
+    await admin.locator('#rs-o-registered').fill(kst(-5));
+    await admin.locator('#rs-output-save').click();
+    await admin.locator('#rs-output-dialog').waitFor({state:'hidden'});
+    assert.equal(researchWrites,7);
+    assert.equal(await admin.locator('#rs-feedback').innerText(),'실적을 추가했어요. 목록에 보이도록 걸러 보기 조건을 풀었어요.');
+    assert.equal(await admin.locator('[data-rs-kind=all]').getAttribute('aria-pressed'),'true');
+    const grant=admin.locator('.rs-output',{hasText:'등록된 특허'});
+    assert.match(await grant.locator('.rs-output-meta').first().innerText(),/^출원 \d{4}\. \d+\. \d+\. · 등록 \d{4}\. \d+\. \d+\.$/);
+    assert.deepEqual(await admin.evaluate(()=>[document.activeElement.dataset.rsAction,document.activeElement.closest('.rs-output')?.querySelector('h3').textContent]),['output-edit','등록된 특허']);
+    const stored=researchDoc.outputs.find(item=>item.title==='등록된 특허');
+    assert.deepEqual([stored.date,stored.registered_on],[kst(-400),kst(-5)]);
+    // Turned back into an application it keeps no registration day.
+    await grant.locator('[data-rs-action=output-edit]').click();
+    assert.equal(await admin.locator('#rs-o-registered').inputValue(),kst(-5));
+    await admin.locator('#rs-o-status').selectOption('filed');
+    assert.equal(await admin.locator('#rs-o-registered-field').isVisible(),false);
+    await admin.locator('#rs-output-save').click();
+    await admin.locator('#rs-output-dialog').waitFor({state:'hidden'});
+    assert.equal(researchDoc.outputs.find(item=>item.title==='등록된 특허').registered_on,null);
+    await admin.locator('#rs-tab-projects').click();
     // New targets offer the four patent indicators; the combined ones are kept for old rows only.
     await admin.locator('#rs-add-project').click();
+    await admin.locator('#rs-p-target-add').click();
     const metricOptions=await admin.locator('#rs-p-targets [data-f=metric] option').allTextContents();
     assert.deepEqual(metricOptions.filter(label=>label.includes('특허')),['국내 특허 출원','국내 특허 등록','국제 특허 출원','국제 특허 등록']);
     await admin.locator('#rs-project-dialog [data-rs-close]').first().click();
@@ -1490,7 +1565,18 @@ try {
     await admin.locator('#rs-p-end').fill(kst(700));
     await admin.locator('#rs-project-save').click();
     await admin.locator('#rs-project-dialog').waitFor({state:'hidden'});
-    assert.ok(researchDoc.projects.some(project=>project.name==='2027 온디바이스 비전 신규과제'));
+    const registeredProject=researchDoc.projects.find(project=>project.name==='2027 온디바이스 비전 신규과제');
+    // The project remembers its proposal and starts without a target nobody chose.
+    assert.deepEqual([registeredProject.proposal_id,registeredProject.targets.length],[researchDoc.proposals[0].id,0]);
+    // Renaming the project (the contract title often differs) keeps the proposal registered, and
+    // an edit of an untargeted project does not add a target.
+    await admin.locator(`[data-rs-project="${registeredProject.id}"] [data-rs-action=project-edit]`).click();
+    assert.equal(await admin.locator('#rs-p-targets .rs-row').count(),0);
+    await admin.locator('#rs-p-name').fill('온디바이스 비전 (1단계)');
+    await admin.locator('#rs-project-save').click();
+    await admin.locator('#rs-project-dialog').waitFor({state:'hidden'});
+    const renamed=researchDoc.projects.find(project=>project.id===registeredProject.id);
+    assert.deepEqual([renamed.name,renamed.targets.length,renamed.proposal_id],['온디바이스 비전 (1단계)',0,researchDoc.proposals[0].id]);
     await admin.locator('#rs-tab-proposals').click();
     await admin.locator('[data-rs-proposal-phase=closed]').click();
     assert.match(await proposal.innerText(),/과제로 등록됨/);
@@ -1513,6 +1599,7 @@ try {
         if(name==='projects')await admin.screenshot({path:path.join(output,`research-projects-mobile-${width}.png`),fullPage:true});
       }
       await admin.locator('#rs-add-project').click();
+      await admin.locator('#rs-p-target-add').click();
       assert.ok(await admin.locator('#rs-project-dialog').evaluate(dialog=>dialog.scrollWidth<=dialog.clientWidth+1),`project form overflows at ${width}px`);
       // A date needs room to be read while it is typed; the count beside it must not squeeze it.
       const dueWidth=await admin.locator('#rs-p-targets [data-f=due_on]').first().evaluate(input=>input.getBoundingClientRect().width);
@@ -1560,6 +1647,26 @@ try {
     assert.match(await admin.locator('#workspace-home .ws-card').first().innerText(),/목표 실적 미등록[\s\S]*목표 미등록 1개/);
     assert.doesNotMatch(await admin.locator('#workspace-home').innerText(),/모든 목표 달성/);
     await openView(admin,'research');
+    // A result day that passed stays listed until the outcome is recorded. A warning that names a
+    // project without a short name wraps instead of pushing the page sideways on a phone.
+    const wordy=makeProject({name:'멀티모달 주행 데이터 이해를 위한 비전-언어 모델 연구와 실증 (2단계 2차년도)',number:'RS-2026-00000002',ends_on:kst(300),targets:[{metric:'paper_sci',count:1}]},made);
+    await sealResearch(validateResearch({schema_version:1,revision:researchDoc.revision+1,updated_at:made.at,projects:[wordy],
+      outputs:[makeOutput({kind:'paper',grade:'sci',status:'published',title:'사사문구 없는 논문',acks:[{project_id:wordy.id}]},[wordy],made)],
+      proposals:[makeProposal({title:'결과를 기다리는 제안서',agency:'NRF',status:'submitted',due_on:kst(-40),result_on:kst(-3)},made)]}));
+    await admin.locator('#rs-refresh').click();
+    await admin.locator('#rs-tab-proposals').click();
+    await admin.locator('[data-rs-proposal-phase=open]').click();
+    await admin.locator('.rs-proposal',{hasText:'결과를 기다리는 제안서'}).waitFor();
+    assert.match(await admin.locator('.rs-proposal').innerText(),/제출 완료[\s\S]*결과 발표 \d{4}\. \d+\. \d+\. · 결과를 기록해 주세요/);
+    await admin.locator('#rs-tab-schedule').click();
+    assert.match(await admin.locator('#rs-schedule').innerText(),/기한이 지났어요[\s\S]*결과 발표 · 결과를 기다리는 제안서[\s\S]*제안서 · NRF · 결과를 기록해 주세요/);
+    await admin.setViewportSize({width:390,height:844});
+    await admin.locator('#rs-tab-outputs').click();
+    assert.match(await admin.locator('.rs-output .rs-pill.warn').innerText(),/사사문구 없음 · 멀티모달 주행 데이터 이해를 위한/);
+    assert.ok(await fits(admin),'a warning that names a long project overflows at 390px');
+    await admin.screenshot({path:path.join(output,'research-warning-mobile-390.png'),fullPage:true});
+    await admin.setViewportSize({width:1440,height:1000});
+    await admin.locator('#rs-tab-projects').click();
 
     // Signing out closes the workspace; staying signed in is opt-in and ends everywhere at once.
     await admin.locator('#workspace-logout').click();

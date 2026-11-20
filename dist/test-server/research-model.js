@@ -1,7 +1,7 @@
 // Research-project tracker: document shape, validation, edits and the counting rules.
 // Pure functions only. Calendar dates are plain YYYY-MM-DD strings read as Asia/Seoul days.
 export const DAY = 86400000;
-export const LIMITS = Object.freeze({projects: 100, outputs: 2000, proposals: 300, targets: 30, milestones: 40, acks: 8, bytes: 300000});
+export const LIMITS = Object.freeze({projects: 100, outputs: 2000, proposals: 300, targets: 30, milestones: 40, acks: 8, bytes: 600000});
 
 // What an output can be, the states it moves through, and the states that count as achieved
 // when a target does not say otherwise. A paper counts once it is published and a talk once it
@@ -16,7 +16,7 @@ export const OUTPUT_KINDS = Object.freeze({
     dateLabel: '발표(예정)일', venueLabel: '학술대회', identifierLabel: 'DOI'},
   patent: {label: '특허', unit: '건', grades: {domestic: '국내', intl: '국제'},
     statuses: ['preparing', 'filed', 'registered'], achieved: ['filed', 'registered'],
-    dateLabel: '출원·등록일', venueLabel: '출원국·기관', identifierLabel: '출원·등록번호'},
+    dateLabel: '출원일', registeredLabel: '등록일', venueLabel: '출원국·기관', identifierLabel: '출원·등록번호'},
   software: {label: 'SW 등록', unit: '건', grades: {},
     statuses: ['preparing', 'registered'], achieved: ['registered'],
     dateLabel: '등록일', venueLabel: '등록 기관', identifierLabel: '등록번호'},
@@ -89,6 +89,7 @@ function checkProject(p) {
   if (!optionalDate(p.starts_on) || !validDate(p.ends_on)) fail('과제 종료일을 입력해 주세요.');
   if (p.starts_on && p.starts_on > p.ends_on) fail('과제 시작일은 종료일보다 앞서야 해요.');
   if (typeof p.archived !== 'boolean' || !time(p.created_at) || !time(p.updated_at) || !text(p.updated_by, 40)) fail('과제 기록 형식이 올바르지 않아요.');
+  if (!(p.proposal_id === null || id(p.proposal_id, 'r'))) fail('과제 기록 형식이 올바르지 않아요.');
   if (!Array.isArray(p.targets) || p.targets.length > LIMITS.targets) fail(`목표는 과제당 ${LIMITS.targets}개까지 등록할 수 있어요.`);
   const seen = new Set();
   for (const t of p.targets) {
@@ -128,6 +129,9 @@ function checkOutput(o, projects) {
   if (!text(o.authors, 300) || !text(o.venue, 160) || !text(o.identifier, 120) || !text(o.note, 1000)) fail('실적 정보가 너무 길어요.');
   if (!link(o.link)) fail('링크는 http:// 또는 https://로 시작하는 주소로 입력해 주세요.');
   if (!optionalDate(o.date)) fail('실적 날짜를 확인해 주세요.');
+  // Only a registered patent has a second day: the registration, apart from the filing.
+  if (o.registered_on !== null && (o.kind !== 'patent' || o.status !== 'registered' || !validDate(o.registered_on))) fail('등록일을 확인해 주세요.');
+  if (o.registered_on && o.date && o.registered_on < o.date) fail('등록일은 출원일보다 빠를 수 없어요.');
   if (!time(o.created_at) || !time(o.updated_at) || !text(o.updated_by, 40)) fail('실적 기록 형식이 올바르지 않아요.');
   if (!Array.isArray(o.acks) || o.acks.length > LIMITS.acks) fail(`한 실적에 사사 과제는 ${LIMITS.acks}개까지 연결할 수 있어요.`);
   const seen = new Set();
@@ -145,8 +149,11 @@ export function validateResearch(doc) {
       !(doc.updated_at === null || time(doc.updated_at)) || !Array.isArray(doc.projects) || !Array.isArray(doc.outputs)) {
     fail('연구과제 문서 형식이 올바르지 않아요. 원본을 확인해 주세요.');
   }
-  // Documents saved before proposals existed have no list; they start with an empty one.
+  // Documents saved before proposals existed have no list; they start with an empty one. The same
+  // goes for the fields added since: a patent's registration day, a project's source proposal.
   if (doc.proposals === undefined) doc.proposals = [];
+  for (const p of doc.projects) if (p && typeof p === 'object' && p.proposal_id === undefined) p.proposal_id = null;
+  for (const o of doc.outputs) if (o && typeof o === 'object' && o.registered_on === undefined) o.registered_on = null;
   if (!Array.isArray(doc.proposals)) fail('연구과제 문서 형식이 올바르지 않아요. 원본을 확인해 주세요.');
   if (doc.proposals.length > LIMITS.proposals) fail(`제안서는 ${LIMITS.proposals}개까지 등록할 수 있어요.`);
   if (doc.projects.length > LIMITS.projects) fail(`과제는 ${LIMITS.projects}개까지 등록할 수 있어요.`);
@@ -188,6 +195,7 @@ export function makeProject(input, {by, at = new Date().toISOString(), previous 
     milestones: (input.milestones || []).map(m => ({id: m.id || newID('m'), title: oneLine(m.title), date: String(m.date || ''), done: !!m.done})),
     note: clean(input.note), archived: !!input.archived,
     created_at: previous?.created_at || at, updated_at: at, updated_by: oneLine(by).slice(0, 40),
+    proposal_id: previous?.proposal_id || input.proposal_id || null,
   };
   if (!project.name) fail('과제명을 입력해 주세요.');
   if (!project.ends_on) fail('과제 종료일을 입력해 주세요.');
@@ -204,6 +212,7 @@ export function makeOutput(input, projects, {by, at = new Date().toISOString(), 
     date: dateOrNull(input.date), identifier: oneLine(input.identifier), link: oneLine(input.link),
     acks: (input.acks || []).map(a => ({project_id: a.project_id, target_id: a.target_id || null, text: clean(a.text)})),
     note: clean(input.note), created_at: previous?.created_at || at, updated_at: at, updated_by: oneLine(by).slice(0, 40),
+    registered_on: input.kind === 'patent' && input.status === 'registered' ? dateOrNull(input.registered_on) : null,
   };
   if (!output.title) fail('실적 제목을 입력해 주세요.');
   checkOutput(output, new Map(projects.map(p => [p.id, p])));
@@ -220,11 +229,12 @@ export function makeProposal(input, {by, at = new Date().toISOString(), previous
   if (!proposal.title) fail('제안서 제목(과제명)을 입력해 주세요.');
   if (!proposal.due_on) fail('제출 마감일을 입력해 주세요.');
   checkProposal(proposal);
+  if (proposal.result_on && proposal.result_on < proposal.due_on) fail('결과 발표일은 제출 마감일보다 빠를 수 없어요.');
   return proposal;
 }
 
 const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
-const stale = '다른 사람이 먼저 수정했어요. 창을 닫고 최신 내용을 확인한 뒤 다시 저장해 주세요.';
+const stale = '다른 사람이 먼저 수정했어요. 창을 닫으면 최신 내용을 다시 불러와요. 확인한 뒤 다시 저장해 주세요.';
 
 // One edit applied to the latest document. `base` is the updated_at the editor started from
 // (null for a new record); a different value means someone else saved in between.
@@ -300,25 +310,52 @@ const FAMILIES = Object.freeze({paper_sci: ['paper', false], paper_scopus: ['pap
 const PLANNED = 'preparing';
 
 // How many more distinct outputs a set of rows still needs. Rows of one family overlap, so the
-// larger side decides; everything else simply adds up. Work that is under way (submitted,
-// accepted, filed) is counted once however many rows it sits in.
+// larger side decides; everything else simply adds up. How many of those still have to be
+// started is read off the rows too: work under way counts only where it fills a row that is
+// short, so a filed patent waiting for registration does not hide a second application nobody
+// has begun.
+const APPLICATION = new Set(['patent_app', 'patent_app_dom', 'patent_app_intl']);
+const REGISTRATION = new Set(['patent_reg', 'patent_reg_dom', 'patent_reg_intl']);
 function distinctNeed(rows) {
   const groups = new Map();
   for (const row of rows) {
     const [name, wide] = FAMILIES[row.target.metric] || ['row:' + row.target.id, true];
-    if (!groups.has(name)) groups.set(name, {wide: 0, narrow: 0, underway: new Set()});
+    if (!groups.has(name)) groups.set(name, {wide: 0, narrow: 0, wideGap: 0, narrowGap: 0});
     const group = groups.get(name);
     group[wide ? 'wide' : 'narrow'] += row.remaining;
-    if (row.remaining > 0) for (const item of row.outputs) if (item.stage === 'pending') group.underway.add(item.output.id);
+    group[wide ? 'wideGap' : 'narrowGap'] += row.gap;
   }
-  let remaining = 0, pending = 0;
-  for (const group of groups.values()) {
+  const sizes = new Map();
+  for (const [name, group] of groups) {
     const need = Math.max(group.wide, group.narrow);
-    remaining += need;
-    pending += Math.min(need, group.underway.size);
+    sizes.set(name, {need, gap: Math.min(need, Math.max(group.wideGap, group.narrowGap))});
   }
-  return {remaining, pending, gap: remaining - pending};
+  // The older combined patent rows count domestic and international patents alike, so one new
+  // patent fills them and its own country's rows together.
+  const combined = sizes.get('patent');
+  if (combined) {
+    for (const name of ['patent_dom', 'patent_intl']) {
+      const part = sizes.get(name);
+      if (!part) continue;
+      combined.split = {need: (combined.split?.need || 0) + part.need, gap: (combined.split?.gap || 0) + part.gap};
+      sizes.delete(name);
+    }
+    if (combined.split) {
+      combined.need = Math.max(combined.need, combined.split.need);
+      combined.gap = Math.min(combined.need, Math.max(combined.gap, combined.split.gap));
+    }
+  }
+  let remaining = 0, gap = 0;
+  for (const size of sizes.values()) { remaining += size.need; gap += size.gap; }
+  return {remaining, pending: remaining - gap, gap};
 }
+// The day an output counts for an indicator. A patent counts as filed on its filing day and as
+// registered on its registration day; everything else has one date.
+// A patent registered before the second date existed has only one, which then stands for both.
+const dayFor = (output, metric) => output.kind === 'patent' && REGISTRATION.has(metric)
+  ? output.registered_on || (output.status === 'registered' ? output.date : null) : output.date;
+// The one date to show next to an output's status.
+export const outputDate = output => output.kind === 'patent' && output.status === 'registered' ? output.registered_on || output.date : output.date;
 
 // Rows of one project with the outputs that fill them.
 // - An output counts for a project only through an acknowledgement (사사) link to it.
@@ -329,9 +366,12 @@ function distinctNeed(rows) {
 //   target with room whose deadline has not passed. Whatever fits nowhere stays on the last
 //   target, where a surplus shows as over-achievement.
 // - An explicit choice among the targets of an indicator the output already belongs to (picking
-//   the year) changes only that; its other indicators are still filled automatically. For a
-//   patent the choice also fixes the stage: chosen as 등록 it no longer fills 출원, and back. Choosing a
+//   the year) changes only that; its other indicators are still filled automatically. Choosing a
 //   target of a different indicator re-classifies the output: it counts there and nowhere else.
+// - Patents: a patent chosen for a 등록 target counts as a registration only (an older patent
+//   registered this year is not also this year's application). Chosen for a 출원 target it still
+//   counts toward 등록 once it is registered. A patent that has not been filed yet is listed
+//   under its application target only.
 // - 'none' keeps the output out of the count. '준비 중' work is listed but is not "in progress".
 export function projectProgress(project, outputs, on = today()) {
   const rows = project.targets.map((target, index) => ({target, index, due_on: target.due_on || project.ends_on, done: [], pending: [], planned: []}));
@@ -349,11 +389,10 @@ export function projectProgress(project, outputs, on = today()) {
       chosen[stageFor(output, chosen.target)].push(output);
       if (!METRICS[chosen.target.metric].accepts(output)) continue;
       metrics = metrics.filter(metric => metric !== chosen.target.metric);
-      // A patent target names a stage: choosing 등록 (or 출원) says which of the two this patent
-      // counts as, so it no longer fills the other stage of the same country automatically.
-      const family = FAMILIES[chosen.target.metric]?.[0];
-      if (family?.startsWith('patent')) metrics = metrics.filter(metric => FAMILIES[metric]?.[0] !== family);
+      if (REGISTRATION.has(chosen.target.metric)) metrics = metrics.filter(metric => !APPLICATION.has(metric));
     } else if (!metrics.length) { extra.push(output); continue; }
+    const filedSomewhere = chosen ? APPLICATION.has(chosen.target.metric) : metrics.some(metric => APPLICATION.has(metric));
+    if (output.kind === 'patent' && output.status === PLANNED && filedSomewhere) metrics = metrics.filter(metric => !REGISTRATION.has(metric));
     for (const metric of metrics) { if (!auto.has(metric)) auto.set(metric, []); auto.get(metric).push(output); }
   }
   for (const [metric, list] of auto) {
@@ -362,7 +401,10 @@ export function projectProgress(project, outputs, on = today()) {
     for (const stage of ['done', 'pending', 'planned']) {
       for (const output of list.filter(item => stageFor(item, last.target) === stage)) {
         const taken = row => row.done.length + (stage === 'done' ? 0 : row.pending.length) + (stage === 'planned' ? row.planned.length : 0);
-        const inTime = row => stage === 'done' ? !output.date || output.date <= row.due_on : row.due_on >= on;
+        // A known date decides the year for work on the way as well: a paper due out next March
+        // does not cover this December's target.
+        const when = dayFor(output, metric);
+        const inTime = row => (!when || when <= row.due_on) && (stage === 'done' || row.due_on >= on);
         (group.find(row => taken(row) < row.target.count && inTime(row)) || last)[stage].push(output);
       }
     }
@@ -412,9 +454,10 @@ export function remainingText(progress, limit = 5) {
 }
 
 // Acknowledgements that would not hold up in a report: no text at all for that project, or a
-// text that does not carry the project's number. Spaces, hyphens and case are ignored when the
+// text that does not carry the project's number. Spaces, hyphens of every kind (a paste from a
+// PDF or HWP file often carries a non-breaking or full-width one) and case are ignored when the
 // number is looked for. '기타 성과' carries no acknowledgement and is not checked.
-const bare = value => value.replace(/[\s\-–—_.]/g, '').toLowerCase();
+const bare = value => value.replace(/[\s\p{Pd}\u2212\u00ad_.]/gu, '').toLowerCase();
 export function ackIssues(output, projects) {
   if (output.kind === 'other') return [];
   const issues = [];
@@ -432,7 +475,10 @@ export function outputWarnings(output, projects) {
   const warnings = [];
   const live = output.acks.filter(a => projects.some(p => p.id === a.project_id));
   if (!live.length) warnings.push({code: 'no-ack', label: '사사 과제 미지정'});
-  if (live.length > 1) warnings.push({code: 'multi-ack', label: `중복 사사 ${live.length}개 과제`});
+  // Two projects acknowledged is a question only while both count it: a link set to
+  // '집계하지 않음' has already been answered.
+  const counted = live.filter(a => a.target_id !== 'none');
+  if (counted.length > 1) warnings.push({code: 'multi-ack', label: `중복 사사 ${counted.length}개 과제`});
   return [...warnings, ...ackIssues(output, projects)];
 }
 
@@ -485,16 +531,21 @@ export function homepageList(outputs) {
 }
 
 // The output list as tab-separated text, ready to paste into a spreadsheet for a report.
-export const EXPORT_COLUMNS = Object.freeze(['종류', '구분', '제목', '저자·발명자', '학술지·학술대회·기관', '상태', '날짜', '식별 번호', '사사 과제', '과제번호', '사사문구 확인', '링크']);
+// '날짜' is the day the kind's own form asks for (a patent's filing day); a registered patent's
+// registration day has its own column.
+export const EXPORT_COLUMNS = Object.freeze(['종류', '구분', '제목', '저자·발명자', '학술지·학술대회·기관', '상태', '날짜', '특허 등록일', '식별 번호', '사사 과제', '과제번호', '사사문구 확인', '링크']);
 export function outputsTable(outputs, projects) {
-  const cell = value => String(value ?? '').replace(/[\t\r\n]+/g, ' ').trim();
+  // One line per cell. A cell that opens with a double quote would be read as a quoted field by
+  // a spreadsheet and swallow the cells after it, so such a cell is quoted properly.
+  const cell = value => { const flat = String(value ?? '').replace(/[\t\r\n]+/g, ' ').trim(); return flat.startsWith('"') ? `"${flat.replaceAll('"', '""')}"` : flat; };
   const rows = outputs.map(output => {
     const kind = OUTPUT_KINDS[output.kind];
     const linked = output.acks.map(a => projects.find(p => p.id === a.project_id)).filter(Boolean);
     const issues = ackIssues(output, projects);
     return [kind.label, output.grade ? kind.grades[output.grade] : '', output.title, output.authors, output.venue, statusLabel(output), output.date || '',
-      output.identifier, linked.map(p => p.short || p.name).join(', '), linked.map(p => p.number).filter(Boolean).join(', '),
-      !linked.length ? '사사 과제 미지정' : issues.length ? issues.map(i => i.label).join(', ') : '확인됨', output.link].map(cell).join('\t');
+      output.registered_on || '', output.identifier, linked.map(p => p.short || p.name).join(', '), linked.map(p => p.number).filter(Boolean).join(', '),
+      // '기타 성과' is never checked for its acknowledgement, so the table does not say it was.
+      !linked.length ? '사사 과제 미지정' : output.kind === 'other' ? '해당 없음' : issues.length ? issues.map(i => i.label).join(', ') : '확인됨', output.link].map(cell).join('\t');
   });
   return [EXPORT_COLUMNS.join('\t'), ...rows].join('\n');
 }
@@ -530,18 +581,23 @@ export function researchOverview(doc, on = today()) {
     if (!dates.includes(p.project.ends_on) && !p.ended) deadlines.push({kind: 'end', project: p.project, where, date: p.project.ends_on, days: p.days, title: '과제 종료'});
   }
   // A proposal still being written is due on its submission date; one that was sent waits for
-  // its result. A submission date that passed while still "작성 중" is listed as overdue.
+  // its result. A submission date that passed while still "작성 중" is listed as overdue, and so
+  // is a result day that passed while the proposal still says "제출 완료".
   const proposals = doc.proposals || [];
   for (const r of proposals) {
     const where = '제안서' + (r.agency ? ' · ' + r.agency : '');
     if (r.status === 'preparing') deadlines.push({kind: 'proposal', proposal: r, where, date: r.due_on, days: daysUntil(r.due_on, on), title: `제출 마감 · ${r.title}`});
-    else if (r.status === 'submitted' && r.result_on && r.result_on >= on) deadlines.push({kind: 'result', proposal: r, where, date: r.result_on, days: daysUntil(r.result_on, on), title: `결과 발표 · ${r.title}`});
+    // A result day that has passed stays listed until the outcome is recorded.
+    else if (r.status === 'submitted' && r.result_on) deadlines.push({kind: 'result', proposal: r, where, date: r.result_on, days: daysUntil(r.result_on, on), title: `결과 발표 · ${r.title}`});
   }
   const order = {milestone: 0, proposal: 1, target: 2, result: 3, end: 4};
   deadlines.sort((a, b) => a.date.localeCompare(b.date) || order[a.kind] - order[b.kind] || a.where.localeCompare(b.where, 'ko'));
   const unacknowledged = doc.outputs.filter(o => !o.acks.some(a => doc.projects.some(p => p.id === a.project_id)));
   const ackProblems = doc.outputs.filter(o => ackIssues(o, doc.projects).length).length;
-  const overdue = deadlines.filter(d => d.days < 0), lateProposals = overdue.filter(d => d.kind === 'proposal').length, lateTargets = overdue.filter(d => d.kind === 'target').length;
+  const overdue = deadlines.filter(d => d.days < 0), lateProposals = overdue.filter(d => d.kind === 'proposal').length;
+  // Targets, not dates: three indicators that share one passed deadline are three late targets.
+  const lateTargets = progress.reduce((sum, p) => sum + p.rows.filter(row => row.remaining > 0 && row.days < 0).length, 0);
+  const lateResults = overdue.filter(d => d.kind === 'result').length;
   const targeted = running.filter(p => p.rows.length).length, remaining = running.reduce((sum, p) => sum + p.remaining, 0);
   // What a one-line summary may claim. "met" needs a running project that has targets and no
   // target left unmet past its deadline, a project that already ended included: a count of zero
@@ -554,6 +610,6 @@ export function researchOverview(doc, on = today()) {
       gap: running.reduce((sum, p) => sum + p.gap, 0), untargeted: running.length - targeted, late_targets: lateTargets,
       missed: running.filter(p => p.state === 'missed').length, outputs: doc.outputs.length, unacknowledged: unacknowledged.length, ack_issues: ackProblems,
       proposals: proposals.length, writing: proposals.filter(r => r.status === 'preparing').length,
-      submitted: proposals.filter(r => r.status === 'submitted').length, late_proposals: lateProposals},
+      submitted: proposals.filter(r => r.status === 'submitted').length, late_proposals: lateProposals, late_results: lateResults},
     next: deadlines.find(d => d.days >= 0) || null, overdue};
 }
