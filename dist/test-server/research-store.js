@@ -1,7 +1,7 @@
 import {GitHubEditsStore,encodeJSON,decodeJSON} from '../edits.js?v=1.2.0';
-import {emptyResearch,validateResearch,applyResearchOperation} from './research-model.js?v=workspace-9';
-import {isEnvelope,sealJSON,openJSON} from './workspace-crypto.js?v=workspace-9';
-import {PROFILE} from './profile.js?v=workspace-9';
+import {emptyResearch,validateResearch,applyResearchOperation} from './research-model.js?v=workspace-10';
+import {isEnvelope,sealJSON,openJSON} from './workspace-crypto.js?v=workspace-10';
+import {PROFILE} from './profile.js?v=workspace-10';
 
 // The research document of this site (see profile.js). It is stored sealed with the workspace key, so the
 // file on the public status branch is unreadable without the shared login password. Commit
@@ -55,7 +55,7 @@ export class ResearchStore{
         if(next.revision===data.revision)return data;
         const sealed=await sealJSON(this.session.key,this.session.keyID,next,CONTEXT);
         try{
-          await this.client.request(this.url,token,{method:'PUT',body:JSON.stringify({message:'research: update workspace records',branch:'status',content:encodeJSON(sealed),...(sha?{sha}:{})})});
+          await this.client.request(this.url,token,{method:'PUT',body:JSON.stringify({message:PROFILE.commits.research+': update workspace records',branch:'status',content:encodeJSON(sealed),...(sha?{sha}:{})})});
           return next;
         }catch(error){if(![409,422].includes(error.status)||attempt===3)throw error;await this.client.pause(200*(attempt+1));}
       }

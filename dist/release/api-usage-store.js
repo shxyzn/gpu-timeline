@@ -1,10 +1,11 @@
 import {GitHubEditsStore,encodeJSON,decodeJSON} from '../edits.js?v=1.2.0';
-import {emptyHistory,validateHistory,mergeSamples} from './api-usage-model.js?v=2.1.1';
+import {emptyHistory,validateHistory,mergeSamples} from './api-usage-model.js?v=workspace-10';
+import {PROFILE} from './profile.js?v=workspace-10';
 
 export class APIUsageStore{
   constructor(dashboard,fetcher=(...args)=>fetch(...args)){
     this.client=new GitHubEditsStore(dashboard,fetcher);this.fetcher=fetcher;this.root=this.client.root;
-    this.path='dashboard/openrouter-usage.json';this.url=this.root+'/contents/'+this.path;
+    this.path=PROFILE.files.usage;this.url=this.root+'/contents/'+this.path;
     this.rawURL=`https://raw.githubusercontent.com/${dashboard.repository}/status/${this.path}`;this.saving=false;
   }
   async readPublic(){
@@ -30,7 +31,7 @@ export class APIUsageStore{
         if(JSON.stringify(next.samples)===JSON.stringify(data.samples))return data;
         next.revision=data.revision+1;next.updated_at=new Date(now).toISOString();validateHistory(next);
         try{
-          await this.client.request(this.url,token,{method:'PUT',body:JSON.stringify({message:'usage charts: record public cost observations',branch:'status',content:encodeJSON(next),...(sha?{sha}:{})})});
+          await this.client.request(this.url,token,{method:'PUT',body:JSON.stringify({message:PROFILE.commits.usage+': record public cost observations',branch:'status',content:encodeJSON(next),...(sha?{sha}:{})})});
           return next;
         }catch(error){if(![409,422].includes(error.status)||attempt===3)throw error;await this.client.pause(200*(attempt+1));}
       }

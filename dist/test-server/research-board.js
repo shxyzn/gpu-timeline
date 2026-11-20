@@ -1,9 +1,10 @@
-import {dashboardView,monitoringAccess,openDashboardLogin,runAdminTask} from '../app.js?patch=workspace-3';
-import {GATE} from './gate.js?v=workspace-9';
-import {currentSession} from './session.js?v=workspace-9';
-import {documentKeys,fromBase64} from './workspace-crypto.js?v=workspace-9';
-import {ResearchStore} from './research-store.js?v=workspace-9';
-import {OUTPUT_KINDS,METRICS,PROPOSAL_STATUSES,PROPOSAL_OPEN,PROPOSAL_ROLES,emptyResearch,makeProject,makeOutput,makeProposal,projectProgress,researchOverview,remainingText,outputWarnings,ackIssues,outputsTable,homepageList,ackText,ACK_LABELS,statusLabel,outputDate,targetLabel,today,daysUntil,ddayLabel,newID} from './research-model.js?v=workspace-9';
+import {dashboardView,monitoringAccess,openDashboardLogin,runAdminTask} from '../app.js?patch=workspace-4';
+import {GATE} from './gate.js?v=workspace-10';
+import {currentSession} from './session.js?v=workspace-10';
+import {documentKeys,fromBase64} from './workspace-crypto.js?v=workspace-10';
+import {ResearchStore} from './research-store.js?v=workspace-10';
+import {PROFILE} from './profile.js?v=workspace-10';
+import {OUTPUT_KINDS,METRICS,PROPOSAL_STATUSES,PROPOSAL_OPEN,PROPOSAL_ROLES,emptyResearch,makeProject,makeOutput,makeProposal,projectProgress,researchOverview,remainingText,outputWarnings,ackIssues,outputsTable,homepageList,ackText,ACK_LABELS,statusLabel,outputDate,targetLabel,today,daysUntil,ddayLabel,newID} from './research-model.js?v=workspace-10';
 
 // Research-project tracker of the test-server workspace: what each project owes, by when,
 // what already counts, and which acknowledgement (사사) every output carries.
@@ -25,6 +26,7 @@ const tone=days=>days<0?'late':days<=30?'soon':days<=90?'near':'far';
 if(root&&session){
   root.innerHTML=`<div class="rs-head"><div><span class="ws-eyebrow">RESEARCH</span><h1 id="rs-title">연구과제</h1><p>과제마다 목표 실적이 몇 개이고, 언제까지이며, 무엇으로 채웠는지 확인해요. 준비 중인 제안서의 마감도 함께 챙겨요.</p></div>
     <div class="rs-actions"><button type="button" id="rs-refresh" class="rs-button">새로고침</button><button type="button" id="rs-add-proposal" class="rs-button">＋ 제안서 추가</button><button type="button" id="rs-add-output" class="rs-button">＋ 실적 추가</button><button type="button" id="rs-add-project" class="rs-button primary">＋ 과제 추가</button></div></div>
+  ${PROFILE.practiceOf?`<p class="rs-practice" role="note"><strong>연습용 기록</strong><span>테스트 서버의 연구과제 기록은 정식 화면과 따로 저장되는 연습용 사본이에요. 여기서 고친 내용은 정식 화면에 반영되지 않아요. 실제 과제·실적은 <a href="${esc(new URL(PROFILE.practiceOf,import.meta.url).href)}">정식 화면의 연구과제</a>에서 추가·수정해 주세요.</span></p>`:''}
   <div class="rs-access"><span id="rs-access"></span><button type="button" id="rs-admin" class="rs-link" hidden>관리자 연결</button></div>
   <p id="rs-feedback" class="rs-feedback" role="status" aria-live="polite"></p><p id="rs-error" class="rs-error" role="alert"></p>
   <div id="rs-summary" class="rs-summary" aria-label="연구과제 요약"></div>

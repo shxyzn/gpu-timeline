@@ -1,18 +1,18 @@
-import {dashboardView,openExperiment,refreshDashboard} from '../app.js?patch=zero-balance-v211';
-import {progressValue,experimentPresentation,humanDuration,gpuReadings} from './current-model.js?v=1.2.0';
+import {dashboardView,openExperiment,refreshDashboard} from '../app.js?patch=workspace-4';
+import {progressValue,experimentPresentation,humanDuration,gpuReadings} from './current-model.js?v=workspace-10';
 import {health,jobETA,timestamp,apiSlot} from '../model.js';
 import {budgetUsage,dollars,usageStatus} from '../openrouter-model.js?v=1.2.0';
-import {availableCurrentView,isUnavailable} from './availability-model.js?v=2.1-as';
-import {repairPanel} from './availability-ui.js?v=2.1-as';
-import './parcel.js?v=1.2.0';
-import './parcel-board.js?patch=zero-balance-v211';
+import {availableCurrentView,isUnavailable} from './availability-model.js?v=workspace-10';
+import {repairPanel} from './availability-ui.js?v=workspace-10';
+import './parcel.js?v=workspace-10';
+import './parcel-board.js?v=workspace-10';
 
 const $=id=>document.getElementById(id);
 const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const clock=value=>new Intl.DateTimeFormat('ko-KR',{timeZone:'Asia/Seoul',hour:'2-digit',minute:'2-digit',hourCycle:'h23'}).format(value);
 const day=value=>new Intl.DateTimeFormat('sv-SE',{timeZone:'Asia/Seoul'}).format(value);
 const date=(value,now=Date.now())=>day(value)===day(now)?'오늘 '+clock(value):new Intl.DateTimeFormat('ko-KR',{timeZone:'Asia/Seoul',month:'numeric',day:'numeric',weekday:'short'}).format(value)+' '+clock(value);
-const age=value=>{const at=timestamp(value);if(at===null)return '수신 없음';const minutes=Math.max(0,Math.floor((Date.now()-at)/60000));return minutes<1?'방금':minutes<60?minutes+'분 전':Math.floor(minutes/60)+'시간 '+minutes%60+'분 전';};
+const age=value=>{const at=timestamp(value);if(at===null)return '기록 없음';const minutes=Math.max(0,Math.floor((Date.now()-at)/60000));return minutes<1?'방금':minutes<60?minutes+'분 전':Math.floor(minutes/60)+'시간 '+minutes%60+'분 전';};
 const duration=humanDuration;
 const badge=(label,state)=>`<span class="current-state ${state}">${esc(label)}</span>`;
 let currentResource='gpu';
@@ -52,8 +52,8 @@ function gpuTable(rows,now) {
     if(row.repair)return `<tr data-current-server="${esc(server.server_id)}" data-gpu-state="maintenance">${index===0?`<th scope="rowgroup" rowspan="${group.length}" class="current-server-label"><strong>${esc(server.name)}</strong><small>${esc(groupModel)}</small><span class="as-tag">A/S 중</span></th>`:''}<td colspan="6" class="as-current-cell">${repairPanel(server.server_id,{compact:true})}</td></tr>`;
     const label=labels[state];
     const entries=jobs.length?jobs.map(job=>`<div class="current-job-entry">${jobButton(server,job)}${job.status==='unknown'||!healthy?`<small class="current-observation">${job.status==='unknown'?'실행 상태 확인 필요':'마지막 관측: 실행 중'}</small>`:''}</div>`).join(''):
-      state==='busy'?'<span>GPU 점유 감지</span><small>등록된 실행 실험 없음</small>':next?jobButton(server,next,'예정 · ')+`<small>시작 ${timestamp(next.started_at)!==null?esc(date(timestamp(next.started_at),now)):'미등록'}</small>`:
-      `<span class="current-muted">${state==='unknown'?'새 상태 확인 필요':'등록된 실행 실험 없음'}</span>`;
+      state==='busy'?'<span>GPU 점유 감지</span><small>실행 중인 실험 없음</small>':next?jobButton(server,next,'예정 · ')+`<small>시작 ${timestamp(next.started_at)!==null?esc(date(timestamp(next.started_at),now)):'미등록'}</small>`:
+      `<span class="current-muted">${state==='unknown'?'새 상태 확인 필요':'실행 중인 실험 없음'}</span>`;
     return `<tr data-current-server="${esc(server.server_id)}" data-gpu-state="${state}">${index===0?`<th scope="rowgroup" rowspan="${group.length}" class="current-server-label"><strong>${esc(server.name)}</strong><small title="${esc(models)}">${esc(groupModel)}</small></th>`:''}<td class="current-resource"><strong>GPU ${gpu.index}</strong>${sameModel?'':`<small>${esc((gpu.name||'기종 미등록').replace(/NVIDIA\s+(?:GeForce\s+)?/gi,''))}</small>`}</td><td class="current-status">${badge(...label)}</td><td class="current-experiments">${entries}</td><td class="current-progress-cell" data-label="진행">${jobs.length?jobs.map(j=>progress(j,healthy&&j.status==='running')).join(''):'<span class="current-muted">—</span>'}</td><td class="current-memory" data-label="GPU · VRAM">${gpuUsage(gpu,healthy)}</td><td class="current-eta" data-label="종료 예정">${jobs.length?jobs.map(j=>`<div>${eta(j,server,healthy,now)}</div>`).join(''):'<span class="current-muted">—</span>'}</td></tr>`;
     }).join('')}</tbody>`;
   }).join('')}</table>`;
@@ -62,7 +62,7 @@ function apiList(rows,now) {
   return rows.map(({server,job,healthy,repair})=>repair?`<article class="current-api-row as-api-row" data-current-api-server="${esc(server.server_id)}"><div><strong>${esc(server.name)}</strong><small>API ${apiSlot(job)} · 보관된 실험</small></div>${repairPanel(server.server_id,{compact:true})}</article>`:`<article class="current-api-row"><div>${jobButton(server,job)}</div><div>${badge(!healthy||job.status==='unknown'?'확인 필요':'실행 중',!healthy||job.status==='unknown'?'warning':'busy')}<small>${esc(server.name)} · API ${apiSlot(job)}</small></div><div>${progress(job,healthy&&job.status==='running')}${job.progress?`<small>${esc(job.progress.completed)} / ${esc(job.progress.total)}</small>`:''}</div><div class="current-eta"><span class="current-api-eta-label">종료 예정</span>${eta(job,server,healthy,now)}</div></article>`).join('')||'<div class="current-empty">현재 등록된 API 실험이 없습니다.</div>';
 }
 function renderCurrent() {
-  const view=dashboardView();document.title=(view.config?.title||'CVML GPU Timeline');
+  const view=dashboardView();
   if(!view.config||!['demo','live'].includes(view.config.mode)||(view.config.mode==='live'&&!Array.isArray(view.config.servers))){$('priority-alerts').textContent=$('notice').textContent||'설정과 서버 연결을 확인해 주세요.';return;}
   const now=Date.now(),stale=view.config.stale_after_seconds||1200;
   const current=availableCurrentView(view.servers,view.telemetryServers,now,stale);
@@ -110,19 +110,21 @@ document.addEventListener('click',event=>{
 });
 $('current-refresh').onclick=async()=>{if($('refresh').disabled)return;$('current-refresh').disabled=true;try{await refreshDashboard();}finally{$('current-refresh').disabled=false;}};
 document.addEventListener('dashboard:render',renderCurrent);
+// The workspace shell owns #home and #research; only dashboard anchors select a tab here.
 function routeHash() {
   const anchor=location.hash.slice(1);
   if(anchor==='api-usage-board'){
     setPanel('resources',false);
     requestAnimationFrame(()=>$(anchor)?.scrollIntoView({block:'start'}));
-  } else if(['release-video','patch-notes'].includes(anchor)) {
-    setPanel(anchor==='patch-notes'?'more':'now',false);
+  } else if(['parcel','patch-notes'].includes(anchor)) {
+    // Orders and deliveries live in 더보기 on the test server; old #parcel links land there.
+    setPanel('more',false);
     requestAnimationFrame(()=>$(anchor)?.scrollIntoView({block:'start'}));
-  } else setPanel(anchor||'now');
+  } else if(document.querySelector(`[data-panel="${CSS.escape(anchor)}"]`)) setPanel(anchor);
 }
 window.addEventListener('hashchange',routeHash);
-document.querySelectorAll('a[href="#release-video"],a[href="#patch-notes"]').forEach(link=>link.addEventListener('click',()=>{
-  setPanel(link.hash==='#patch-notes'?'more':'now',false);
+document.querySelectorAll('a[href="#parcel"],a[href="#patch-notes"]').forEach(link=>link.addEventListener('click',()=>{
+  setPanel('more',false);
   requestAnimationFrame(()=>$(link.hash.slice(1))?.scrollIntoView({block:'start'}));
 }));
 document.querySelector('.priority-tabs').addEventListener('keydown',event=>{
@@ -136,7 +138,7 @@ document.querySelector('.priority-tabs').addEventListener('keydown',event=>{
 routeHash();
 renderCurrent();
 
-import './monitoring.js?v=2.1.2';
-import './availability.js?patch=zero-balance-v211';
+import './monitoring.js?v=workspace-10';
+import './availability.js?v=workspace-10';
 
-import './api-usage.js?patch=zero-balance-v211';
+import './api-usage.js?v=workspace-10';

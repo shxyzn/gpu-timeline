@@ -11,5 +11,9 @@ export const PROFILE = Object.freeze({
   // test server cannot change what production shows.
   files: Object.freeze({research: 'dashboard/research-test.json', monitoring: 'dashboard/monitoring-test.json', usage: 'dashboard/openrouter-usage-test.json'}),
   // Prefixes of the commit messages written with those documents.
-  commits: Object.freeze({monitoring: 'monitoring-test', usage: 'test usage charts'}),
+  commits: Object.freeze({research: 'research-test', monitoring: 'monitoring-test', usage: 'test usage charts'}),
+  // Since the v3.0 release the lab's real research records are kept on production and the test
+  // server holds a practice copy. This is the address of the research view that holds the real
+  // ones, relative to this module; '' on the site that holds them itself.
+  practiceOf: '../#research',
 });

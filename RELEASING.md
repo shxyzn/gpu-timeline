@@ -1,5 +1,23 @@
 # 버전과 서버 업데이트
 
+## 정식 배포 절차 (v3.0부터)
+
+정식 화면은 테스트 서버를 그대로 옮긴 것입니다. 정식 화면의 파일을 손으로 고치지 않고, 아래 순서로 만들어 냅니다. 사용자가 정식 배포를 요청했을 때만 진행합니다.
+
+1. 테스트 서버의 변경을 먼저 끝냅니다(점검 공지를 켜고, 배포하고, 확인).
+2. 정식 화면의 점검 공지를 켭니다. `dist/index.html`의 `#production-maintenance-notice`에서 `hidden`을 지우고 `#production-maintenance-start`·`#production-maintenance-end`를 지금 시각과 예상 종료 시각(KST)으로 고친 뒤 배포합니다. 배포 중에는 예전 화면이 새 파일을 불러와 잠시 어긋날 수 있어서, 바꾸기 전에 먼저 알립니다.
+3. `VERSION`을 새 릴리스 번호로 바꾸고 `node scripts/promote_release.mjs`를 실행합니다.
+   - `dist/release/`가 `dist/test-server/`의 스크립트·스타일과 같아집니다(`profile.js` 제외).
+   - `dist/index.html`(작업 공간)과 `dist/login.html`(로그인)이 테스트 서버의 `preview.html`·`index.html`에서 만들어집니다. 테스트 서버 표시(`snapshot`)는 릴리스 번호로, `정식 화면` 링크는 `테스트 서버` 링크로 바뀝니다.
+   - 정식 점검 공지의 표시 여부와 시각은 바꾸기 전 `dist/index.html`의 것을 그대로 넘깁니다. 배포 스크립트는 공지를 켜거나 끄지 않습니다.
+   - 테스트 서버 페이지의 모양이 스크립트가 아는 것과 달라졌으면 아무것도 쓰지 않고 멈춥니다. 그때는 스크립트의 규칙을 함께 고칩니다.
+4. 두 화면이 달라야 하는 것이 새로 생겼으면 `dist/test-server/profile.js`와 `dist/release/profile.js`에 같은 이름의 항목으로 적습니다. 다른 파일에서 화면을 가르지 않습니다.
+5. `CHANGELOG.md`에 릴리스 항목을 쓰고 `npm test`, `python3 -m unittest discover -s tests -p 'test_*.py'`, 브라우저 검증을 실행합니다.
+6. 배포한 뒤 Pages 산출물을 `node scripts/verify_deployed.mjs <site-dir> --notice … --production-notice visible --revision <sha>`로 확인합니다.
+7. 확인이 끝나면 정식 점검 공지에 `hidden`을 다시 넣어 배포하고 `--production-notice hidden`으로 확인합니다.
+
+연구과제 기록은 화면마다 다른 파일에 있습니다(`dashboard/research.json` / `dashboard/research-test.json`). 정식 배포는 저장된 기록을 옮기거나 바꾸지 않습니다. 3.0.0 때만 테스트 서버의 기록을 정식 파일로 한 번 복사했습니다.
+
 ## v1.1.8 자원 통계
 
 OpenRouter 키 한도 바와 화면 배치는 웹 배포만으로 적용됩니다. CPU·RAM·저장장치·GPU 사용 이력과 병목 후보를 보려면 해당 서버의 공용 수집기를 v1.1.8로 업데이트하세요. 서버 관리 화면의 고정 커밋 설치 명령을 기존 설치 계정에서 한 번 실행하면 됩니다. 계정별 설치나 실행 중 실험 재시작은 필요하지 않습니다. 통계는 업데이트 이후부터 쌓이며 첫 업로드까지 기존 업로드 간격만큼 걸릴 수 있습니다. [지표·수집 안내](RESOURCE_STATS.md)를 참고하세요.

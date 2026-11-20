@@ -1,9 +1,7 @@
-import {dashboardView,monitoringAccess,saveAPIUsageHistory,saveTestAPIUsageHistory} from '../app.js?patch=workspace-3';
-import {PROFILE} from './profile.js?v=workspace-9';
-const saveHistory=PROFILE.name==='production'?saveAPIUsageHistory:saveTestAPIUsageHistory;
+import {dashboardView,monitoringAccess,runAdminTask} from '../app.js?patch=workspace-4';
 import {dollars,usageStatus} from '../openrouter-model.js?v=1.2.0';
-import {emptyHistory,chartData,needsRecording} from './api-usage-model.js?v=workspace-9';
-import {APIUsageStore} from './api-usage-store.js?v=workspace-9';
+import {emptyHistory,chartData,needsRecording,samplesFromTokens} from './api-usage-model.js?v=workspace-10';
+import {APIUsageStore} from './api-usage-store.js?v=workspace-10';
 
 const $=id=>document.getElementById(id),board=$('api-usage-board');
 const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -87,7 +85,8 @@ async function record(){
   const access=monitoringAccess();
   if(!store||!loaded||loadError||recording||!access.unlocked||access.busy||Date.now()<retryAt||!needsRecording(history,dashboardView().tokens))return;
   recording=true;render();
-  try{const next=await saveHistory();if(next.revision>=history.revision)history=next;saveError='';}
+  // One administrator write through this site's own store, under the shared editor's lock.
+  try{const next=await runAdminTask(token=>store.append(token,samplesFromTokens(dashboardView().tokens)));if(next.revision>=history.revision)history=next;saveError='';}
   catch{saveError='이력을 저장하지 못했어요. 표시 중인 조회값은 유지됩니다. 이력 새로고침으로 다시 시도할 수 있어요.';retryAt=Date.now()+60000;}
   finally{recording=false;render();}
 }

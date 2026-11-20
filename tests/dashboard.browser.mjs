@@ -62,12 +62,13 @@ try {
   const usageHistories={test:emptyHistory(),production:emptyHistory()};
   const usageProfile=pathname=>pathname.endsWith('/dashboard/openrouter-usage-test.json')?'test':pathname.endsWith('/dashboard/openrouter-usage.json')?'production':null;
   let usageHistoryWrites=0,usageHistoryReads=0,usageHistoryForbidden=false,usageHistoryUnavailable=false;
-  // The test server's login gate and sealed research document use a throwaway password and key
-  // here, so the real shared password never has to appear in this file.
+  // The login gate and the sealed research document of both sites use a throwaway password and
+  // key here, so the real shared password never has to appear in this file.
   const workspacePassword='browser-test-workspace',workspaceKeyBytes=crypto.getRandomValues(new Uint8Array(32));
   const workspaceGate=await sealGate(workspacePassword,workspaceKeyBytes,{iterations:100000});
   const workspaceKey=await importDocumentKey(workspaceKeyBytes),researchContext='cvml-workspace/research/v1';
-  let researchDoc=null,researchSealed=null,researchWrites=0,researchForbidden=false,researchUnavailable=false,researchPublic=null;
+  let researchDoc=null,researchSealed=null,researchWrites=0,researchForbidden=false,researchUnavailable=false,researchPublic=null,researchProfile='test';
+  const researchOf=pathname=>pathname.endsWith('/dashboard/research-test.json')?'test':pathname.endsWith('/dashboard/research.json')?'production':null;
   const sealResearch=async doc=>{researchDoc=doc;researchSealed=await sealJSON(workspaceKey,workspaceGate.key_id,doc,researchContext);};
   const telemetry = id => ({server_id: id, name: `Server ${id.slice(-1).toUpperCase()}`, updated_at: iso(id === 'server-c' && serverCStale ? -2 : 0), collector_ok: true,
     resources: resourceEnabled && id !== 'server-c' ? resourceFixture(Date.now(),resourceFailed) : undefined,
@@ -92,7 +93,7 @@ try {
     return route.fulfill({body:previous,contentType:'text/javascript'});
   });
   await context.route('**/version.json*', route => fulfill(route, {version: '1.1.5', revision: 'a'.repeat(40)}));
-  await context.route('**/test-server/gate.js*', route => route.fulfill({contentType: 'text/javascript', body: `export const GATE=Object.freeze(${JSON.stringify(workspaceGate)});`}));
+  for(const layer of ['test-server','release'])await context.route(`**/${layer}/gate.js*`, route => route.fulfill({contentType: 'text/javascript', body: `export const GATE=Object.freeze(${JSON.stringify(workspaceGate)});`}));
   await context.grantPermissions(['clipboard-read', 'clipboard-write']);
   await context.route('**/config.json*', async route => {
     const config = JSON.parse(await fs.readFile(path.join(root, 'dist/config.json'), 'utf8'));
@@ -105,7 +106,8 @@ try {
     if(historyProfile){assert.equal(historyProfile,monitoringProfile,'read only the current history profile');usageHistoryReads++;assert.equal(route.request().headers().authorization,undefined);return fulfill(route,usageHistoryUnavailable?{}:usageHistories[historyProfile],usageHistoryUnavailable?503:200);}
     if (url.pathname.endsWith('/hardware-prices/prices.json')) return fulfill(route, JSON.parse(await fs.readFile(path.join(root, 'dist/hardware-prices.json'), 'utf8')));
     if(/\/dashboard\/monitoring(?:-test)?\.json$/.test(url.pathname))return fulfill(route,monitoringProfiles[url.pathname.endsWith('monitoring-test.json')?'test':'production']);
-    if(url.pathname.endsWith('/dashboard/research-test.json')){
+    if(researchOf(url.pathname)){
+      assert.equal(researchOf(url.pathname),researchProfile,'each site reads only its own research document');
       assert.equal(route.request().headers().authorization,undefined);
       if(researchUnavailable)return fulfill(route,{},503);
       // `researchPublic` stands for a public copy that still trails the stored file after a write.
@@ -149,10 +151,11 @@ try {
       }
       return fulfill(route,{type:'file',encoding:'base64',sha:'monitor-'+monitoringData.revision,content:encodeJSON(monitoringData)});
     }
-    if(url.pathname.endsWith('/contents/dashboard/research-test.json')){
+    if(researchOf(url.pathname)){
+      assert.equal(researchOf(url.pathname),researchProfile,'each site writes only its own research document');
       if(request.method()==='PUT'){
         if(researchForbidden)return fulfill(route,{},403);
-        const body=request.postDataJSON();assert.equal(body.branch,'status');assert.equal(body.message,'research: update workspace records');
+        const body=request.postDataJSON();assert.equal(body.branch,'status');assert.equal(body.message,(researchProfile==='test'?'research-test':'research')+': update workspace records');
         assert.equal(body.sha,researchSealed?'research-'+researchDoc.revision:undefined);
         const sealed=decodeJSON(body.content);assert.equal(isEnvelope(sealed),true,'research records must be stored sealed');
         researchDoc=await openJSON(workspaceKey,workspaceGate.key_id,sealed,researchContext);researchSealed=sealed;researchWrites++;
@@ -625,16 +628,24 @@ try {
   }
   assert.deepEqual(errors,[]);
 
-  const stagingEntry=base+'/test-server/', stagingPreview=stagingEntry+'preview.html';
-  // Sign in to the workspace. A panel name lands on that view; without one the visitor arrives
+  // The two sites run the same workspace: production at the root with its sign-in on login.html,
+  // the test server under /test-server/.
+  const sites={
+    production:{profile:'production',path:'/',entry:base+'/login.html',workspace:base+'/'},
+    test:{profile:'test',path:'/test-server/preview.html',entry:base+'/test-server/',workspace:base+'/test-server/preview.html'},
+  };
+  const releaseVersion=(await fs.readFile(path.join(root,'VERSION'),'utf8')).trim();
+  // The test server names its snapshot once, on <body>; every label on its pages must agree with it.
+  const stagingLabel='v'+(await fs.readFile(path.join(root,'dist/test-server/preview.html'),'utf8')).match(/data-staging-version="([^"]+)"/)[1];
+  // Sign in to a workspace. A panel name lands on that view; without one the visitor arrives
   // on the home and opens the GPU dashboard from the bar.
-  async function enterStaging(page,anchor=''){
-    await page.goto(stagingEntry+(anchor?'?panel='+anchor:''));
+  async function enter(page,site,anchor=''){
+    await page.goto(site.entry+(anchor?'?panel='+anchor:''));
     await page.getByLabel('이름').fill('테스트 사용자');
     const field=page.getByLabel('비밀번호',{exact:true});
     await field.fill(workspacePassword);
     await field.press('Enter');
-    await page.waitForURL(stagingPreview+(anchor?'#'+anchor:''));
+    await page.waitForURL(site.workspace+(anchor?'#'+anchor:''));
     await page.locator('body[data-workspace=ready]').waitFor();
     assert.equal(await page.locator('#workspace-user').innerText(),'테스트 사용자님');
     if(!anchor){
@@ -642,24 +653,28 @@ try {
       await page.locator('#workspace-gpu-link').click();
     }
   }
-  async function openDashboard(page,environment,anchor=''){
-    if(environment.profile==='test')await enterStaging(page,anchor);
-    else await page.goto(base+environment.path+(anchor?'#'+anchor:''));
-  }
-  // The test server keeps orders and deliveries at the top of 더보기; production has its own tab.
-  const parcelTab=environment=>environment.profile==='test'?'#tab-more':'#tab-parcel';
+  const openDashboard=(page,environment,anchor='')=>enter(page,environment,anchor);
 
-  // The public entry stays closed until the preview code is accepted.
-  const closed=await context.newPage(),closedRequests=[];
+  // Neither site loads the dashboard or its data before sign-in, and a signed-out link comes back
+  // to the same view afterwards.
+  for(const site of Object.values(sites)){
+  researchProfile=site.profile;
+  const closed=await context.newPage(),closedRequests=[],entryPath=new URL(site.entry).pathname;
   closed.on('request',request=>closedRequests.push(new URL(request.url())));
   await closed.setViewportSize({width:320,height:844});
-  await closed.goto(stagingPreview+'#resources');
-  await closed.waitForURL(stagingEntry+'?panel=resources');
+  await closed.goto(site.workspace+'#resources');
+  await closed.waitForURL(site.entry+'?panel=resources');
   assert.equal(await closed.getByRole('heading',{name:'CVML Workspace'}).isVisible(),true);
   assert.equal(await closed.locator('#api-usage-board').count(),0);
   const premature=closedRequests.filter(url=>url.pathname.endsWith('/config.json')||url.pathname.endsWith('/app.js')||['raw.githubusercontent.com','api.github.com','openrouter.ai'].includes(url.hostname));
-  assert.deepEqual(premature.map(url=>url.pathname),[],'the preview must not load the dashboard or its data before entry');
-  assert.equal(new URL(await closed.getByRole('link',{name:'정식 화면 보기'}).getAttribute('href'),closed.url()).href,base+'/');
+  assert.deepEqual(premature.map(url=>url.pathname),[],'a workspace must not load the dashboard or its data before entry');
+  if(site.profile==='test'){
+    assert.equal(new URL(await closed.getByRole('link',{name:'정식 화면 보기'}).getAttribute('href'),closed.url()).href,base+'/');
+    assert.equal(await closed.locator('.entry-version').innerText(),stagingLabel);
+  }else{
+    assert.equal(await closed.locator('.entry a').count(),0);
+    assert.equal(await closed.locator('.entry-version').innerText(),'v'+releaseVersion);
+  }
   assert.ok(await closed.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
   await closed.getByLabel('이름').fill('테스트 사용자');
   const entryCode=closed.getByLabel('비밀번호',{exact:true});
@@ -668,18 +683,20 @@ try {
   await closed.getByText('비밀번호가 맞지 않아요.',{exact:true}).waitFor();
   assert.equal(await entryCode.getAttribute('aria-invalid'),'true');
   assert.equal(await entryCode.inputValue(),'');
-  assert.equal(new URL(closed.url()).pathname,'/test-server/');
+  assert.equal(new URL(closed.url()).pathname,entryPath);
   // A blank name is refused, and nothing is kept until a sign-in succeeds.
   await closed.getByLabel('이름').fill('   ');
   await entryCode.fill(workspacePassword);
   await entryCode.press('Enter');
   await closed.getByText('이름을 입력해 주세요.',{exact:true}).waitFor();
-  assert.equal(new URL(closed.url()).pathname,'/test-server/');
+  assert.equal(new URL(closed.url()).pathname,entryPath);
   assert.equal(await closed.evaluate(()=>sessionStorage.length+':'+localStorage.getItem('cvml.workspace.session.v1')),'0:null');
   await closed.close();
+  }
 
-  // Run the v2.1 workflows on production and the retained staging preview.
-  for(const environment of [{path:'/',profile:'production'},{path:'/test-server/preview.html',profile:'test'}]){
+  // Run the dashboard workflows on production and on the test server: same modules, own documents.
+  for(const environment of [sites.production,sites.test]){
+  researchProfile=environment.profile;
   monitoringProfile=environment.profile;monitoringData=monitoringProfiles[monitoringProfile];monitoringWrites=0;monitoringForbidden=false;monitoringApplied=false;
   const otherMonitoring=structuredClone(monitoringProfiles[monitoringProfile==='test'?'production':'test']);
   const otherProfile=environment.profile==='test'?'production':'test';
@@ -731,29 +748,31 @@ try {
   assert.equal(new Set(controllerURLs).size,1,'all entry modules must share exactly one dashboard controller');
   assert.equal(await preview.locator('.design-credit').innerText(),'designed by psh in suwon');
   assert.equal(await preview.locator('#patch-notes').count(),0);
+  assert.equal(await preview.title(),'GPU 대시보드 · CVML Workspace');
   if(environment.profile==='production'){
-    assert.equal(await preview.title(),'CVML GPU Timeline');
-    assert.equal(await preview.locator('#admin-login').evaluate(e=>e.previousElementSibling.id),'test-server-link');
+    // Production names its release, links to the test server, and keeps its own notice hidden.
+    assert.equal(await preview.locator('.ws-brand span').innerText(),'v'+releaseVersion);
     assert.equal(await preview.getByRole('link',{name:'테스트 서버',exact:true}).getAttribute('href'),'./test-server/');
-    assert.equal(await preview.locator('#kimi-service-notice,#server-welcome,#kimi-tribute-dialog').count(),0);
+    assert.equal(await preview.locator('#test-server-link').count(),1);
     assert.equal(await preview.locator('#maintenance-notice').count(),0);
     // The production notice is shown only while a release is under way. Whether it is, is written in
     // the page itself; what is checked here is that the page shows exactly what it declares.
     const productionNotice=!/<aside id="production-maintenance-notice" hidden/.test(await fs.readFile(path.join(root,'dist/index.html'),'utf8'));
     assert.equal(await preview.locator('#production-maintenance-notice').isVisible(),productionNotice);
-    assert.equal(await preview.locator('.priority-home').count(),0);
-    assert.match(await preview.locator('#dashboard-version').innerText(),/^대시보드 v2\.1\.2(?:\+|$)/);
+    assert.match(await preview.locator('#production-maintenance-notice').textContent(),/사이트 점검 중/);
+    assert.match(await preview.locator('#dashboard-version').innerText(),/^대시보드 v1\.1\.5\+aaaaaaa$/);
   }else{
+    assert.equal(await preview.locator('.ws-brand span').innerText(),stagingLabel);
+    assert.equal(new URL(await preview.getByRole('link',{name:'정식 화면',exact:true}).getAttribute('href'),preview.url()).href,base+'/');
+    assert.equal(await preview.locator('#production-maintenance-notice').count(),0);
     assert.equal(await preview.locator('#maintenance-notice').count(),1);
     assert.match(await preview.locator('#maintenance-notice').textContent(),/사이트 점검 중/);
   }
-  assert.equal(await preview.locator(environment.profile==='test'?'#gpu-workspace>details[open]':'main>details[open]').count(),0);
-  if(environment.profile==='test'){
-    // The test server shows none of the film, A/S, new-server or release boxes, and no parcel tab.
-    assert.equal(await preview.locator('#release-video,#kimi-service-notice,#server-welcome,#kimi-tribute-dialog,#monitor-release,#tab-parcel,#panel-parcel').count(),0);
-    assert.equal(await preview.locator('#gpu-workspace>header').evaluate(e=>e.previousElementSibling),null);
-    assert.equal(await preview.locator('.priority-header h1').innerText(),'GPU Dashboard');
-  }
+  // Neither site shows the film, A/S, new-server or release boxes, and neither has a parcel tab.
+  assert.equal(await preview.locator('#gpu-workspace>details[open]').count(),0);
+  assert.equal(await preview.locator('#release-video,#kimi-service-notice,#server-welcome,#kimi-tribute-dialog,#monitor-release,#tab-parcel,#panel-parcel').count(),0);
+  assert.equal(await preview.locator('#gpu-workspace>header').evaluate(e=>e.previousElementSibling),null);
+  assert.equal(await preview.locator('.priority-header h1').innerText(),'GPU Dashboard');
   assert.equal(await preview.locator('#panel-now').isVisible(),true);
   assert.equal(await preview.locator('#panel-timeline').isVisible(),false);
   assert.equal(await preview.locator('.current-gpu-table tbody tr').count(),4);
@@ -798,7 +817,7 @@ try {
     await preview.waitForFunction(()=>document.getElementById('api-usage-state').textContent.includes('개 키의 관측 기록'));
     assert.ok(usageHistoryReads>historyReadsBefore);
     assert.equal(await preview.locator('#api-usage-board').evaluate(e=>e.previousElementSibling.id),'openrouter-grid');
-    if(environment.profile==='test')assert.match(await preview.locator('#dashboard-version').innerText(),/테스트 v3.0 snapshot 8/);
+    assert.equal(await preview.locator('#dashboard-version').innerText(),environment.profile==='test'?'테스트 '+stagingLabel+'+aaaaaaa':'대시보드 v1.1.5+aaaaaaa');
     assert.equal(await preview.locator('#api-usage-key option').count(),3);
     assert.ok(await preview.locator('#api-usage-plot [data-usage-day]').count()>0);
     assert.equal(await preview.locator('#api-usage-board script').count(),0);
@@ -847,9 +866,9 @@ try {
   assert.equal(monitoringWrites,0);
   await preview.locator('#tab-more').click();
   assert.equal(await preview.locator('#usage').isVisible(),true);
-  await preview.locator(parcelTab(environment)).click();
-  assert.equal(new URL(preview.url()).hash,environment.profile==='test'?'#more':'#parcel');
-  if(environment.profile==='test')assert.equal(await preview.locator('#panel-more>#parcel').count(),1,'orders and deliveries open at the top of 더보기');
+  await preview.locator('#tab-more').click();
+  assert.equal(new URL(preview.url()).hash,'#more');
+  assert.equal(await preview.locator('#panel-more>#parcel').count(),1,'orders and deliveries open at the top of 더보기');
   assert.equal(parcelCalls,0);
   assert.equal(await preview.locator('#parcel-count-active').innerText(),'0');
   await preview.locator('#parcel-quick-lookup > summary').click();
@@ -879,7 +898,7 @@ try {
   assert.equal(await preview.evaluate(()=>navigator.clipboard.readText()),'123456789012');
   await preview.screenshot({path:path.join(output,environment.profile+'-test-server-parcel-desktop.png'),fullPage:true});
   await preview.locator('#tab-now').click();
-  await preview.locator(parcelTab(environment)).click();
+  await preview.locator('#tab-more').click();
   assert.equal(await preview.locator('.parcel-history li').count(),2);
   assert.equal(parcelCalls,1);
   const departureColor=await preview.locator('.parcel-summary h3').evaluate(e=>getComputedStyle(e).color);
@@ -1006,7 +1025,7 @@ try {
   assert.equal(parcelCalls,callsBeforeViewer);assert.equal(writes,writesAfterOrders);
   await viewer.reload();
   // A reload keeps the signed-in visitor on the same dashboard tab.
-  if(environment.profile==='test'){await viewer.locator('body[data-workspace=ready]').waitFor();assert.equal(await viewer.locator('#tab-more').getAttribute('aria-selected'),'true');}
+  await viewer.locator('body[data-workspace=ready]').waitFor();assert.equal(await viewer.locator('#tab-more').getAttribute('aria-selected'),'true');
   await viewer.locator('[data-parcel-card]').first().waitFor();
   assert.equal(await viewer.locator('[data-parcel-card]').count(),3);
   assert.equal(await viewer.locator('#parcel-count-active').innerText(),'3');
@@ -1103,23 +1122,11 @@ try {
 
   await preview.locator('#tab-more').click();
   assert.equal(await preview.locator('#patch-notes').count(),0);
-  if(environment.profile==='production'){
-  if(!await preview.locator('#release-video').evaluate(e=>e.open))await preview.locator('#release-video-toggle').click();
-  await preview.locator('#release-video').scrollIntoViewIfNeeded();
-  assert.match(await preview.locator('#release-video source').getAttribute('src'),/v2\.1-film/);
-  if(!skipFilms){
-  await preview.locator('#release-video video').evaluate(video=>video.load());
-  await preview.waitForFunction(()=>document.querySelector('#release-video video').readyState>=1);
-  assert.equal(await preview.locator('#release-video video').evaluate(v=>v.duration),60);
-  assert.equal(await preview.locator('#release-video video').evaluate(v=>v.videoWidth),1920);
-  }
-  assert.equal(await preview.locator('#release-video video').getAttribute('poster'),'../media/poster-v2.1.jpg');
-  }
 
   await preview.locator('#tab-now').click();
   for(const width of [390,320]) {
     await preview.setViewportSize({width,height:844});
-    for(const name of ['now','timeline','resources','servers',...(environment.profile==='test'?[]:['parcel']),'more']) {
+    for(const name of ['now','timeline','resources','servers','more']) {
       await preview.locator('#tab-'+name).click();
       assert.ok(await preview.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),`test-server ${name} overflows at ${width}px`);
       if(name==='resources'){
@@ -1138,7 +1145,7 @@ try {
     await preview.locator('#current-api-tab').click();
     assert.ok(await preview.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),`test-server API overflows at ${width}px`);
     await preview.screenshot({path:path.join(output,environment.profile+`-test-server-api-mobile-${width}.png`),fullPage:true});
-    await preview.locator(parcelTab(environment)).click();
+    await preview.locator('#tab-more').click();
     assert.ok(await preview.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),`parcel result overflows at ${width}px`);
     await preview.screenshot({path:path.join(output,environment.profile+`-test-server-parcel-mobile-${width}.png`),fullPage:true});
     await preview.locator('#parcel-order-add').click();
@@ -1168,8 +1175,11 @@ try {
   assert.deepEqual(usageHistories[otherProfile],otherUsage,'testing one dashboard must preserve the other usage history');
   }
 
-  // ---- Test-server workspace: home, research tracker, sealed storage, sign-out ----------------
-  {
+  // ---- Workspace: home, research tracker, sealed storage, sign-out, on both sites -------------
+  for(const site of [sites.test,sites.production]){
+    const siteEntry=site.entry,siteWorkspace=site.workspace,enterSite=(page,anchor='')=>enter(page,site,anchor);
+    researchProfile=site.profile;researchWrites=0;researchForbidden=false;researchUnavailable=false;
+    monitoringProfile=site.profile;monitoringData=monitoringProfiles[monitoringProfile];
     const kst=offset=>new Intl.DateTimeFormat('sv-SE',{timeZone:'Asia/Seoul'}).format(Date.now()+offset*86400000);
     const made={by:'홍길동',at:new Date(Date.now()-86400000).toISOString()};
     const running=makeProject({name:'멀티모달 주행 과제 <b>',short:'IITP 멀티모달',agency:'IITP',number:'RS-2025-00123456',starts_on:kst(-300),ends_on:kst(400),
@@ -1190,10 +1200,16 @@ try {
 
     // A signed-in reader sees what each project still owes and which acknowledgement was used.
     const reader=await context.newPage();reader.on('pageerror',error=>researchErrors.push(error.message));
-    await enterStaging(reader,'research');
+    await enterSite(reader,'research');
     await reader.locator('.rs-project').first().waitFor();
     assert.equal(await reader.title(),'연구과제 · CVML Workspace');
     assert.equal(await reader.locator('#workspace-research').isVisible(),true);
+    // The real records are production's. Only the test server says that what it shows is a
+    // practice copy, and links to the view that holds the real ones.
+    if(site.profile==='test'){
+      assert.match(await reader.locator('.rs-practice').innerText(),/연습용 기록[\s\S]*정식 화면에 반영되지 않아요[\s\S]*정식 화면의 연구과제/);
+      assert.equal(await reader.locator('.rs-practice a').evaluate(link=>link.href),base+'/#research');
+    }else assert.equal(await reader.locator('.rs-practice').count(),0);
     assert.equal(await reader.locator('#gpu-workspace').isVisible(),false);
     assert.equal(await reader.locator('.ws-nav [aria-current=page]').innerText(),'연구과제');
     // The lab's public homepage sits in the bar and opens in a new tab, away from the workspace.
@@ -1312,6 +1328,7 @@ try {
     await openView(reader,'home');
     assert.equal(await reader.title(),'CVML Workspace');
     await reader.waitForFunction(()=>document.getElementById('workspace-home').innerText.includes('여유 GPU'));
+    assert.equal(await reader.locator('#workspace-home .ws-card-label').first().innerText(),site.profile==='test'?'연구과제 · 연습용 기록':'연구과제');
     assert.match(await reader.locator('#workspace-home').innerText(),/테스트 사용자님, 안녕하세요[\s\S]*실적 1\s*건 더 필요[\s\S]*여유 GPU[\s\S]*챙겨야 할 기한[\s\S]*연차보고서 제출/);
     await reader.screenshot({path:path.join(output,'workspace-home-desktop.png'),fullPage:true});
     await reader.locator('#workspace-home .ws-card').first().click();
@@ -1344,7 +1361,7 @@ try {
     // When the very first read fails there is nothing to copy, and the copy buttons say so.
     researchUnavailable=true;
     const early=await context.newPage();early.on('pageerror',error=>researchErrors.push(error.message));
-    await enterStaging(early,'research');
+    await enterSite(early,'research');
     await early.waitForFunction(()=>document.getElementById('rs-error').textContent.includes('불러오지 못했어요'));
     await early.locator('#rs-tab-outputs').click();
     assert.deepEqual(await early.evaluate(()=>['rs-copy-outputs','rs-copy-homepage'].map(id=>document.getElementById(id).disabled)),[true,true]);
@@ -1356,7 +1373,7 @@ try {
 
     // The administrator adds and corrects records; every write goes out sealed.
     const admin=await context.newPage();admin.on('pageerror',error=>researchErrors.push(error.message));
-    await enterStaging(admin,'research');
+    await enterSite(admin,'research');
     await admin.locator('.rs-project').first().waitFor();
     await admin.locator('#rs-admin').click();
     await admin.locator('#admin-password').fill('cvml-test');
@@ -1673,29 +1690,29 @@ try {
 
     // Signing out closes the workspace; staying signed in is opt-in and ends everywhere at once.
     await admin.locator('#workspace-logout').click();
-    await admin.waitForURL(stagingEntry);
+    await admin.waitForURL(siteEntry);
     assert.equal(await admin.getByLabel('이름').inputValue(),'테스트 사용자');
-    await admin.goto(stagingPreview+'#research');
-    await admin.waitForURL(stagingEntry+'?panel=research');
+    await admin.goto(siteWorkspace+'#research');
+    await admin.waitForURL(siteEntry+'?panel=research');
     await admin.getByLabel('비밀번호',{exact:true}).fill(workspacePassword);
     await admin.getByLabel(/로그인 유지/).check();
     await admin.getByRole('button',{name:'로그인'}).click();
-    await admin.waitForURL(stagingPreview+'#research');
+    await admin.waitForURL(siteWorkspace+'#research');
     await admin.locator('body[data-workspace=ready]').waitFor();
     const remembered=await context.newPage();remembered.on('pageerror',error=>researchErrors.push(error.message));
-    await remembered.goto(stagingEntry);
-    await remembered.waitForURL(stagingPreview);
+    await remembered.goto(siteEntry);
+    await remembered.waitForURL(siteWorkspace);
     await remembered.locator('body[data-workspace=ready]').waitFor();
     assert.equal(await remembered.locator('#workspace-user').innerText(),'테스트 사용자님');
     await remembered.locator('#workspace-logout').click();
-    await remembered.waitForURL(stagingEntry);
-    await admin.waitForURL(stagingEntry+'?panel=research');
+    await remembered.waitForURL(siteEntry);
+    await admin.waitForURL(siteEntry+'?panel=research');
     assert.equal(await admin.evaluate(()=>localStorage.getItem('cvml.workspace.session.v1')),null);
     await remembered.close();await admin.close();
     assert.deepEqual(researchErrors,[]);
   }
 
-  console.log('Browser checks passed: existing dashboard workflows plus the test-server workspace (sign-in, home, sealed research records), live data, shared editor, stale GPU/API handling, tabs, details, refresh and 320/390px layouts.');
+  console.log('Browser checks passed: existing dashboard workflows plus the workspace on production and the test server (sign-in, home, sealed research records), live data, shared editor, stale GPU/API handling, tabs, details, refresh and 320/390px layouts.');
   console.log(`Screenshots: ${output}`);
 } catch (error) {
   if (page) await page.screenshot({path: path.join(output, 'failure.png'), fullPage: true}).catch(() => {});

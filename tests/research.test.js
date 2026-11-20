@@ -633,7 +633,8 @@ test('the research store keeps the public file sealed and retries conflicts', as
       if (conflicts) { conflicts--; return reply(409); }
       assert.equal(body.sha, stored ? 'sha-' + sha : undefined);
       assert.equal(body.branch, 'status');
-      assert.equal(body.message, 'research: update workspace records');
+      // Generic on purpose: the commit says which site wrote, never what was written.
+      assert.equal(body.message, 'research-test: update workspace records');
       stored = decodeJSON(body.content); sha++;
       return reply(200, {content: {sha: 'sha-' + sha}});
     }

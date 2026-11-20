@@ -57,7 +57,9 @@ export async function saveParcelRecord(operation){
   }finally{editor.setBusy(false);editorChanged();}
 }
 // Runs one administrator write for a layer module while holding the editor lock, the same way
-// the saves above do. The token is handed only to the task and is not kept anywhere else.
+// the saves above do. The token is handed only to the task and is not kept anywhere else. The
+// core does not know which site it runs for: a layer (the test server, or its released copy) saves
+// its own documents through this with its own store, so no layer's address appears in this file.
 export async function runAdminTask(task){
   if(!editor?.enabled||!editor.unlocked)throw new Error('관리자 로그인 후 저장할 수 있어요.');
   if(editor.busy||editor.store.saving)throw new Error('앞선 저장이 끝난 뒤 다시 시도해 주세요.');
@@ -66,34 +68,6 @@ export async function runAdminTask(task){
   finally{editor.setBusy(false);editorChanged();}
 }
 export function monitoringAccess(){return {enabled:!!editor?.enabled,unlocked:!!editor?.unlocked,busy:!!editor?.busy};}
-// Used only by the staging usage charts; production does not import or call this recorder.
-export function saveTestAPIUsageHistory(){return saveUsageHistory('test');}
-export function saveAPIUsageHistory(){return saveUsageHistory('production');}
-async function saveUsageHistory(profile){
-  if(!editor?.enabled||!editor.unlocked)throw new Error('관리자 로그인이 필요합니다.');
-  if(editor.busy||editor.store.saving)throw new Error('앞선 저장이 끝난 뒤 다시 시도해 주세요.');
-  const [{APIUsageStore},{samplesFromTokens}]=await Promise.all([
-    import(profile==='test'?'./test-server/api-usage-store.js?v=2.1.1':'./release/api-usage-store.js?v=2.1.1'),
-    import(profile==='test'?'./test-server/api-usage-model.js?v=2.1.1':'./release/api-usage-model.js?v=2.1.1')
-  ]);
-  if(!editor.unlocked||editor.busy||editor.store.saving)throw new Error('관리자 로그인과 저장 상태를 다시 확인해 주세요.');
-  const token=editor.token,samples=samplesFromTokens(editor.data.openrouter_tokens||[]);
-  editor.setBusy(true);editorChanged();
-  try{return await new APIUsageStore(config.dashboard).append(token,samples);}
-  finally{editor.setBusy(false);editorChanged();}
-}
-export function saveTestMonitoringConfig(draft,expectedRevision,requestID){return saveMonitoring('test',draft,expectedRevision,requestID);}
-export function saveMonitoringConfig(draft,expectedRevision,requestID){return saveMonitoring('production',draft,expectedRevision,requestID);}
-async function saveMonitoring(profile,draft,expectedRevision,requestID){
-  if(!editor?.enabled||!editor.unlocked)throw new Error('관리자 로그인 후 저장할 수 있어요.');
-  if(!config.servers?.some(s=>s.id===draft.server_id))throw new Error('등록된 서버를 선택해 주세요.');
-  if(editor.busy)throw new Error('앞선 저장이 끝난 뒤 다시 시도해 주세요.');
-  const {MonitoringStore}=await import(profile==='test'?'./test-server/monitoring-store.js?v=2.1':'./release/monitoring-store.js?v=2.1');
-  if(editor.busy||!editor.unlocked)throw new Error('관리자 로그인과 저장 상태를 다시 확인해 주세요.');
-  const token=editor.token;editor.setBusy(true);editorChanged();
-  try{return await new MonitoringStore(config.dashboard).saveServer(token,draft,expectedRevision,requestID);}
-  finally{editor.setBusy(false);editorChanged();}
-}
 export function refreshDashboard(){return refresh();}
 export function openExperiment(server,id){
   if(!servers.some(s=>s.server_id===server&&s.jobs.some(j=>j.id===id)))return;

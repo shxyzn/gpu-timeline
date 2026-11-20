@@ -1,9 +1,10 @@
-import {dashboardView} from '../app.js?patch=workspace-3';
-import {GATE} from './gate.js?v=workspace-9';
-import {currentSession} from './session.js?v=workspace-9';
-import {researchState} from './research-board.js?v=workspace-9';
-import {availableCurrentView} from './availability-model.js?v=workspace-9';
-import {ddayLabel} from './research-model.js?v=workspace-9';
+import {dashboardView} from '../app.js?patch=workspace-4';
+import {GATE} from './gate.js?v=workspace-10';
+import {currentSession} from './session.js?v=workspace-10';
+import {researchState} from './research-board.js?v=workspace-10';
+import {availableCurrentView} from './availability-model.js?v=workspace-10';
+import {ddayLabel} from './research-model.js?v=workspace-10';
+import {PROFILE} from './profile.js?v=workspace-10';
 
 // Shell of the test-server workspace: one bar to move between the home, the research tracker
 // and the GPU dashboard, and a home that summarises both. The URL hash names the view, so the
@@ -70,7 +71,7 @@ function renderHome(){
   const {overview}=researchState(),upcoming=(overview?.deadlines||[]).filter(d=>d.days>=0).slice(0,5),late=overview?.overdue||[];
   const item=d=>`<li class="${d.days<0?'late':''}"><span class="rs-due ${d.days<0?'late':d.days<=30?'soon':d.days<=90?'near':'far'}"><strong>${esc(ddayLabel(d.days))}</strong>${esc(day(d.date))}</span><div><strong>${esc(d.title)}</strong><span>${esc(d.where)}</span></div></li>`;
   const html=`<span class="ws-eyebrow">CVML WORKSPACE</span><h1 id="ws-home-title">${esc(session.name)}님, 안녕하세요.</h1><p>연구실 과제의 남은 실적과 GPU 현황을 한곳에서 확인해요.</p>
-    <div class="ws-cards">${card('#research','연구과제',researchCard(),'과제별 실적 보기')}${card($('workspace-gpu-link')?.getAttribute('href')||'#now','GPU 대시보드',gpuCard(),'GPU·실험 현황 보기')}</div>
+    <div class="ws-cards">${card('#research',PROFILE.practiceOf?'연구과제 · 연습용 기록':'연구과제',researchCard(),'과제별 실적 보기')}${card($('workspace-gpu-link')?.getAttribute('href')||'#now','GPU 대시보드',gpuCard(),'GPU·실험 현황 보기')}</div>
     ${late.length||upcoming.length?`<section class="ws-upcoming" aria-labelledby="ws-upcoming-title"><h2 id="ws-upcoming-title">챙겨야 할 기한</h2><ul class="rs-deadlines">${[...late.slice(0,3),...upcoming].map(item).join('')}</ul></section>`:''}`;
   if(drawnHome!==html){home.innerHTML=html;drawnHome=html;}
 }

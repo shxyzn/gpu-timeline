@@ -1,10 +1,11 @@
 import {GitHubEditsStore,encodeJSON,decodeJSON} from '../edits.js?v=1.2.0';
-import {emptyMonitoring,validateMonitoring,validateConfig} from './monitoring-model.js?v=2.1';
+import {emptyMonitoring,validateMonitoring,validateConfig} from './monitoring-model.js?v=workspace-10';
+import {PROFILE} from './profile.js?v=workspace-10';
 
 export class MonitoringStore {
   constructor(dashboard,fetcher=(...args)=>fetch(...args)){
     this.client=new GitHubEditsStore(dashboard,fetcher);this.fetcher=fetcher;
-    this.root=this.client.root;this.branch='status';this.path='dashboard/monitoring.json';
+    this.root=this.client.root;this.branch='status';this.path=PROFILE.files.monitoring;
     this.url=`${this.root}/contents/${this.path}`;
     this.rawURL=`https://raw.githubusercontent.com/${dashboard.repository}/status/${this.path}`;
     this.saving=false;
@@ -40,7 +41,7 @@ export class MonitoringStore {
         const next={...data,revision:data.revision+1,updated_at:at,servers:[...data.servers.filter(c=>c.server_id!==draft.server_id),saved]};
         validateMonitoring(next);
         try{
-          await this.client.request(this.url,token,{method:'PUT',body:JSON.stringify({message:`monitoring: ${draft.server_id} schedule`,branch:'status',content:encodeJSON(next),...(sha?{sha}:{})})});
+          await this.client.request(this.url,token,{method:'PUT',body:JSON.stringify({message:`${PROFILE.commits.monitoring}: ${draft.server_id} schedule`,branch:'status',content:encodeJSON(next),...(sha?{sha}:{})})});
           return next;
         }catch(error){if(![409,422].includes(error.status)||attempt===3)throw error;await this.client.pause(200*(attempt+1));}
       }

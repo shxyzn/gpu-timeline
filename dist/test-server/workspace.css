@@ -200,6 +200,10 @@ body[data-workspace] .ws-loading{display:none}
 .rs-fieldset legend{padding:0 6px;font-size:13px;font-weight:650}
 .rs-fieldset .admin-help{margin:0 0 10px}
 .rs-dialog .rs-field-note{margin:0;align-self:center}
+.rs-practice{display:flex;gap:6px 12px;align-items:baseline;flex-wrap:wrap;margin:16px 0 18px;padding:12px 16px;border-radius:14px;background:var(--ws-amber-soft);color:#5c4300;font-size:13.5px;line-height:1.55}
+.rs-practice strong{flex:none;font-weight:700}
+.rs-practice span{flex:1 1 280px;min-width:0}
+.rs-practice a{color:inherit;font-weight:600;text-decoration:underline;text-underline-offset:2px}
 .rs-rows{display:grid;gap:10px;margin-bottom:10px}
 .rs-rows:empty{display:none}
 .rs-row{position:relative;display:grid;grid-template-columns:minmax(0,1.5fr) minmax(0,.7fr) minmax(0,1fr);gap:12px 10px;padding:12px 44px 12px 12px;border-radius:13px;background:var(--ws-soft)}

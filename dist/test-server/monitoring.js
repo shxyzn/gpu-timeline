@@ -1,13 +1,18 @@
-import {dashboardView,monitoringAccess,openDashboardLogin,saveMonitoringConfig,saveTestMonitoringConfig} from '../app.js?patch=workspace-3';
-import {PROFILE} from './profile.js?v=workspace-9';
-import {CHECKS,DAYS,monitoringID,defaultConfig,emptyMonitoring,makeSchedule,validateConfig,validateSchedule,scheduleLabel,nextRun} from './monitoring-model.js?v=workspace-9';
-import {MonitoringStore} from './monitoring-store.js?v=workspace-9';
-import {isUnavailable} from './availability-model.js?v=workspace-9';
+import {dashboardView,monitoringAccess,openDashboardLogin,runAdminTask} from '../app.js?patch=workspace-4';
+import {PROFILE} from './profile.js?v=workspace-10';
+import {CHECKS,DAYS,monitoringID,defaultConfig,emptyMonitoring,makeSchedule,validateConfig,validateSchedule,scheduleLabel,nextRun} from './monitoring-model.js?v=workspace-10';
+import {MonitoringStore} from './monitoring-store.js?v=workspace-10';
+import {isUnavailable} from './availability-model.js?v=workspace-10';
 import {health} from '../model.js';
 
 const $=id=>document.getElementById(id);
 // Schedules are kept, saved and acknowledged per site: a collector reports which profile it runs.
-const production=PROFILE.name==='production',saveConfig=production?saveMonitoringConfig:saveTestMonitoringConfig;
+const production=PROFILE.name==='production';
+// One administrator write through this site's own store, under the shared editor's lock.
+async function saveConfig(candidate,revision,requestID){
+  if(!dashboardView().config?.servers?.some(s=>s.id===candidate.server_id))throw new Error('등록된 서버를 선택해 주세요.');
+  return runAdminTask((token,dashboard)=>new MonitoringStore(dashboard).saveServer(token,candidate,revision,requestID));
+}
 const reportFor=s=>s?.monitoring?.profile===PROFILE.name?s.monitoring:null;
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const stamp=t=>t&&Number.isFinite(new Date(t).getTime())?new Intl.DateTimeFormat('ko-KR',{timeZone:'Asia/Seoul',month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit',hourCycle:'h23'}).format(new Date(t))+' KST':'아직 없음';

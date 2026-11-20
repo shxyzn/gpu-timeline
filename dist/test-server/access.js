@@ -1,10 +1,10 @@
 // Entry gate of the workspace. The sign-in page checks the shared password and starts a
 // session; the workspace page loads only for a signed-in browser (profile.js names both pages). This is separate from
 // dashboard administration, which still needs the administrator's own GitHub connection.
-import {GATE} from './gate.js?v=workspace-9';
-import {openGate,toBase64} from './workspace-crypto.js?v=workspace-9';
-import {currentSession,startSession,endSession,lastName,cleanName} from './session.js?v=workspace-9';
-import {PROFILE} from './profile.js?v=workspace-9';
+import {GATE} from './gate.js?v=workspace-10';
+import {openGate,toBase64} from './workspace-crypto.js?v=workspace-10';
+import {currentSession,startSession,endSession,lastName,cleanName} from './session.js?v=workspace-10';
+import {PROFILE} from './profile.js?v=workspace-10';
 
 const form=document.getElementById('workspace-login');
 const previewURL=new URL(PROFILE.pages.workspace,import.meta.url);
@@ -62,9 +62,9 @@ if(form){
     try{
       await Promise.all([
         import('../usage.js'),
-        import('./app.js?v=workspace-9'),
-        import('./workspace.js?v=workspace-9'),
-        import('./research-board.js?v=workspace-9'),
+        import('./app.js?v=workspace-10'),
+        import('./workspace.js?v=workspace-10'),
+        import('./research-board.js?v=workspace-10'),
       ]);
     }catch{
       const problem=document.getElementById('workspace-load-error');
