@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "revision": 1297,
-  "updated_at": "2026-11-21T19:36:11.834Z",
+  "revision": 1298,
+  "updated_at": "2026-11-21T20:37:11.844Z",
   "manual_jobs": [],
   "hidden_jobs": [
     {
@@ -30,7 +30,7 @@
         "limit_reset": null
       },
       "checked_at": "2026-11-13T07:33:47.636Z",
-      "attempted_at": "2026-11-21T19:36:11.167Z",
+      "attempted_at": "2026-11-21T20:37:11.169Z",
       "error": "unauthorized"
     },
     {
@@ -47,7 +47,7 @@
         "limit_reset": null
       },
       "checked_at": "2026-11-13T07:59:47.629Z",
-      "attempted_at": "2026-11-21T19:36:11.391Z",
+      "attempted_at": "2026-11-21T20:37:11.400Z",
       "error": "unauthorized"
     },
     {
@@ -80,8 +80,8 @@
         "byok_usage": 0,
         "limit_reset": null
       },
-      "checked_at": "2026-11-21T19:36:11.834Z",
-      "attempted_at": "2026-11-21T19:36:11.608Z",
+      "checked_at": "2026-11-21T20:37:11.844Z",
+      "attempted_at": "2026-11-21T20:37:11.617Z",
       "error": null
     }
   ],
