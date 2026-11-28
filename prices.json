@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "source": "danawa",
-  "attempted_at": "2026-11-27T08:35:35+00:00",
+  "attempted_at": "2026-11-28T07:50:30+00:00",
   "products": [
     {
       "id": "ryzen-9950x",
@@ -9,7 +9,7 @@
       "price_krw": 977500,
       "availability": "available",
       "checked_at": "2026-11-20T07:17:34+00:00",
-      "attempted_at": "2026-11-27T08:35:35+00:00",
+      "attempted_at": "2026-11-28T07:50:30+00:00",
       "fetch_error": "ValueError"
     },
     {
@@ -18,7 +18,7 @@
       "price_krw": 895200,
       "availability": "available",
       "checked_at": "2026-11-22T06:49:53+00:00",
-      "attempted_at": "2026-11-27T08:35:35+00:00",
+      "attempted_at": "2026-11-28T07:50:30+00:00",
       "fetch_error": "ValueError"
     },
     {
@@ -27,7 +27,7 @@
       "price_krw": 3768960,
       "availability": "available",
       "checked_at": "2026-11-17T07:56:12+00:00",
-      "attempted_at": "2026-11-27T08:35:35+00:00",
+      "attempted_at": "2026-11-28T07:50:30+00:00",
       "fetch_error": "ValueError"
     },
     {
@@ -36,7 +36,7 @@
       "price_krw": 612040,
       "availability": "available",
       "checked_at": "2026-11-19T07:27:40+00:00",
-      "attempted_at": "2026-11-27T08:35:35+00:00",
+      "attempted_at": "2026-11-28T07:50:30+00:00",
       "fetch_error": "ValueError"
     },
     {
@@ -45,7 +45,7 @@
       "price_krw": 919350,
       "availability": "available",
       "checked_at": "2026-11-18T07:29:48+00:00",
-      "attempted_at": "2026-11-27T08:35:35+00:00",
+      "attempted_at": "2026-11-28T07:50:30+00:00",
       "fetch_error": "ValueError"
     },
     {
@@ -54,7 +54,7 @@
       "price_krw": 1470000,
       "availability": "available",
       "checked_at": "2026-11-16T06:31:22+00:00",
-      "attempted_at": "2026-11-27T08:35:35+00:00",
+      "attempted_at": "2026-11-28T07:50:30+00:00",
       "fetch_error": "ValueError"
     },
     {
@@ -63,7 +63,7 @@
       "price_krw": 415000,
       "availability": "available",
       "checked_at": "2026-11-20T07:17:34+00:00",
-      "attempted_at": "2026-11-27T08:35:35+00:00",
+      "attempted_at": "2026-11-28T07:50:30+00:00",
       "fetch_error": "ValueError"
     },
     {
@@ -72,7 +72,7 @@
       "price_krw": 505910,
       "availability": "available",
       "checked_at": "2026-11-19T07:27:40+00:00",
-      "attempted_at": "2026-11-27T08:35:35+00:00",
+      "attempted_at": "2026-11-28T07:50:30+00:00",
       "fetch_error": "ValueError"
     },
     {
@@ -81,7 +81,7 @@
       "price_krw": 767930,
       "availability": "available",
       "checked_at": "2026-11-21T07:09:54+00:00",
-      "attempted_at": "2026-11-27T08:35:35+00:00",
+      "attempted_at": "2026-11-28T07:50:30+00:00",
       "fetch_error": "ValueError"
     },
     {
@@ -90,7 +90,7 @@
       "price_krw": 2340310,
       "availability": "available",
       "checked_at": "2026-11-20T07:17:34+00:00",
-      "attempted_at": "2026-11-27T08:35:35+00:00",
+      "attempted_at": "2026-11-28T07:50:30+00:00",
       "fetch_error": "ValueError"
     },
     {
@@ -99,7 +99,7 @@
       "price_krw": 7529990,
       "availability": "available",
       "checked_at": "2026-11-20T07:17:34+00:00",
-      "attempted_at": "2026-11-27T08:35:35+00:00",
+      "attempted_at": "2026-11-28T07:50:30+00:00",
       "fetch_error": "ValueError"
     },
     {
@@ -108,7 +108,7 @@
       "price_krw": 1928960,
       "availability": "available",
       "checked_at": "2026-11-22T06:49:53+00:00",
-      "attempted_at": "2026-11-27T08:35:35+00:00",
+      "attempted_at": "2026-11-28T07:50:30+00:00",
       "fetch_error": "ValueError"
     },
     {
@@ -117,7 +117,7 @@
       "price_krw": 2994990,
       "availability": "available",
       "checked_at": "2026-11-22T06:49:53+00:00",
-      "attempted_at": "2026-11-27T08:35:35+00:00",
+      "attempted_at": "2026-11-28T07:50:30+00:00",
       "fetch_error": "ValueError"
     },
     {
@@ -126,7 +126,7 @@
       "price_krw": 6551560,
       "availability": "available",
       "checked_at": "2026-11-20T07:17:34+00:00",
-      "attempted_at": "2026-11-27T08:35:35+00:00",
+      "attempted_at": "2026-11-28T07:50:30+00:00",
       "fetch_error": "ValueError"
     },
     {
@@ -135,7 +135,7 @@
       "price_krw": 6105900,
       "availability": "available",
       "checked_at": "2026-11-21T07:09:54+00:00",
-      "attempted_at": "2026-11-27T08:35:35+00:00",
+      "attempted_at": "2026-11-28T07:50:30+00:00",
       "fetch_error": "ValueError"
     },
     {
@@ -144,7 +144,7 @@
       "price_krw": 14173910,
       "availability": "available",
       "checked_at": "2026-11-17T07:56:12+00:00",
-      "attempted_at": "2026-11-27T08:35:35+00:00",
+      "attempted_at": "2026-11-28T07:50:30+00:00",
       "fetch_error": "ValueError"
     },
     {
@@ -153,7 +153,7 @@
       "price_krw": 11950000,
       "availability": "available",
       "checked_at": "2026-11-17T07:56:12+00:00",
-      "attempted_at": "2026-11-27T08:35:35+00:00",
+      "attempted_at": "2026-11-28T07:50:30+00:00",
       "fetch_error": "ValueError"
     },
     {
@@ -162,7 +162,7 @@
       "price_krw": 13399990,
       "availability": "available",
       "checked_at": "2026-11-18T07:29:48+00:00",
-      "attempted_at": "2026-11-27T08:35:35+00:00",
+      "attempted_at": "2026-11-28T07:50:30+00:00",
       "fetch_error": "ValueError"
     },
     {
@@ -171,7 +171,7 @@
       "price_krw": 27599990,
       "availability": "available",
       "checked_at": "2026-11-22T06:49:53+00:00",
-      "attempted_at": "2026-11-27T08:35:35+00:00",
+      "attempted_at": "2026-11-28T07:50:30+00:00",
       "fetch_error": "ValueError"
     },
     {
@@ -180,7 +180,7 @@
       "price_krw": 3590000,
       "availability": "available",
       "checked_at": "2026-11-21T07:09:54+00:00",
-      "attempted_at": "2026-11-27T08:35:35+00:00",
+      "attempted_at": "2026-11-28T07:50:30+00:00",
       "fetch_error": "ValueError"
     },
     {
@@ -189,7 +189,7 @@
       "price_krw": 2197150,
       "availability": "available",
       "checked_at": "2026-11-20T07:17:34+00:00",
-      "attempted_at": "2026-11-27T08:35:35+00:00",
+      "attempted_at": "2026-11-28T07:50:30+00:00",
       "fetch_error": "ValueError"
     },
     {
@@ -198,7 +198,7 @@
       "price_krw": 1297960,
       "availability": "available",
       "checked_at": "2026-11-18T07:29:48+00:00",
-      "attempted_at": "2026-11-27T08:35:35+00:00",
+      "attempted_at": "2026-11-28T07:50:30+00:00",
       "fetch_error": "ValueError"
     },
     {
@@ -207,7 +207,7 @@
       "price_krw": 5177550,
       "availability": "available",
       "checked_at": "2026-11-21T07:09:54+00:00",
-      "attempted_at": "2026-11-27T08:35:35+00:00",
+      "attempted_at": "2026-11-28T07:50:30+00:00",
       "fetch_error": "ValueError"
     },
     {
@@ -216,7 +216,7 @@
       "price_krw": 7700000,
       "availability": "available",
       "checked_at": "2026-11-18T07:29:48+00:00",
-      "attempted_at": "2026-11-27T08:35:35+00:00",
+      "attempted_at": "2026-11-28T07:50:30+00:00",
       "fetch_error": "ValueError"
     },
     {
@@ -225,7 +225,7 @@
       "price_krw": 14817900,
       "availability": "available",
       "checked_at": "2026-11-22T06:49:53+00:00",
-      "attempted_at": "2026-11-27T08:35:35+00:00",
+      "attempted_at": "2026-11-28T07:50:30+00:00",
       "fetch_error": "ValueError"
     },
     {
@@ -234,7 +234,7 @@
       "price_krw": 8200000,
       "availability": "available",
       "checked_at": "2026-11-17T07:56:12+00:00",
-      "attempted_at": "2026-11-27T08:35:35+00:00",
+      "attempted_at": "2026-11-28T07:50:30+00:00",
       "fetch_error": "ValueError"
     },
     {
@@ -243,7 +243,7 @@
       "price_krw": 5390000,
       "availability": "available",
       "checked_at": "2026-11-20T07:17:34+00:00",
-      "attempted_at": "2026-11-27T08:35:35+00:00",
+      "attempted_at": "2026-11-28T07:50:30+00:00",
       "fetch_error": "ValueError"
     },
     {
@@ -252,7 +252,7 @@
       "price_krw": 12471000,
       "availability": "available",
       "checked_at": "2026-11-21T07:09:54+00:00",
-      "attempted_at": "2026-11-27T08:35:35+00:00",
+      "attempted_at": "2026-11-28T07:50:30+00:00",
       "fetch_error": "ValueError"
     },
     {
@@ -261,7 +261,7 @@
       "price_krw": 2690000,
       "availability": "available",
       "checked_at": "2026-11-20T07:17:34+00:00",
-      "attempted_at": "2026-11-27T08:35:35+00:00",
+      "attempted_at": "2026-11-28T07:50:30+00:00",
       "fetch_error": "ValueError"
     },
     {
@@ -270,7 +270,7 @@
       "price_krw": null,
       "availability": "unavailable",
       "checked_at": "2026-11-19T07:27:40+00:00",
-      "attempted_at": "2026-11-27T08:35:35+00:00",
+      "attempted_at": "2026-11-28T07:50:30+00:00",
       "fetch_error": "ValueError"
     },
     {
@@ -279,7 +279,7 @@
       "price_krw": 26550000,
       "availability": "available",
       "checked_at": "2026-11-17T07:56:12+00:00",
-      "attempted_at": "2026-11-27T08:35:35+00:00",
+      "attempted_at": "2026-11-28T07:50:30+00:00",
       "fetch_error": "ValueError"
     },
     {
@@ -288,7 +288,7 @@
       "price_krw": 3449990,
       "availability": "available",
       "checked_at": "2026-11-16T06:31:22+00:00",
-      "attempted_at": "2026-11-27T08:35:35+00:00",
+      "attempted_at": "2026-11-28T07:50:30+00:00",
       "fetch_error": "ValueError"
     },
     {
@@ -297,7 +297,7 @@
       "price_krw": 786940,
       "availability": "available",
       "checked_at": "2026-11-20T07:17:34+00:00",
-      "attempted_at": "2026-11-27T08:35:35+00:00",
+      "attempted_at": "2026-11-28T07:50:30+00:00",
       "fetch_error": "ValueError"
     },
     {
@@ -306,7 +306,7 @@
       "price_krw": 4287650,
       "availability": "available",
       "checked_at": "2026-11-17T07:56:12+00:00",
-      "attempted_at": "2026-11-27T08:35:35+00:00",
+      "attempted_at": "2026-11-28T07:50:30+00:00",
       "fetch_error": "ValueError"
     },
     {
@@ -315,7 +315,7 @@
       "price_krw": 787190,
       "availability": "available",
       "checked_at": "2026-11-17T07:56:12+00:00",
-      "attempted_at": "2026-11-27T08:35:35+00:00",
+      "attempted_at": "2026-11-28T07:50:30+00:00",
       "fetch_error": "ValueError"
     },
     {
@@ -324,7 +324,7 @@
       "price_krw": 1295830,
       "availability": "available",
       "checked_at": "2026-11-22T06:49:53+00:00",
-      "attempted_at": "2026-11-27T08:35:35+00:00",
+      "attempted_at": "2026-11-28T07:50:30+00:00",
       "fetch_error": "ValueError"
     },
     {
@@ -333,7 +333,7 @@
       "price_krw": 479930,
       "availability": "available",
       "checked_at": "2026-11-19T07:27:40+00:00",
-      "attempted_at": "2026-11-27T08:35:35+00:00",
+      "attempted_at": "2026-11-28T07:50:30+00:00",
       "fetch_error": "ValueError"
     },
     {
@@ -342,7 +342,7 @@
       "price_krw": 1799000,
       "availability": "available",
       "checked_at": "2026-11-10T07:19:41+00:00",
-      "attempted_at": "2026-11-27T08:35:35+00:00",
+      "attempted_at": "2026-11-28T07:50:30+00:00",
       "fetch_error": "ValueError"
     },
     {
@@ -351,7 +351,7 @@
       "price_krw": 5409110,
       "availability": "available",
       "checked_at": "2026-10-13T07:26:59+00:00",
-      "attempted_at": "2026-11-27T08:35:35+00:00",
+      "attempted_at": "2026-11-28T07:50:30+00:00",
       "fetch_error": "ValueError"
     },
     {
@@ -360,7 +360,7 @@
       "price_krw": 2234000,
       "availability": "available",
       "checked_at": "2026-11-17T07:56:12+00:00",
-      "attempted_at": "2026-11-27T08:35:35+00:00",
+      "attempted_at": "2026-11-28T07:50:30+00:00",
       "fetch_error": "ValueError"
     },
     {
@@ -369,7 +369,7 @@
       "price_krw": 9784210,
       "availability": "available",
       "checked_at": "2026-11-22T06:49:53+00:00",
-      "attempted_at": "2026-11-27T08:35:35+00:00",
+      "attempted_at": "2026-11-28T07:50:30+00:00",
       "fetch_error": "ValueError"
     },
     {
@@ -378,7 +378,7 @@
       "price_krw": 1536210,
       "availability": "available",
       "checked_at": "2026-11-22T06:49:53+00:00",
-      "attempted_at": "2026-11-27T08:35:35+00:00",
+      "attempted_at": "2026-11-28T07:50:30+00:00",
       "fetch_error": "ValueError"
     },
     {
@@ -387,7 +387,7 @@
       "price_krw": 705940,
       "availability": "available",
       "checked_at": "2026-11-19T07:27:40+00:00",
-      "attempted_at": "2026-11-27T08:35:35+00:00",
+      "attempted_at": "2026-11-28T07:50:30+00:00",
       "fetch_error": "ValueError"
     },
     {
@@ -396,7 +396,7 @@
       "price_krw": 1659290,
       "availability": "available",
       "checked_at": "2026-11-16T06:31:22+00:00",
-      "attempted_at": "2026-11-27T08:35:35+00:00",
+      "attempted_at": "2026-11-28T07:50:30+00:00",
       "fetch_error": "ValueError"
     }
   ]
